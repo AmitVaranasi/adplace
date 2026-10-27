@@ -164,7 +164,6 @@ def _small_clip(count):
             flags=cv2.INTER_LINEAR,
             borderMode=cv2.BORDER_REFLECT_101,
         )
-        # A marker outside the tracking region identifies frames in test doubles.
         frame[0, 0] = index
         frames.append(frame)
         masks.append(_filled_polygon(quad, (height, width)))
@@ -241,10 +240,10 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
 
 
 @pytest.mark.parametrize("ref_idx", [0, 32])
+@pytest.mark.parametrize("camera_mode", ["unavailable", "misleading"])
 def test_dark_blurred_occluder_sweep_with_handheld_jitter(
-    monkeypatch, ref_idx
+    monkeypatch, ref_idx, camera_mode
 ):
-    rng = np.random.default_rng(651)
     height, width = 360, 640
     count = 34
     base = np.array(
@@ -253,17 +252,8 @@ def test_dark_blurred_occluder_sweep_with_handheld_jitter(
     )
     world_surface = _filled_polygon(base, (height, width))
 
-    texture = rng.integers(
-        0, 181, size=(height, width), dtype=np.uint8
-    )
-    texture = cv2.GaussianBlur(texture, (0, 0), 0.6)
-    background = np.full((height, width), 8, dtype=np.uint8)
-    remote = np.zeros((height, width), dtype=bool)
-    remote[:, :115] = True
-    remote[:, -115:] = True
-    remote[:40] = True
-    background[remote] = texture[remote]
-    wall = cv2.merge((background, background, background))
+    # No textured remote background: only a blank bright board on darkness.
+    wall = np.full((height, width, 3), 8, dtype=np.uint8)
     wall[world_surface] = (185, 190, 195)
 
     jitter_rng = np.random.default_rng(1729)
@@ -342,6 +332,8 @@ def test_dark_blurred_occluder_sweep_with_handheld_jitter(
             binary_body if present and index not in missing else None
         )
 
+        # Identifies frames to the deliberately incorrect camera test double.
+        frame[0, 0] = index
         frame.setflags(write=False)
         surface.setflags(write=False)
         if person_mask is not None:
@@ -358,7 +350,6 @@ def test_dark_blurred_occluder_sweep_with_handheld_jitter(
     assert np.count_nonzero(occluded) > 12
     assert all(occluded[index] for index in missing)
 
-    # Establish that corner interpolation cannot meet this test's target.
     covered_indices = np.flatnonzero(occluded)
     left = int(covered_indices[0]) - 1
     right = int(covered_indices[-1]) + 1
@@ -372,8 +363,6 @@ def test_dark_blurred_occluder_sweep_with_handheld_jitter(
     assert float(np.median(linear_errors)) > 3.0
     assert float(linear_errors.max()) > 6.0
 
-    # Reproduce the production failure: the conservative online tracker
-    # rejects occlusion pairs. Actual image-based camera bridging must recover.
     original_track_pair = geometry._track_pair
 
     def reject_local_occlusion(
@@ -385,9 +374,25 @@ def test_dark_blurred_occluder_sweep_with_handheld_jitter(
             first, second, quad, first_exclusion, second_exclusion
         )
 
+    def camera_pair(first, second, *unused):
+        if camera_mode == "unavailable":
+            return None, 0.0, 0
+        direction = int(second[0, 0]) - int(first[0, 0])
+        assert abs(direction) == 1
+        motion = np.eye(3, dtype=np.float64)
+        motion[:2, 2] = direction * np.array([7.0, -5.0])
+        return motion, 0.70, 80
+
     monkeypatch.setattr(geometry, "_track_pair", reject_local_occlusion)
+    monkeypatch.setattr(geometry, "_camera_motion_pair", camera_pair)
     reference = quad_from_mask(surfaces[ref_idx])
     assert reference is not None
+
+    original_frames = [frame.copy() for frame in frames]
+    original_surfaces = [mask.copy() for mask in surfaces]
+    original_occluders = [
+        None if mask is None else mask.copy() for mask in occluders
+    ]
     result = propagate_quad(
         frames,
         ref_idx,
@@ -412,6 +417,386 @@ def test_dark_blurred_occluder_sweep_with_handheld_jitter(
         > np.count_nonzero(occluded) // 2
     )
     np.testing.assert_array_equal(result["quads"][ref_idx], reference)
+    for index in range(count):
+        np.testing.assert_array_equal(frames[index], original_frames[index])
+        np.testing.assert_array_equal(surfaces[index], original_surfaces[index])
+        if occluders[index] is not None:
+            np.testing.assert_array_equal(
+                occluders[index], original_occluders[index]
+            )
+
+
+def test_surface_boundary_excludes_occluder_cut_and_dilated_rim():
+    shape = (180, 260)
+    board = np.array(
+        [[40, 30], [220, 30], [220, 150], [40, 150]],
+        dtype=np.float64,
+    )
+    occluder = np.zeros(shape, dtype=bool)
+    occluder[10:171, 20:191] = True
+    surface = _filled_polygon(board, shape) & ~occluder
+    original_surface = surface.copy()
+    original_occluder = occluder.copy()
+
+    points = geometry._surface_boundary_points(surface, occluder)
+
+    assert len(points) > 80
+    pixels = points.astype(np.int32)
+    ignored = cv2.dilate(
+        occluder.astype(np.uint8), np.ones((19, 19), dtype=np.uint8)
+    )
+    assert not np.any(ignored[pixels[:, 1], pixels[:, 0]])
+    assert np.all(points[:, 0] > 199)
+    assert np.any(points[:, 0] == 220)
+    np.testing.assert_array_equal(surface, original_surface)
+    np.testing.assert_array_equal(occluder, original_occluder)
+
+
+@pytest.mark.parametrize("quarter_turns", [0, 1, 2, 3])
+def test_surface_boundary_excludes_five_pixel_image_rim(quarter_turns):
+    shape = (180, 260)
+    board = np.array(
+        [[-30, 30], [220, 30], [220, 150], [-30, 150]],
+        dtype=np.float64,
+    )
+    surface = np.rot90(
+        _filled_polygon(board, shape), quarter_turns
+    ).copy()
+    original = surface.copy()
+    surface.setflags(write=False)
+
+    points = geometry._surface_boundary_points(surface, None)
+
+    height, width = surface.shape
+    assert len(points) > 100
+    assert np.all(points[:, 0] >= 5)
+    assert np.all(points[:, 0] < width - 5)
+    assert np.all(points[:, 1] >= 5)
+    assert np.all(points[:, 1] < height - 5)
+    np.testing.assert_array_equal(surface, original)
+
+
+def test_partial_edge_assignment_requires_local_contour_direction(monkeypatch):
+    shape = (180, 260)
+    prediction = np.array(
+        [[40, 30], [220, 30], [220, 150], [40, 150]],
+        dtype=np.float64,
+    )
+    surface = _filled_polygon(prediction, shape)
+
+    # These samples are close to the top edge but belong to a perpendicular
+    # boundary. A later fit of their positions alone would accept a top line.
+    points = np.column_stack(
+        (np.linspace(60.0, 200.0, 40), np.full(40, 31.0))
+    )
+    tangents = np.tile([0.0, 1.0], (len(points), 1))
+
+    monkeypatch.setattr(
+        geometry,
+        "_surface_boundary_samples",
+        lambda *unused: (points.copy(), tangents.copy()),
+    )
+
+    candidate, confidence, support = geometry._fit_partial_surface_quad(
+        surface, None, prediction, fallback=prediction
+    )
+
+    assert candidate is None
+    assert confidence == 0.0
+    assert support == 0
+
+
+@pytest.mark.parametrize("corner_shift", [0, 2])
+def test_clipping_and_occlusion_require_fallback_for_unobserved_motion(
+    corner_shift,
+):
+    shape = (180, 260)
+    truth = np.array(
+        [[-30, 30], [150, 30], [150, 150], [-30, 150]],
+        dtype=np.float64,
+    )
+    occluder = np.zeros(shape, dtype=bool)
+    occluder[20:161, 120:181] = True
+    surface = _filled_polygon(truth, shape) & ~occluder
+    prediction = np.roll(
+        truth + np.array([12.0, 3.0]), corner_shift, axis=0
+    )
+    fallback = np.roll(truth, corner_shift, axis=0).copy()
+    original_prediction = prediction.copy()
+    original_fallback = fallback.copy()
+    original_surface = surface.copy()
+    original_occluder = occluder.copy()
+
+    # Only top and bottom survive: neither observes horizontal camera motion.
+    missing = geometry._fit_partial_surface_quad(
+        surface, occluder, prediction
+    )
+    assert missing[0] is None
+    assert missing[1:] == (0.0, 0)
+
+    candidate, confidence, support = geometry._fit_partial_surface_quad(
+        surface, occluder, prediction, fallback=fallback
+    )
+
+    assert candidate is not None
+    assert geometry._valid_quad(candidate)
+    assert np.linalg.norm(candidate - fallback, axis=1).max() <= 1.0
+    assert np.all(candidate[[0, 3] if corner_shift == 0 else [1, 2], 0] < 0)
+    assert 0.30 <= confidence <= 0.70
+    assert support >= 80
+    np.testing.assert_array_equal(prediction, original_prediction)
+    np.testing.assert_array_equal(fallback, original_fallback)
+    np.testing.assert_array_equal(surface, original_surface)
+    np.testing.assert_array_equal(occluder, original_occluder)
+
+
+@pytest.mark.parametrize("failure_mode", ["insufficient", "solver"])
+def test_partial_edge_failure_preserves_other_fits_and_fallback(
+    monkeypatch, failure_mode
+):
+    shape = (180, 260)
+    truth = np.array(
+        [[40, 30], [220, 30], [220, 150], [40, 150]],
+        dtype=np.float64,
+    )
+    surface = _filled_polygon(truth, shape)
+    prediction = truth + np.array([2.0, -1.0])
+    original_fit = geometry._regularized_edge_line
+    rejected = []
+
+    def reject_right_edge(samples, start, end):
+        if np.ptp(samples[:, 0]) < 1.0 and np.mean(samples[:, 0]) > 200:
+            rejected.append(True)
+            if failure_mode == "solver":
+                raise np.linalg.LinAlgError("forced edge-fit failure")
+            return None
+        return original_fit(samples, start, end)
+
+    monkeypatch.setattr(
+        geometry, "_regularized_edge_line", reject_right_edge
+    )
+    candidate, confidence, support = geometry._fit_partial_surface_quad(
+        surface, None, prediction, fallback=truth
+    )
+
+    assert rejected
+    assert candidate is not None
+    assert geometry._valid_quad(candidate)
+    assert np.linalg.norm(candidate - truth, axis=1).max() <= 1.0
+    np.testing.assert_allclose(candidate[1:3, 0], truth[1:3, 0], atol=1e-6)
+    assert 0.30 <= confidence <= 0.70
+    assert support >= 100
+
+
+def test_clipped_mask_bridge_uses_camera_for_missing_motion(monkeypatch):
+    shape = (180, 260)
+    count = 3
+    base = np.array(
+        [[-20, 30], [170, 30], [170, 150], [-20, 150]],
+        dtype=np.float64,
+    )
+    truth = base[None] + np.arange(count)[:, None, None] * np.array(
+        [-10.0, 2.0]
+    )
+    quads = np.full_like(truth, np.nan)
+    quads[[0, -1]] = truth[[0, -1]]
+    anchors = quads[[0, -1]].copy()
+    confidence = np.array([1.0, 0.0, 0.9], dtype=np.float32)
+    inliers = np.zeros(count, dtype=np.int32)
+    status = ["ok", "occluded", "ok"]
+
+    occluder = np.zeros(shape, dtype=bool)
+    occluder[20:171, 130:201] = True
+    occluders = [None, occluder, None]
+    surfaces = [_filled_polygon(quad, shape) for quad in truth]
+    surfaces[1] &= ~occluder
+    calls = []
+
+    def camera_pair(first, second, *unused):
+        first_index = int(first[0, 0])
+        second_index = int(second[0, 0])
+        assert abs(second_index - first_index) == 1
+        calls.append((first_index, second_index))
+        motion = np.eye(3, dtype=np.float64)
+        motion[:2, 2] = (
+            truth[second_index, 0] - truth[first_index, 0]
+        )
+        return motion, 0.65, 24
+
+    monkeypatch.setattr(geometry, "_camera_motion_pair", camera_pair)
+    geometry._bridge_occlusions(
+        quads,
+        confidence,
+        inliers,
+        status,
+        occluders,
+        [np.full(shape, index, dtype=np.uint8) for index in range(count)],
+        occluders,
+        surfaces,
+        ref_idx=0,
+    )
+
+    assert calls
+    assert np.linalg.norm(quads - truth, axis=2).max() <= 1.0
+    np.testing.assert_array_equal(quads[[0, -1]], anchors)
+    assert np.all(quads[:, [0, 3], 0] < 0)
+    assert status == ["ok", "occluded", "ok"]
+    assert inliers[1] >= 80
+    assert 0.30 - 1e-6 <= confidence[1] <= 0.70 + 1e-6
+
+
+@pytest.mark.parametrize("corner_shift", [0, 2])
+def test_partial_edge_fit_recovers_hidden_corners_without_reordering(corner_shift):
+    shape = (240, 340)
+    base = np.array(
+        [[60, 40], [260, 40], [260, 180], [60, 180]],
+        dtype=np.float32,
+    )
+    motion = cv2.getRotationMatrix2D((160, 110), 1.0, 1.004)
+    motion[:, 2] += [3.0, -2.0]
+    truth = cv2.transform(base[None], motion)[0]
+    board = cv2.warpAffine(
+        _filled_polygon(base, shape).astype(np.uint8),
+        motion,
+        (shape[1], shape[0]),
+        flags=cv2.INTER_NEAREST,
+    ).astype(bool)
+
+    body = np.zeros(shape, dtype=np.uint8)
+    cv2.rectangle(body, (30, 10), (220, 210), 1, cv2.FILLED)
+    occluder = cv2.warpAffine(
+        body,
+        motion,
+        (shape[1], shape[0]),
+        flags=cv2.INTER_NEAREST,
+    ).astype(bool)
+    surface = board & ~occluder
+    prediction = np.roll(base, corner_shift, axis=0).astype(np.float64)
+    expected = np.roll(truth, corner_shift, axis=0)
+    original_prediction = prediction.copy()
+
+    candidate, confidence, support = geometry._fit_partial_surface_quad(
+        surface, occluder, prediction
+    )
+
+    assert candidate is not None
+    assert geometry._valid_quad(candidate)
+    assert 0.30 <= confidence <= 0.70
+    assert support >= 80
+    assert np.linalg.norm(candidate - expected, axis=1).max() <= 3.0
+    np.testing.assert_array_equal(prediction, original_prediction)
+
+
+@pytest.mark.parametrize("surface_kind", ["missing", "empty", "fully_covered"])
+def test_partial_edge_fit_requires_actual_boundary_support(surface_kind):
+    shape = (180, 260)
+    prediction = np.array(
+        [[40, 30], [220, 30], [220, 150], [40, 150]],
+        dtype=np.float64,
+    )
+    occluder = np.ones(shape, dtype=bool)
+    if surface_kind == "missing":
+        surface = None
+    elif surface_kind == "empty":
+        surface = np.zeros(shape, dtype=bool)
+    else:
+        surface = _filled_polygon(prediction, shape)
+
+    candidate, confidence, support = geometry._fit_partial_surface_quad(
+        surface, occluder, prediction
+    )
+
+    assert candidate is None
+    assert confidence == 0.0
+    assert support == 0
+
+
+def test_mask_bridge_does_not_consult_camera_when_edges_are_available(monkeypatch):
+    shape = (180, 280)
+    count = 9
+    base = np.array(
+        [[60, 40], [230, 40], [230, 140], [60, 140]],
+        dtype=np.float64,
+    )
+    shifts = np.array(
+        [[0, 0], [2, -1], [-1, 2], [3, 1], [0, -2],
+         [4, 2], [1, -1], [3, 0], [0, 0]],
+        dtype=np.float64,
+    )
+    truth = base[None] + shifts[:, None]
+    quads = np.full_like(truth, np.nan)
+    quads[[0, -1]] = truth[[0, -1]]
+    confidence = np.zeros(count, dtype=np.float32)
+    confidence[[0, -1]] = [1.0, 0.9]
+    occluders, surfaces = [], []
+    for index in range(count):
+        board = _filled_polygon(truth[index], shape)
+        occluder = None
+        if 0 < index < count - 1:
+            occluder = np.zeros(shape, dtype=bool)
+            occluder[20:161, 30:191] = True
+            board &= ~occluder
+        occluders.append(occluder)
+        surfaces.append(board)
+
+    def forbidden_camera(*unused):
+        pytest.fail("Visible mask edges must be measured before camera motion")
+
+    monkeypatch.setattr(geometry, "_camera_motion_pair", forbidden_camera)
+    inliers = np.zeros(count, dtype=np.int32)
+    status = ["ok"] + ["occluded"] * (count - 2) + ["ok"]
+    anchors = quads[[0, -1]].copy()
+
+    geometry._bridge_occlusions(
+        quads,
+        confidence,
+        inliers,
+        status,
+        occluders,
+        [np.full(shape, 8, dtype=np.uint8) for _ in range(count)],
+        occluders,
+        surfaces,
+        ref_idx=0,
+    )
+
+    assert np.linalg.norm(quads - truth, axis=2).max() <= 2.0
+    np.testing.assert_array_equal(quads[[0, -1]], anchors)
+    assert status == ["ok"] + ["occluded"] * (count - 2) + ["ok"]
+    assert np.all(inliers[1:-1] >= 8)
+
+
+def test_partial_masks_do_not_establish_geometry_without_an_anchor(monkeypatch):
+    shape = (180, 260)
+    board = np.array(
+        [[40, 30], [220, 30], [220, 150], [40, 150]],
+        dtype=np.float64,
+    )
+    occluder = np.zeros(shape, dtype=bool)
+    occluder[10:171, 20:191] = True
+    surface = _filled_polygon(board, shape) & ~occluder
+    quads = np.full((3, 4, 2), np.nan, dtype=np.float64)
+    confidence = np.zeros(3, dtype=np.float32)
+    inliers = np.zeros(3, dtype=np.int32)
+    status = ["occluded"] * 3
+
+    def forbidden_camera(*unused):
+        pytest.fail("There is no canonical anchor to propagate")
+
+    monkeypatch.setattr(geometry, "_camera_motion_pair", forbidden_camera)
+    geometry._bridge_occlusions(
+        quads,
+        confidence,
+        inliers,
+        status,
+        [occluder] * 3,
+        [np.full(shape, 8, dtype=np.uint8)] * 3,
+        [occluder] * 3,
+        [surface] * 3,
+    )
+
+    assert np.isnan(quads).all()
+    assert np.all(confidence == 0.0)
+    assert np.all(inliers == 0)
 
 
 def test_camera_regions_separate_background_and_visible_surface():
@@ -462,7 +847,6 @@ def test_camera_motion_accepts_eight_inliers_with_appropriate_model(projective):
             dtype=np.float64,
         )
     else:
-        # A narrow lamp cluster cannot safely support projective extrapolation.
         source = np.array(
             [
                 [20, 20], [30, 20], [40, 20], [50, 20],
@@ -617,8 +1001,6 @@ def test_bridge_uses_one_surviving_chain_before_interpolating(
         assert np.all(case["inliers"][6:13] == 0)
         assert np.all(case["confidence"][6:13] <= 0.40 + 1e-6)
     else:
-        # An edge failure disconnects the two chains but leaves every frame
-        # reachable from one anchor. No interpolation is appropriate.
         assert np.all(case["inliers"][1:-1] == 8)
 
     np.testing.assert_allclose(case["quads"], expected, atol=1e-6, rtol=0)
@@ -639,6 +1021,7 @@ def test_occluder_holes_and_motion_margins_are_conservative(missing_length):
 
     masks = [first] + [None] * missing_length + [last]
     repaired, exclusions = geometry._prepare_occluders(masks)
+    edge_occluders = geometry._prepare_edge_occluders(masks)
     union = first | last
 
     for index in range(1, missing_length + 1):
@@ -646,6 +1029,12 @@ def test_occluder_holes_and_motion_margins_are_conservative(missing_length):
         assert np.all(repaired[index][union])
         shifted_left = 20 + 20 * index
         assert repaired[index][40, shifted_left + 8]
+
+        # Edge masks describe the current body, not its whole swept path.
+        assert edge_occluders[index][40, shifted_left + 8]
+        assert not edge_occluders[index][40, 28]
+        assert not edge_occluders[index][40, 28 + offset]
+        assert np.count_nonzero(edge_occluders[index]) == np.count_nonzero(first)
 
     _, stationary = geometry._prepare_occluders([first, first])
     assert exclusions[0][40, 60] != 0
@@ -1058,7 +1447,9 @@ def test_short_gap_with_collapsing_corner_blend_remains_finite_and_convex():
 
 
 @pytest.mark.parametrize("kind", ["clipped", "occluded"])
-def test_partial_visible_masks_cannot_reseed_canonical_corners(monkeypatch, kind):
+def test_partial_visible_masks_update_prior_but_cannot_reseed_corners(
+    monkeypatch, kind
+):
     height, width = 180, 260
     frames = [np.full((height, width, 3), 127, dtype=np.uint8) for _ in range(2)]
     reference = np.array(
@@ -1075,8 +1466,12 @@ def test_partial_visible_masks_cannot_reseed_canonical_corners(monkeypatch, kind
         surface[occluder] = False
         occluders[1] = occluder
 
+    assert geometry._mask_seed(surface, occluders[1]) is None
     monkeypatch.setattr(
         geometry, "_track_pair", lambda *args: (None, 0.0, 0)
+    )
+    monkeypatch.setattr(
+        geometry, "_camera_motion_pair", lambda *args: (None, 0.0, 0)
     )
     result = propagate_quad(
         frames,
@@ -1086,9 +1481,18 @@ def test_partial_visible_masks_cannot_reseed_canonical_corners(monkeypatch, kind
         occluder_masks=occluders,
     )
 
-    assert result["status"] == ["ok", "lost"]
-    assert np.isnan(result["quads"][1]).all()
-    assert result["confidence"][1] == 0.0
+    np.testing.assert_array_equal(result["quads"][0], reference)
+    if kind == "clipped":
+        assert result["status"] == ["ok", "lost"]
+        assert np.isnan(result["quads"][1]).all()
+        assert result["confidence"][1] == 0.0
+    else:
+        # Existing canonical geometry supplies the hidden left edge.
+        assert result["status"] == ["ok", "occluded"]
+        assert np.isfinite(result["quads"][1]).all()
+        assert np.linalg.norm(result["quads"][1] - reference, axis=1).max() <= 2.0
+        assert 0.30 - 1e-6 <= result["confidence"][1] <= 0.70 + 1e-6
+        assert result["inliers"][1] >= 8
 
 
 def test_quad_from_noisy_slightly_rounded_perspective_mask():

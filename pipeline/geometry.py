@@ -275,8 +275,7 @@ def _prepare_occluders(occluders):
                 borderMode=cv2.BORDER_CONSTANT,
                 borderValue=0,
             ).astype(bool)
-            # The union handles uncertain shape/velocity; the shifted mask
-            # also covers intermediate positions during a three-frame hole.
+            # LK needs a conservative union covering uncertain motion.
             masks[index] = first_mask | last_mask | shifted
 
     exclusions = []
@@ -284,13 +283,65 @@ def _prepare_occluders(occluders):
         if mask is None:
             exclusions.append(None)
             continue
-        # All distances are in tracking pixels. Protect the 25-pixel LK
-        # window as well as a faint rim and a speed-dependent blurred edge.
+        # Protect LK's window, faint rims, and speed-dependent blur.
         radius = int(np.ceil(4.0 + 12.0 + 0.75 * motion[index]))
         kernel = np.ones((2 * radius + 1, 2 * radius + 1), dtype=np.uint8)
         exclusions.append(cv2.dilate(mask.astype(np.uint8), kernel))
 
     return masks, exclusions
+
+
+def _prepare_edge_occluders(occluders):
+    """Repair short holes at the estimated current position, without LK margins.
+
+    The swept union used for optical flow can erase all useful board edges.
+    Boundary fitting instead aligns both endpoint detections to the missing
+    frame, unions their shapes there, and subsequently adds its own rim band.
+    """
+    masks = [
+        None if mask is None or not np.any(mask) else mask.copy()
+        for mask in occluders
+    ]
+    observed = [index for index, mask in enumerate(masks) if mask is not None]
+    centers = {}
+    for index in observed:
+        moments = cv2.moments(masks[index].astype(np.uint8), binaryImage=True)
+        centers[index] = np.array(
+            [moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]],
+            dtype=np.float64,
+        )
+
+    for left, right in zip(observed, observed[1:]):
+        distance = right - left
+        if not 1 < distance <= 4:
+            continue
+
+        displacement = centers[right] - centers[left]
+        height, width = masks[left].shape
+        for index in range(left + 1, right):
+            fraction = (index - left) / distance
+            aligned = []
+            for source, shift in (
+                (left, fraction * displacement),
+                (right, (fraction - 1.0) * displacement),
+            ):
+                transform = np.array(
+                    [[1.0, 0.0, shift[0]], [0.0, 1.0, shift[1]]],
+                    dtype=np.float32,
+                )
+                aligned.append(
+                    cv2.warpAffine(
+                        masks[source].astype(np.uint8),
+                        transform,
+                        (width, height),
+                        flags=cv2.INTER_NEAREST,
+                        borderMode=cv2.BORDER_CONSTANT,
+                        borderValue=0,
+                    ).astype(bool)
+                )
+            masks[index] = aligned[0] | aligned[1]
+
+    return masks
 
 
 def _mask_seed(surface, occluder):
@@ -316,6 +367,403 @@ def _mask_seed(surface, occluder):
         if np.any((_polygon_mask(quad, surface.shape) != 0) & (ignored != 0)):
             return None
     return quad.astype(np.float64)
+
+
+def _surface_boundary_samples(surface, occluder):
+    """Return usable contour points and their local, unoriented tangents."""
+    empty = np.empty((0, 2), dtype=np.float64)
+    if surface is None or not np.any(surface):
+        return empty, empty.copy()
+
+    binary = np.asarray(surface, dtype=bool).astype(np.uint8)
+    contours, _ = cv2.findContours(
+        binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
+    )
+    point_groups = []
+    tangent_groups = []
+    for contour in contours:
+        pixels = contour.reshape(-1, 2)
+        if len(pixels) < 3:
+            continue
+
+        # A chord suppresses raster stair steps while retaining the direction
+        # of each visible fragment. Compute it before filtering the contour.
+        radius = min(6, (len(pixels) - 1) // 2)
+        coordinates = pixels.astype(np.float64)
+        tangents = (
+            np.roll(coordinates, -radius, axis=0)
+            - np.roll(coordinates, radius, axis=0)
+        )
+        norms = np.linalg.norm(tangents, axis=1)
+        valid = norms > 0.0
+        point_groups.append(pixels[valid])
+        tangent_groups.append(tangents[valid] / norms[valid, None])
+
+    if not point_groups:
+        return empty, empty.copy()
+
+    # Keep separate visible components; their board-edge fragments are useful.
+    pixels = np.concatenate(point_groups, axis=0)
+    tangents = np.concatenate(tangent_groups, axis=0)
+    height, width = binary.shape
+
+    # A frame cut is not a physical surface edge. Also exclude neighboring
+    # pixels, whose contour chords can turn around the artificial corner.
+    margin = 5
+    keep = (
+        (pixels[:, 0] >= margin)
+        & (pixels[:, 0] < width - margin)
+        & (pixels[:, 1] >= margin)
+        & (pixels[:, 1] < height - margin)
+    )
+    if occluder is not None:
+        ignored = cv2.dilate(
+            np.asarray(occluder, dtype=np.uint8),
+            np.ones((19, 19), dtype=np.uint8),
+        )
+        keep &= ignored[pixels[:, 1], pixels[:, 0]] == 0
+
+    return pixels[keep].astype(np.float64), tangents[keep]
+
+
+def _surface_boundary_points(surface, occluder):
+    """Return mask contours excluding the occluder's boundary and image rim."""
+    return _surface_boundary_samples(surface, occluder)[0]
+
+
+def _visible_edge_samples(samples, direction, length):
+    """Robustly verify a fragment before using it as a board-edge measurement."""
+    if len(samples) < 8:
+        return None
+    if np.ptp(samples @ direction) < max(8.0, 0.035 * length):
+        return None
+
+    try:
+        vx, vy, x0, y0 = cv2.fitLine(
+            samples.astype(np.float32), cv2.DIST_HUBER, 0, 0.01, 0.01
+        ).ravel()
+    except cv2.error:
+        return None
+
+    fitted_direction = np.array([vx, vy], dtype=np.float64)
+    if float(fitted_direction @ direction) < 0.0:
+        fitted_direction *= -1.0
+
+    angle = float(
+        np.arctan2(
+            direction[0] * fitted_direction[1]
+            - direction[1] * fitted_direction[0],
+            direction @ fitted_direction,
+        )
+    )
+    if abs(angle) > 0.20:
+        return None
+
+    normal = np.array([-fitted_direction[1], fitted_direction[0]])
+    residuals = np.abs((samples - np.array([x0, y0])) @ normal)
+    accepted = residuals <= 1.75
+    if np.count_nonzero(accepted) < max(8, int(np.ceil(0.65 * len(samples)))):
+        return None
+
+    samples = samples[accepted]
+    span = float(np.ptp(samples @ direction))
+    if span < max(8.0, 0.035 * length):
+        return None
+
+    # Refit after rejecting pixels belonging to noise or an adjacent edge.
+    try:
+        vx, vy, _, _ = cv2.fitLine(
+            samples.astype(np.float32), cv2.DIST_HUBER, 0, 0.01, 0.01
+        ).ravel()
+    except cv2.error:
+        return None
+
+    fitted_direction = np.array([vx, vy], dtype=np.float64)
+    if float(fitted_direction @ direction) < 0.0:
+        fitted_direction *= -1.0
+    angle = float(
+        np.arctan2(
+            direction[0] * fitted_direction[1]
+            - direction[1] * fitted_direction[0],
+            direction @ fitted_direction,
+        )
+    )
+    if abs(angle) > 0.20:
+        return None
+    return samples, span, angle
+
+
+def _regularized_edge_line(samples, start, end):
+    """Fit a Huber line, regularizing poorly observed angles to the prediction."""
+    vector = end - start
+    length = float(np.linalg.norm(vector))
+    direction = vector / length
+    normal = np.array([-direction[1], direction[0]])
+    origin = 0.5 * (start + end)
+
+    along = (samples - origin) @ direction
+    across = (samples - origin) @ normal
+    center = float(np.median(along))
+    design = np.column_stack((along - center, np.ones(len(samples))))
+
+    # Long fragments overwhelm this angular prior. Short fragments measure
+    # position without making a noisy angle extrapolate across the whole board.
+    prior = np.array(
+        [[np.sqrt(0.05) * length, 0.0], [0.0, np.sqrt(0.02)]],
+        dtype=np.float64,
+    )
+    coefficients = np.array([0.0, np.median(across)], dtype=np.float64)
+    for _ in range(6):
+        residual = design @ coefficients - across
+        weights = np.minimum(1.0, 1.0 / np.maximum(np.abs(residual), 1e-9))
+        root = np.sqrt(weights)
+        coefficients, _, _, _ = np.linalg.lstsq(
+            np.vstack((design * root[:, None], prior)),
+            np.r_[across * root, 0.0, 0.0],
+            rcond=None,
+        )
+
+    slope, intercept = coefficients
+    if not np.isfinite(coefficients).all() or abs(slope) > 0.20:
+        return None
+
+    fitted_normal = normal - slope * direction
+    normalization = float(np.linalg.norm(fitted_normal))
+    offset = (
+        float(fitted_normal @ origin) + intercept - slope * center
+    ) / normalization
+    return fitted_normal / normalization, float(offset)
+
+
+def _fit_partial_surface_quad(surface, occluder, prediction, fallback=None):
+    """Measure canonical edges without mistaking clipping for surface motion.
+
+    Sufficient visible lines transport hidden edges through a similarity
+    update. If those lines cannot observe translation and scale, the caller
+    must supply a current-frame fallback from the previous estimator.
+    Unsupported or failed edge fits retain that fallback's individual lines.
+    """
+    failure = (None, 0.0, 0)
+    if not _valid_quad(prediction):
+        return failure
+    if fallback is not None:
+        if not _valid_quad(fallback):
+            return failure
+        fallback = np.asarray(fallback, dtype=np.float64)
+
+    points, tangents = _surface_boundary_samples(surface, occluder)
+    if len(points) < 8:
+        return failure
+
+    prediction = np.asarray(prediction, dtype=np.float64)
+    edges = np.roll(prediction, -1, axis=0) - prediction
+    lengths = np.linalg.norm(edges, axis=1)
+    directions = edges / lengths[:, None]
+
+    offsets = points[:, None, :] - prediction[None, :, :]
+    projections = np.sum(offsets * edges[None, :, :], axis=2) / lengths**2
+    closest = (
+        prediction[None, :, :]
+        + np.clip(projections, 0.0, 1.0)[:, :, None] * edges[None, :, :]
+    )
+    distances = np.linalg.norm(points[:, None, :] - closest, axis=2)
+
+    # Proximity alone can assign a perpendicular fragment to a hidden edge.
+    # Require local contour direction as well as the subsequent robust fit.
+    compatible = np.abs(tangents @ directions.T) >= np.cos(0.25)
+    owners = np.where(compatible, distances, np.inf).argmin(axis=1)
+    tolerance = max(10.0, min(40.0, 0.20 * float(lengths.min())))
+
+    measurements = []
+    for edge_index in range(4):
+        selected = (
+            compatible[:, edge_index]
+            & (owners == edge_index)
+            & (distances[:, edge_index] <= tolerance)
+            & (projections[:, edge_index] >= -0.07)
+            & (projections[:, edge_index] <= 1.07)
+        )
+        measurement = _visible_edge_samples(
+            points[selected], directions[edge_index], lengths[edge_index]
+        )
+        if measurement is not None:
+            # Reject failures before they contribute to shared motion.
+            try:
+                line = _regularized_edge_line(
+                    measurement[0],
+                    prediction[edge_index],
+                    prediction[(edge_index + 1) % 4],
+                )
+            except (cv2.error, np.linalg.LinAlgError):
+                line = None
+            if line is None:
+                measurement = None
+        measurements.append(measurement)
+
+    measured_count = sum(value is not None for value in measurements)
+    if measured_count == 0:
+        return failure
+
+    # Share well-observed rotation with short fragments and hidden edges.
+    # Rasterized 10-pixel fragments must not independently rotate a far corner.
+    weighted_angle = 0.0
+    angle_weight = 24.0**3
+    for edge_index, measurement in enumerate(measurements):
+        if measurement is None:
+            continue
+        samples, span, angle = measurement
+        if span >= max(18.0, 0.15 * lengths[edge_index]):
+            weight = min(float(len(samples)), 2.0 * span) * span**2
+            weighted_angle += weight * angle
+            angle_weight += weight
+    angle = float(np.clip(weighted_angle / angle_weight, -0.12, 0.12))
+    cosine, sine = np.cos(angle), np.sin(angle)
+    rotation = np.array([[cosine, -sine], [sine, cosine]])
+
+    center = prediction.mean(axis=0)
+    rotated = (prediction - center) @ rotation.T
+    rotated_edges = np.roll(rotated, -1, axis=0) - rotated
+    rotated_directions = rotated_edges / lengths[:, None]
+    normals = np.column_stack(
+        (-rotated_directions[:, 1], rotated_directions[:, 0])
+    )
+
+    rows = []
+    targets = []
+    for edge_index, measurement in enumerate(measurements):
+        if measurement is None:
+            continue
+        samples, span, _ = measurement
+        normal = normals[edge_index]
+        midpoint = 0.5 * (
+            rotated[edge_index] + rotated[(edge_index + 1) % 4]
+        )
+        weight = np.sqrt(
+            min(1.0, span / max(12.0, 0.20 * lengths[edge_index]))
+        )
+        rows.append(
+            weight * np.array([normal[0], normal[1], normal @ midpoint])
+        )
+        targets.append(
+            weight
+            * (
+                float(np.median(samples @ normal))
+                - float(normal @ (center + midpoint))
+            )
+        )
+
+    if fallback is None:
+        # Two surviving parallel edges cannot observe motion along themselves.
+        # Weak numerical priors must not turn that missing motion into a
+        # successful mask-only estimate and suppress the camera fallback.
+        try:
+            normalized_rows = np.asarray(rows) / np.array(
+                [1.0, 1.0, float(lengths.min())]
+            )
+            singular = np.linalg.svd(normalized_rows, compute_uv=False)
+        except np.linalg.LinAlgError:
+            return failure
+        if len(singular) < 3 or singular[-1] < 0.04 * singular[0]:
+            return failure
+
+    # Weak priors stabilize the supported update. Unsupported edge lines come
+    # from the current-frame fallback when one has been supplied.
+    rows.extend(
+        [
+            np.array([0.03, 0.0, 0.0]),
+            np.array([0.0, 0.03, 0.0]),
+            np.array([0.0, 0.0, 0.10 * lengths.min()]),
+        ]
+    )
+    targets.extend([0.0, 0.0, 0.0])
+    try:
+        update, _, _, _ = np.linalg.lstsq(
+            np.asarray(rows), np.asarray(targets), rcond=None
+        )
+    except np.linalg.LinAlgError:
+        return failure
+
+    if not np.isfinite(update).all() or abs(update[2]) > 0.15:
+        return failure
+    transported = center + (1.0 + update[2]) * rotated + update[:2]
+    if not _valid_quad(transported):
+        return failure
+
+    retained = transported if fallback is None else fallback
+    lines = []
+    support = 0
+    fitted_count = 0
+    span_fractions = []
+    for edge_index, measurement in enumerate(measurements):
+        line = None
+        if measurement is not None:
+            samples, span, _ = measurement
+            try:
+                line = _regularized_edge_line(
+                    samples,
+                    transported[edge_index],
+                    transported[(edge_index + 1) % 4],
+                )
+            except (cv2.error, np.linalg.LinAlgError):
+                line = None
+
+        if line is None:
+            start = retained[edge_index]
+            end = retained[(edge_index + 1) % 4]
+            vector = end - start
+            normal = np.array([-vector[1], vector[0]])
+            normal /= np.linalg.norm(normal)
+            lines.append((normal, float(normal @ start)))
+            continue
+
+        lines.append(line)
+        support += len(samples)
+        fitted_count += 1
+        span_fractions.append(min(1.0, span / lengths[edge_index]))
+
+    if fitted_count == 0 or (fallback is None and fitted_count < 3):
+        return failure
+
+    corners = []
+    try:
+        for corner_index in range(4):
+            previous = lines[corner_index - 1]
+            current = lines[corner_index]
+            matrix = np.stack((previous[0], current[0]))
+            if abs(float(np.linalg.det(matrix))) < 0.08:
+                return failure
+            corners.append(
+                np.linalg.solve(matrix, np.array([previous[1], current[1]]))
+            )
+    except np.linalg.LinAlgError:
+        return failure
+
+    candidate = np.asarray(corners, dtype=np.float64)
+    if (
+        not _valid_quad(candidate)
+        or np.linalg.norm(candidate - prediction, axis=1).max()
+        > max(24.0, 0.30 * float(lengths.min()))
+    ):
+        return failure
+
+    ignored = None
+    if occluder is not None:
+        ignored = cv2.dilate(
+            np.asarray(occluder, dtype=np.uint8),
+            np.ones((19, 19), dtype=np.uint8),
+        )
+    agreement, _ = _assess_frame(
+        candidate, surface.shape, surface, occluder, ignored
+    )
+    if agreement < 0.60:
+        return failure
+
+    quality = (
+        0.30
+        + 0.075 * fitted_count
+        + 0.075 * float(np.mean(span_fractions))
+    )
+    return candidate, float(np.clip(quality, 0.30, 0.70)), support
 
 
 def _tracking_region(quad, shape, expansion=1.0):
@@ -385,7 +833,6 @@ def _flow_matches(
         return empty, empty
 
     try:
-        # A good forward match supplies the reverse initialization.
         backward, backward_status, _ = cv2.calcOpticalFlowPyrLK(
             second,
             first,
@@ -449,7 +896,6 @@ def _fit_motion(source, target, quad, region, camera=False):
     if len(source) < 12:
         return None, 0.0, 0
 
-    # Canonical correspondence order makes RANSAC independent of enumeration.
     source = np.asarray(source, dtype=np.float32).reshape(-1, 2)
     target = np.asarray(target, dtype=np.float32).reshape(-1, 2)
     order = np.lexsort(
@@ -482,8 +928,6 @@ def _fit_motion(source, target, quad, region, camera=False):
         support_area = float(cv2.contourArea(cv2.convexHull(source[accepted])))
         if camera:
             height, width = region.shape
-            # Keep online propagation conservative. The separate occlusion
-            # bridge can use sparse similarity fits pinned to both anchors.
             span = np.ptp(source[accepted], axis=0)
             if (
                 support_area < max(64.0, 0.08 * region.size)
@@ -596,7 +1040,6 @@ def _descriptor_matches(
 
 
 def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion):
-    # Online propagation remains conservative during an occluder passage.
     camera = first_exclusion is not None or second_exclusion is not None
     region = (
         np.ones(first_gray.shape, dtype=np.uint8)
@@ -664,7 +1107,6 @@ def _camera_regions(quad, shape, exclusion, surface=None):
     if surface is not None:
         full_surface |= surface.astype(np.uint8)
 
-    # Include uncertainty in the interpolated guide and ORB's patch radius.
     outside = cv2.dilate(
         full_surface, np.ones((33, 33), dtype=np.uint8)
     )
@@ -720,8 +1162,6 @@ def _fit_camera_motion(source, target, quad, shape):
 
         try:
             if projective:
-                # A homography needs two-dimensional support. A small or
-                # nearly collinear lamp cluster still permits similarity.
                 singular = np.linalg.svd(centered, compute_uv=False)
                 area = float(
                     cv2.contourArea(cv2.convexHull(first.astype(np.float32)))
@@ -740,7 +1180,6 @@ def _fit_camera_motion(source, target, quad, shape):
                     first.astype(np.float32), second.astype(np.float32), 0
                 )
             else:
-                # Deterministic least-squares similarity refinement.
                 first_center = first.mean(axis=0)
                 second_center = second.mean(axis=0)
                 destination = second - second_center
@@ -844,7 +1283,7 @@ def _camera_motion_pair(
     first_surface=None,
     second_surface=None,
 ):
-    """Estimate camera motion from dark background and visible surface features."""
+    """Estimate fallback motion from background and visible surface features."""
     try:
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         first = clahe.apply(first_gray)
@@ -861,8 +1300,6 @@ def _camera_motion_pair(
 
     results = {}
     maximum_support = 0
-    # Evaluate both sources independently: background parallax must not drown
-    # out a useful fit on the surviving part of the actual surface.
     for name, region_index in (("surface", 1), ("background", 0)):
         region = first_regions[region_index]
         second_region = second_regions[region_index]
@@ -970,7 +1407,6 @@ def _assess_frame(
     visible_expected = expected_pixels & usable
     expected_count = int(np.count_nonzero(visible_expected))
     total_count = int(np.count_nonzero(expected_pixels))
-    # Thin rasterization slivers are not negative evidence of full coverage.
     if expected_count < max(32, 0.08 * total_count):
         return 1.0, occluded
 
@@ -1051,9 +1487,13 @@ def _bridge_occlusions(
     exclusions,
     surfaces,
     ref_idx=None,
+    edge_occluders=None,
 ):
-    """Pin occluded camera-motion chains to their available temporal anchors."""
+    """Bridge from both anchors, measuring mask edges before using camera motion."""
     count = len(quads)
+    if edge_occluders is None:
+        edge_occluders = occluders
+
     pending = np.array(
         [
             mask is not None and status[index] != "ok"
@@ -1099,10 +1539,13 @@ def _bridge_occlusions(
                 anchor = left if left is not None else right
                 guides[index] = quads[anchor].copy()
 
-        # Each edge is estimated once. Inverting an accepted edge preserves
-        # the same motion when composing from the right anchor backwards.
+        # Camera fits are lazy fallbacks. A sufficiently observed mask chain
+        # never evaluates a background camera-motion estimate.
         motions = {}
-        for index in range(low, high):
+
+        def get_motion(index):
+            if index in motions:
+                return motions[index]
             motion, quality, support = _camera_motion_pair(
                 grays[index],
                 grays[index + 1],
@@ -1130,42 +1573,67 @@ def _bridge_occlusions(
                     except np.linalg.LinAlgError:
                         motion = None
             motions[index] = motion, quality, support
+            return motions[index]
 
         def chain(anchor, direction):
             if anchor is None:
                 return {}
             predictions = {
-                anchor: (quads[anchor].copy(), float(confidence[anchor]), 0)
+                anchor: (quads[anchor].copy(), float(confidence[anchor]), 0, False)
             }
             previous = anchor
             total_quality = 0.0
             steps = 0
             end = high + 1 if direction == 1 else low - 1
             for index in range(anchor + direction, end, direction):
-                motion, edge_quality, support = motions[min(previous, index)]
-                if motion is None:
-                    break
-                if direction == -1:
-                    try:
-                        motion = np.linalg.inv(motion)
-                    except np.linalg.LinAlgError:
+                prior = predictions[previous][0]
+                candidate, quality, support = _fit_partial_surface_quad(
+                    surfaces[index], edge_occluders[index], prior
+                )
+                measured = candidate is not None
+
+                if not measured:
+                    motion, edge_quality, support = get_motion(
+                        min(previous, index)
+                    )
+                    if motion is None:
+                        break
+                    if direction == -1:
+                        try:
+                            motion = np.linalg.inv(motion)
+                        except np.linalg.LinAlgError:
+                            break
+
+                    candidate = _motion_quad(prior, motion, grays[index].shape)
+                    if candidate is None:
                         break
 
-                candidate = _motion_quad(
-                    predictions[previous][0], motion, grays[index].shape
-                )
-                if candidate is None:
-                    break
-                steps += 1
-                total_quality += edge_quality
-                quality = (
-                    min(float(confidence[anchor]), total_quality / steps)
-                    * np.exp(-steps / 80.0)
-                )
+                    # The previous estimator supplies current-frame lines for
+                    # unsupported edges. Supported mask edges still get their
+                    # own fits, including when clipping hides all motion along
+                    # the remaining parallel boundary fragments.
+                    recovered = _fit_partial_surface_quad(
+                        surfaces[index],
+                        edge_occluders[index],
+                        candidate,
+                        fallback=candidate,
+                    )
+                    if recovered[0] is not None:
+                        candidate, quality, support = recovered
+                        measured = True
+                    else:
+                        steps += 1
+                        total_quality += edge_quality
+                        quality = (
+                            min(float(confidence[anchor]), total_quality / steps)
+                            * np.exp(-steps / 80.0)
+                        )
+
                 predictions[index] = (
                     candidate,
                     float(np.clip(quality, 0.30, 0.70)),
                     support,
+                    measured,
                 )
                 previous = index
             return predictions
@@ -1181,34 +1649,41 @@ def _bridge_occlusions(
             second = backward.get(index)
             offset = index - low
             if first is not None and second is not None:
-                fraction = (index - left) / (right - left)
-                candidate = (1.0 - fraction) * first[0] + fraction * second[0]
-                if not _valid_quad(candidate):
-                    candidate = first[0] if fraction <= 0.5 else second[0]
-                disagreement = float(
-                    np.mean(np.linalg.norm(first[0] - second[0], axis=1))
-                )
-                quality = (
-                    (1.0 - fraction) * first[1] + fraction * second[1]
-                ) * np.exp(-disagreement / 6.0)
-                support = max(first[2], second[2])
+                if first[3] != second[3]:
+                    # Never dilute an actual board-edge measurement with
+                    # a camera-only chain, regardless of feature count.
+                    chosen = first if first[3] else second
+                    candidate, quality, support = chosen[:3]
+                else:
+                    fraction = (index - left) / (right - left)
+                    candidate = (
+                        (1.0 - fraction) * first[0] + fraction * second[0]
+                    )
+                    if not _valid_quad(candidate):
+                        candidate = first[0] if fraction <= 0.5 else second[0]
+                    disagreement = float(
+                        np.mean(np.linalg.norm(first[0] - second[0], axis=1))
+                    )
+                    quality = (
+                        (1.0 - fraction) * first[1] + fraction * second[1]
+                    ) * np.exp(-disagreement / 6.0)
+                    support = max(first[2], second[2])
             elif first is not None or second is not None:
-                candidate, quality, support = first if first is not None else second
+                chosen = first if first is not None else second
+                candidate, quality, support = chosen[:3]
             else:
                 continue
+
             estimates[offset] = candidate
             qualities[offset] = np.clip(quality, 0.30, 0.70)
             supports[offset] = support
 
-        # Anchor values are exact inputs, not outputs of the opposite chain.
         for anchor in (left, right):
             if anchor is not None:
                 estimates[anchor - low] = quads[anchor]
                 qualities[anchor - low] = confidence[anchor]
 
-        # Only positions reached by neither chain may use interpolation.
-        # Use the nearest recovered neighbours, rather than discarding motion
-        # estimates on either side of a failed group of edges.
+        # Interpolate only frames reached by neither directional chain.
         missing = ~np.isfinite(estimates).all(axis=(1, 2))
         boundaries = np.diff(np.r_[False, missing, False].astype(np.int8))
         missing_starts = np.flatnonzero(boundaries == 1)
@@ -1233,16 +1708,29 @@ def _bridge_occlusions(
                 qualities[offset] = quality
 
         for index in range(int(start), int(stop)):
-            candidate = estimates[index - low]
+            offset = index - low
+            candidate = estimates[offset]
             if not np.isfinite(candidate).all():
                 continue
-            # A detection elsewhere in the scene cannot explain this loss.
+
+            # Re-impose supported mask lines after blending. Each unsupported
+            # edge retains its current-frame bidirectional fallback line.
+            measured = _fit_partial_surface_quad(
+                surfaces[index],
+                edge_occluders[index],
+                candidate,
+                fallback=candidate,
+            )
+            if measured[0] is not None:
+                candidate, qualities[offset], supports[offset] = measured
+
             expected = _polygon_mask(candidate, grays[index].shape) != 0
             if not np.any(expected & occluders[index]):
                 continue
+
             quads[index] = candidate
-            confidence[index] = qualities[index - low]
-            inliers[index] = supports[index - low]
+            confidence[index] = qualities[offset]
+            inliers[index] = supports[offset]
             status[index] = "occluded"
 
 
@@ -1302,7 +1790,7 @@ def _fill_short_gaps(quads, confidence, status, occluders):
 def propagate_quad(
     frames, ref_idx, ref_quad, surface_masks=None, occluder_masks=None
 ) -> dict:
-    """Track, re-acquire surfaces, and bridge occlusions with anchored motion."""
+    """Track and re-acquire surfaces; bridge occlusions using visible mask edges."""
     frames = list(frames)
     count = len(frames)
     if (
@@ -1327,7 +1815,6 @@ def propagate_quad(
     if not _valid_quad(reference):
         raise ValueError("ref_quad must be a finite clockwise convex quad")
 
-    # This module does not alter NumPy's global random state.
     cv2.setRNGSeed(0)
 
     height, width = frame_shape[:2]
@@ -1354,6 +1841,7 @@ def propagate_quad(
     occluders = _prepare_masks(
         occluder_masks, count, (height, width), tracking_size
     )
+    edge_occluders = _prepare_edge_occluders(occluders)
     occluders, exclusions = _prepare_occluders(occluders)
     seeds = [
         _mask_seed(surface, exclusion)
@@ -1428,8 +1916,6 @@ def propagate_quad(
                         candidate = seed
                         candidate_quality = 0.75
 
-            # Continue scanning after a failed chain until a complete mask
-            # establishes another adjacent-frame chain.
             previous = index
             active_quad = candidate
             if candidate is not None:
@@ -1527,8 +2013,7 @@ def propagate_quad(
         confidence[index] = np.clip(candidate_quality * agreement, 0.0, 1.0)
         status[index] = "occluded" if occluded else "ok"
 
-    # This also replaces finite one-way occlusion tracks, preventing their
-    # accumulated drift from bypassing the bidirectional bridge.
+    # Replace finite one-way occlusion tracks as well as missing geometry.
     _bridge_occlusions(
         resolved,
         confidence,
@@ -1539,6 +2024,7 @@ def propagate_quad(
         exclusions,
         surfaces,
         ref_idx=ref_idx,
+        edge_occluders=edge_occluders,
     )
     _fill_short_gaps(resolved, confidence, status, occluders)
     for index in range(count):
