@@ -39,7 +39,7 @@ def _order_quad(points):
     q = np.asarray(points, dtype=np.float64).reshape(4, 2)
     center = q.mean(axis=0)
     angles = np.arctan2(q[:, 1] - center[1], q[:, 0] - center[0])
-    q = q[np.argsort(angles)]
+    q = q[np.argsort(angles, kind="stable")]
     if _signed_area(q) < 0:
         q = q[::-1]
     return np.roll(q, -int(np.argmin(q.sum(axis=1))), axis=0)
@@ -337,6 +337,16 @@ def _fit_motion(source, target, quad, region):
     if len(source) < 12:
         return None, 0.0, 0
 
+    # RANSAC must see the same correspondence order regardless of how a
+    # detector or matcher enumerates otherwise identical features.
+    source = np.asarray(source, dtype=np.float32).reshape(-1, 2)
+    target = np.asarray(target, dtype=np.float32).reshape(-1, 2)
+    order = np.lexsort(
+        (target[:, 1], target[:, 0], source[:, 1], source[:, 0])
+    )
+    source = np.ascontiguousarray(source[order])
+    target = np.ascontiguousarray(target[order])
+
     inlier_count = 0
     try:
         homography, consensus = cv2.findHomography(
@@ -412,6 +422,23 @@ def _fit_motion(source, target, quad, region):
     return candidate, float(np.clip(confidence, 0.0, 1.0)), inlier_count
 
 
+def _ordered_features(keypoints, descriptors):
+    """Canonicalize ORB features before matching, including descriptor ties."""
+    order = sorted(
+        range(len(keypoints)),
+        key=lambda index: (
+            keypoints[index].pt[1],
+            keypoints[index].pt[0],
+            keypoints[index].octave,
+            keypoints[index].size,
+            keypoints[index].angle,
+            -keypoints[index].response,
+            descriptors[index].tobytes(),
+        ),
+    )
+    return [keypoints[index] for index in order], descriptors[order]
+
+
 def _descriptor_matches(first, second, first_region, second_region):
     empty = np.empty((0, 2), dtype=np.float32)
     try:
@@ -434,6 +461,12 @@ def _descriptor_matches(first, second, first_region, second_region):
         ):
             return empty, empty
 
+        first_keys, first_descriptors = _ordered_features(
+            first_keys, first_descriptors
+        )
+        second_keys, second_descriptors = _ordered_features(
+            second_keys, second_descriptors
+        )
         matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
         pairs = matcher.knnMatch(first_descriptors, second_descriptors, k=2)
         reverse = {
@@ -447,6 +480,9 @@ def _descriptor_matches(first, second, first_region, second_region):
             and pair[0].distance < 0.80 * pair[1].distance
             and reverse.get(pair[0].trainIdx) == pair[0].queryIdx
         ]
+        matches.sort(
+            key=lambda match: (match.queryIdx, match.trainIdx, match.distance)
+        )
     except cv2.error:
         return empty, empty
 
@@ -475,6 +511,11 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
         )
     except cv2.error:
         detected = None
+
+    if detected is not None:
+        points = detected.reshape(-1, 2)
+        order = np.lexsort((points[:, 0], points[:, 1]))
+        detected = points[order].reshape(-1, 1, 2)
 
     source, target = _flow_matches(
         first_gray, second_gray, detected, second_exclusion
@@ -587,7 +628,8 @@ def _mask_is_outlier(seed, predictions):
     )
 
 
-def _fill_short_gaps(quads, confidence, status, surfaces, occluders):
+def _fill_short_gaps(quads, confidence, status, occluders):
+    """Fill every bounded gap of at most 12 frames, including masked gaps."""
     valid = np.isfinite(quads).all(axis=(1, 2))
     boundaries = np.diff(np.r_[False, ~valid, False].astype(np.int8))
     starts = np.flatnonzero(boundaries == 1)
@@ -597,36 +639,36 @@ def _fill_short_gaps(quads, confidence, status, surfaces, occluders):
         length = int(stop - start)
         if length > 12 or start == 0 or stop == len(quads):
             continue
-        if any(surfaces[index] is not None for index in range(start, stop)):
-            continue
 
-        filled = []
-        occluded_gap = False
+        left = quads[start - 1].copy()
+        right = quads[stop].copy()
+        quality = min(
+            0.5, 0.5 * min(confidence[start - 1], confidence[stop])
+        )
+
         for index in range(start, stop):
             fraction = (index - start + 1) / (length + 1)
-            quad = (1.0 - fraction) * quads[start - 1] + fraction * quads[stop]
+            quad = (1.0 - fraction) * left + fraction * right
             if not _valid_quad(quad, min_area=1.0):
-                break
+                # Extreme endpoint rotations can collapse a corner blend.
+                # Preserve an endpoint's convex shape at the blended center.
+                endpoint = left if fraction <= 0.5 else right
+                quad = endpoint - endpoint.mean(axis=0) + quad.mean(axis=0)
+
+            occluded = False
             if occluders[index] is not None:
                 expected = _polygon_mask(quad, occluders[index].shape) != 0
-                if np.any(expected & occluders[index]):
-                    occluded_gap = True
-                    break
-            filled.append(quad)
+                occluded = bool(np.any(expected & occluders[index]))
 
-        if len(filled) != length or occluded_gap:
-            continue
-
-        quality = 0.5 * min(confidence[start - 1], confidence[stop])
-        quads[start:stop] = np.asarray(filled)
-        confidence[start:stop] = min(0.5, quality)
-        status[start:stop] = ["ok"] * length
+            quads[index] = quad
+            confidence[index] = quality
+            status[index] = "occluded" if occluded else "ok"
 
 
 def propagate_quad(
     frames, ref_idx, ref_quad, surface_masks=None, occluder_masks=None
 ) -> dict:
-    """Track both ways, re-acquire complete surfaces, and fill short bounded gaps."""
+    """Track deterministically, re-acquire surfaces, and fill short bounded gaps."""
     frames = list(frames)
     count = len(frames)
     if (
@@ -650,6 +692,10 @@ def propagate_quad(
     reference = np.asarray(ref_quad, dtype=np.float32)
     if not _valid_quad(reference):
         raise ValueError("ref_quad must be a finite clockwise convex quad")
+
+    # Reset stochastic OpenCV operations for each invocation. This module
+    # does not use a NumPy RNG or alter NumPy's global random state.
+    cv2.setRNGSeed(0)
 
     height, width = frame_shape[:2]
     factor = min(1.0, 960.0 / max(height, width))
@@ -691,6 +737,7 @@ def propagate_quad(
     quality = np.zeros(count, dtype=np.float64)
     inliers = np.zeros(count, dtype=np.int32)
     ignored_masks = np.zeros(count, dtype=bool)
+    supported_masks = np.zeros(count, dtype=bool)
 
     # OpenCV resizing maps pixel centers, rather than pixel-array edges.
     scaled_reference = (reference.astype(np.float64) + 0.5) * scale - 0.5
@@ -723,7 +770,22 @@ def propagate_quad(
                 disagrees = (
                     candidate is not None and not _quads_agree(candidate, seed)
                 )
-                if needs_seed or disagrees:
+
+                # A complete mask agreeing with current or last accepted
+                # geometry, backed by twice the minimum homography support,
+                # must not be vetoed by missing or contradictory neighbours.
+                supported_masks[index] = support >= 24 and (
+                    _quads_agree(seed, last_known_quad)
+                    or (
+                        candidate is not None
+                        and _quads_agree(candidate, seed)
+                    )
+                )
+                if supported_masks[index]:
+                    if needs_seed or disagrees:
+                        candidate = seed
+                        candidate_quality = 0.75
+                elif needs_seed or disagrees:
                     predictions = _neighbour_predictions(
                         index,
                         anchor,
@@ -749,7 +811,14 @@ def propagate_quad(
             if candidate is not None:
                 tracked[index] = candidate
                 quality[index] = candidate_quality
-                last_known_quad = candidate
+                # An unresolved mask conflict must not replace the temporal
+                # anchor used to recognize the next agreeing complete mask.
+                if (
+                    seed is None
+                    or ignored_masks[index]
+                    or _quads_agree(candidate, seed)
+                ):
+                    last_known_quad = candidate
 
     resolved = np.full_like(tracked, np.nan)
     confidence = np.zeros(count, dtype=np.float32)
@@ -772,6 +841,9 @@ def propagate_quad(
         )
         if index == ref_idx:
             # The supplied canonical reference has priority over segmentation.
+            agreement = 1.0
+        elif supported_masks[index]:
+            # Preserve the independently supported decision from propagation.
             agreement = 1.0
         elif ignored_masks[index]:
             agreement = 1.0
@@ -827,7 +899,7 @@ def propagate_quad(
         confidence[index] = np.clip(candidate_quality * agreement, 0.0, 1.0)
         status[index] = "occluded" if occluded else "ok"
 
-    _fill_short_gaps(resolved, confidence, status, surfaces, occluders)
+    _fill_short_gaps(resolved, confidence, status, occluders)
     quads = ((resolved + 0.5) / scale - 0.5).astype(np.float32)
     quads[ref_idx] = reference
 

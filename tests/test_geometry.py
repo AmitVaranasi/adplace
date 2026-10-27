@@ -394,6 +394,63 @@ def test_neighbour_supported_mask_corrects_bad_track_and_continues(monkeypatch):
     assert result["inliers"][3] == 40
 
 
+@pytest.mark.parametrize("ref_idx", [0, 2])
+def test_many_inliers_and_temporally_agreeing_mask_are_never_lost(
+    monkeypatch, ref_idx
+):
+    frames, masks, truth = _small_clip(3)
+    target_index = 2 - ref_idx
+    surfaces = [None] * len(frames)
+    surfaces[target_index] = masks[target_index]
+
+    seed = quad_from_mask(masks[target_index])
+    assert seed is not None
+    assert float(np.linalg.norm(seed - truth[1], axis=1).max()) <= 4.0
+
+    def misleading_pair(first, second, quad, first_exclusion, second_exclusion):
+        candidate, quality, _ = _exact_pair(
+            first, second, quad, first_exclusion, second_exclusion
+        )
+        if int(second[0, 0]) == target_index:
+            candidate = candidate + np.array([18.0, -6.0])
+        return candidate, quality, 60
+
+    monkeypatch.setattr(geometry, "_track_pair", misleading_pair)
+    result = propagate_quad(
+        frames, ref_idx, truth[ref_idx], surface_masks=surfaces
+    )
+
+    # The target is an endpoint, so interpolation cannot conceal rejection.
+    # Its only neighbour also predicts the misleading homography.
+    assert result["status"][target_index] == "ok"
+    assert result["status"] == ["ok"] * len(frames)
+    assert result["inliers"][target_index] == 60
+    assert result["confidence"][target_index] > 0.5
+    error = np.linalg.norm(result["quads"] - truth, axis=2)
+    assert float(error.max()) <= 2.0
+
+
+def test_propagate_quad_is_deterministic_across_identical_runs():
+    frames, masks, truth = _small_clip(9)
+    ref_idx = 4
+
+    cv2.setRNGSeed(17)
+    first = propagate_quad(
+        frames, ref_idx, truth[ref_idx], surface_masks=masks
+    )
+    cv2.setRNGSeed(901)
+    second = propagate_quad(
+        frames, ref_idx, truth[ref_idx], surface_masks=masks
+    )
+
+    assert first["status"] == ["ok"] * len(frames)
+    assert np.isfinite(first["quads"]).all()
+    assert np.count_nonzero(first["inliers"] >= 12) >= len(frames) // 2
+    assert first["status"] == second["status"]
+    for key in ("quads", "confidence", "inliers"):
+        np.testing.assert_array_equal(first[key], second[key])
+
+
 def test_low_confidence_reseed_preserves_canonical_corner_identity(monkeypatch):
     frames, masks, truth = _small_clip(4)
 
@@ -441,6 +498,63 @@ def test_only_short_bracketed_maskless_gaps_are_interpolated(
         assert result["status"][1:-1] == ["lost"] * gap_length
         assert np.isnan(result["quads"][1:-1]).all()
         assert np.all(result["confidence"][1:-1] == 0.0)
+
+
+def test_short_bracketed_gaps_with_masks_and_occlusion_are_interpolated(
+    monkeypatch,
+):
+    count = 14
+    frames, masks, truth = _small_clip(count)
+    monkeypatch.setattr(
+        geometry, "_track_pair", lambda *args: (None, 0.0, 0)
+    )
+    surfaces = [None] + [
+        np.zeros(frames[0].shape[:2], dtype=bool)
+        for _ in range(count - 2)
+    ] + [masks[-1]]
+    occluders = [None] * count
+    occluded_index = 6
+    occluders[occluded_index] = _filled_polygon(
+        truth[occluded_index], frames[0].shape[:2]
+    )
+
+    result = propagate_quad(
+        frames,
+        0,
+        truth[0],
+        surface_masks=surfaces,
+        occluder_masks=occluders,
+    )
+
+    expected_status = ["ok"] * count
+    expected_status[occluded_index] = "occluded"
+    assert result["status"] == expected_status
+    assert np.isfinite(result["quads"]).all()
+    assert np.all(result["inliers"] == 0)
+    assert np.all(result["confidence"][1:-1] > 0.0)
+    assert np.all(result["confidence"][1:-1] <= 0.5)
+    error = np.linalg.norm(result["quads"] - truth, axis=2)
+    assert float(error.max()) <= 2.0
+
+
+def test_short_gap_with_collapsing_corner_blend_remains_finite_and_convex():
+    base = np.array(
+        [[10, 10], [110, 10], [110, 90], [10, 90]], dtype=np.float64
+    )
+    quads = np.stack(
+        (base, np.full((4, 2), np.nan), np.roll(base, 2, axis=0))
+    )
+    original_endpoints = quads[[0, 2]].copy()
+    confidence = np.array([1.0, 0.0, 0.8], dtype=np.float32)
+    status = ["ok", "lost", "ok"]
+
+    geometry._fill_short_gaps(quads, confidence, status, [None] * 3)
+
+    assert status == ["ok"] * 3
+    assert np.isfinite(quads).all()
+    assert geometry._valid_quad(quads[1], min_area=1.0)
+    assert 0.0 < confidence[1] <= 0.5
+    np.testing.assert_array_equal(quads[[0, 2]], original_endpoints)
 
 
 @pytest.mark.parametrize("kind", ["clipped", "occluded"])

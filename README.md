@@ -40,8 +40,8 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 
 | Check | Result | Target |
 |---|---|---|
-| Frames tracked | 95% | — |
-| Corner error vs SAM mask (median / p90) | 1.6 / 3.0 px | ≤ 3 px median |
+| Frames tracked | 100% (deterministic) | — |
+| Corner error vs SAM mask (median / p90 / max) | 1.5 / 3.0 / 3.7 px | ≤ 3 px median |
 | Corner jitter (median / p95) | 0.46 / 2.0 px | no visible slide |
 | Watermark after export (3 brands) | verified, 97–99.6% bits | token recovered |
 | Clean control | 52% bits, not detected | not detected |
