@@ -1,0 +1,234 @@
+<title>Signboard Realism Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single screening column, slate bar above the picture, score strip below, like a QC review station. */
+:root {
+  --bg: #eef0ee; --panel: #ffffff; --ink: #1b1f1d; --muted: #5d6762; --line: #d3d8d4;
+  --accent: #c2410c; --accent-ink: #ffffff; --ok: #1f7a4d; --screen: #0c0e0d;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121513; --panel: #1b1f1d; --ink: #e6ebe8; --muted: #9aa59f; --line: #2c322f;
+  --accent: #f07a3e; --accent-ink: #160b05; --ok: #4cc28a; --screen: #000000; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121513; --panel: #1b1f1d; --ink: #e6ebe8; --muted: #9aa59f; --line: #2c322f;
+  --accent: #f07a3e; --accent-ink: #160b05; --ok: #4cc28a; --screen: #000000; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px; }
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 20px; }
+h1 { font-family: var(--display); font-stretch: 80%; font-weight: 800; font-size: clamp(30px, 6vw, 44px);
+  line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-family: var(--display); font-stretch: 85%; font-weight: 700; font-size: 22px; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 62ch; }
+.muted { color: var(--muted); }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px; display: grid; gap: 14px; }
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+label { font-weight: 700; }
+input[type=text] { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); width: 100%; max-width: 260px; }
+button { font: 700 16px/1 var(--body); border: 0; border-radius: 4px; padding: 14px 20px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); justify-self: start; }
+button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.slate { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 13px/1.4 var(--mono); color: var(--muted);
+  font-variant-numeric: tabular-nums; }
+.slate b { color: var(--ink); font-weight: 600; }
+.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+.screen { background: var(--screen); border-radius: 4px; display: grid; place-items: center; overflow: hidden; }
+.screen video { display: block; max-width: 100%; max-height: 62vh; width: auto; height: auto; }
+.question { font-family: var(--display); font-stretch: 90%; font-weight: 600; font-size: 20px; text-wrap: balance; }
+.scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.scale button { justify-self: stretch; padding: 12px 4px; background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.scale button span { font: 400 11px/1.2 var(--body); color: var(--muted); }
+.scale button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.scale button[aria-pressed="true"] span { color: var(--accent-ink); }
+.ends { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.hint { font-size: 14px; color: var(--muted); min-height: 1.4em; }
+.code { font: 13px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+  padding: 12px; word-break: break-all; user-select: all; }
+.saved { color: var(--ok); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .progress i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid; gap:10px">
+    <div class="eyebrow">Video review · about 3 minutes</div>
+    <h1>How natural do these signs look?</h1>
+  </header>
+
+  <section class="card" id="intro">
+    <p>You'll watch 8 short clips of street signs and screens, 5 seconds each. Some are untouched footage and some have been edited. For each one, rate how natural the main sign or screen looks.</p>
+    <ol class="steps">
+      <li>Watch the clip at least once. It loops, so watch it again if you like.</li>
+      <li>Pick a score from 1 (obvious editing artefacts) to 5 (no visible artefacts).</li>
+      <li>Go with your first impression. There are no right answers.</li>
+    </ol>
+    <div style="display:grid; gap:6px">
+      <label for="initials">Your initials (optional)</label>
+      <input type="text" id="initials" maxlength="8" autocomplete="off" placeholder="e.g. JK">
+    </div>
+    <button id="start">Start</button>
+    <p class="hint" id="resume"></p>
+  </section>
+
+  <section class="card" id="trial" hidden>
+    <div class="slate"><span>Clip <b id="num">1</b> of <b id="total">8</b></span><span>5.0 s loop</span><span>sound off</span></div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="screen"><video id="video" muted playsinline loop preload="auto"></video></div>
+    <div class="question">How visually natural is the main sign or screen in this clip?</div>
+    <div class="scale" id="scale" role="group" aria-label="Score from 1 to 5"></div>
+    <div class="ends"><span>1 = obvious artefacts</span><span>5 = no visible artefacts</span></div>
+    <div class="row"><button id="next" disabled>Next clip</button><span class="hint" id="wait">Watch the clip once to unlock the scores.</span></div>
+  </section>
+
+  <section class="card" id="done" hidden>
+    <h2>Thanks, that's everything.</h2>
+    <p id="savemsg" class="muted">Saving your answers…</p>
+    <div style="display:grid; gap:8px">
+      <p class="muted">If the organiser asks for it, send them this results code:</p>
+      <div class="code" id="code"></div>
+      <div class="row"><button class="ghost" id="copy">Copy code</button><span class="hint" id="copied"></span></div>
+    </div>
+  </section>
+
+  <p class="muted" style="font-size:13px">Footage: Wikimedia Commons, CC BY-SA 4.0 (Wikimedia Foundation; Andy Mabbett; WACN). Brands shown are fictional. Edited clips here are for this test only.</p>
+</div>
+
+<script>
+const IDS = ["s01", "s02", "s03", "s04", "s05", "s06", "s07", "s08"];
+const LABELS = ["Obvious", "Noticeable", "Slight", "Barely", "None"];
+const STORE = "realism-v1";
+const $ = (id) => document.getElementById(id);
+
+function load() { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } }
+function keep(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch {} }
+
+function shuffled(a) {
+  const r = a.slice();
+  for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
+  return r;
+}
+
+let state = load() || { order: shuffled(IDS), scores: {}, initials: "", started: null, finished: null };
+let watched = false;
+let dbRef = null;   // ratings/<viewer id>, when this viewer may save
+let saving = Promise.resolve();
+
+$("total").textContent = IDS.length;
+const answered = Object.keys(state.scores).length;
+if (answered && !state.finished) { $("resume").textContent = `You've rated ${answered} of ${IDS.length}. Start picks up where you left off.`; $("initials").value = state.initials || ""; }
+if (state.finished) showDone();
+
+(async () => {
+  try {
+    const [db, user] = await Promise.all([window.claude?.use?.("db"), window.claude?.use?.("user")]);
+    const id = db && user ? await user.id() : null;
+    if (id) dbRef = db.doc("ratings/" + id);
+    if (state.finished) persist();
+  } catch { dbRef = null; }
+})();
+
+function persist() {
+  if (!dbRef) return Promise.resolve(false);
+  const body = { initials: state.initials, scores: state.scores, order: state.order,
+                 started: state.started, finished: state.finished, version: 1 };
+  saving = saving.then(() => dbRef.set(body).then(() => true, () => false));
+  return saving;
+}
+
+function code() {
+  const s = state.order.filter((id) => state.scores[id]).map((id) => id.slice(1) + state.scores[id]).join("");
+  return `RC1-${(state.initials || "anon").replace(/[^A-Za-z0-9]/g, "")}-${s}`;
+}
+
+$("scale").innerHTML = LABELS.map((l, i) =>
+  `<button type="button" data-v="${i + 1}" aria-pressed="false" disabled>${i + 1}<span>${l}</span></button>`).join("");
+
+function current() { return state.order.findIndex((id) => !state.scores[id]); }
+
+function show() {
+  const i = current();
+  if (i < 0) return finish();
+  const id = state.order[i];
+  watched = false;
+  $("num").textContent = i + 1;
+  $("bar").style.width = `${(100 * i) / IDS.length}%`;
+  $("next").disabled = true;
+  $("wait").textContent = "Watch the clip once to unlock the scores.";
+  for (const b of $("scale").children) { b.disabled = true; b.setAttribute("aria-pressed", "false"); }
+  const v = $("video");
+  v.src = `clips/${id}.mp4`;
+  v.play().catch(() => {});
+}
+
+$("video").addEventListener("timeupdate", (e) => {
+  const v = e.target;
+  // A loop restarts currentTime, so unlock once playback has reached near the end.
+  if (!watched && v.duration && v.currentTime >= v.duration - 0.3) unlock();
+});
+
+function unlock() {
+  watched = true;
+  $("wait").textContent = "";
+  for (const b of $("scale").children) b.disabled = false;
+}
+
+$("scale").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-v]");
+  if (!b || b.disabled) return;
+  for (const o of $("scale").children) o.setAttribute("aria-pressed", String(o === b));
+  $("next").disabled = false;
+  $("next").dataset.v = b.dataset.v;
+});
+
+$("next").addEventListener("click", () => {
+  const id = state.order[current()];
+  state.scores[id] = Number($("next").dataset.v);
+  keep(state);
+  persist();
+  show();
+});
+
+$("start").addEventListener("click", () => {
+  state.initials = $("initials").value.trim().slice(0, 8);
+  state.started = state.started || new Date().toISOString();
+  keep(state);
+  $("intro").hidden = true;
+  $("trial").hidden = false;
+  show();
+});
+
+async function finish() {
+  state.finished = state.finished || new Date().toISOString();
+  keep(state);
+  showDone();
+  const ok = await persist();
+  $("savemsg").innerHTML = ok ? '<span class="saved">Saved.</span> Your answers reached the organiser.'
+    : "Your answers couldn't be saved automatically from this account. Please copy the code below and send it to the organiser.";
+}
+
+function showDone() {
+  $("intro").hidden = true; $("trial").hidden = true; $("done").hidden = false;
+  $("video").removeAttribute("src");
+  $("code").textContent = code();
+  if (!dbRef) $("savemsg").textContent = "Please copy the code below and send it to the organiser.";
+}
+
+$("copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(code()).then(() => { $("copied").textContent = "Copied."; },
+    () => { const r = document.createRange(); r.selectNodeContents($("code")); getSelection().removeAllRanges(); getSelection().addRange(r); $("copied").textContent = "Selected. Press Ctrl+C or Cmd+C."; });
+});
+</script>

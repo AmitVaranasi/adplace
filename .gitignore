@@ -10,3 +10,5 @@ assets/clips/
 ckpts/
 .playwright-mcp/
 __pycache__/
+eval/stage/
+eval/rating/

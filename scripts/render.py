@@ -60,8 +60,11 @@ def encode(frames, fps, path, crf=18):
         raise SystemExit(f"ffmpeg failed writing {path}")
 
 
-def render_campaign(clip, cache, brand, emissive=False):
-    """Composite, label, watermark, export and verify one campaign on one analysed clip. Returns the report dict."""
+def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None):
+    """Composite, label, watermark, export and verify one campaign on one analysed clip. Returns the report dict.
+
+    label=False is only for the blinded realism rating (the label would give the edit away); never for distribution.
+    """
     frames, fps = read_frames(clip)
     quads = np.load(Path(cache) / "quads.npy")
     occ_file = Path(cache) / "occluders.npz"
@@ -84,17 +87,19 @@ def render_campaign(clip, cache, brand, emissive=False):
     t0 = time.time()
     placed = composite.render_clip(frames, quads, creative, occluder_masks=occluders, emissive=emissive)
     timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
-    placed = [add_label(f) for f in placed]
+    if label:
+        placed = [add_label(f) for f in placed]
     t0 = time.time()
     marked = watermark.embed(placed, c["campaign_token"])
     timings["watermark_s"] = round(time.time() - t0, 1)
 
-    out = ROOT / "outputs" / f"{Path(clip).stem}_{brand}.mp4"
+    out = Path(out_dir or ROOT / "outputs") / f"{Path(clip).stem}_{brand}.mp4"
+    out.parent.mkdir(parents=True, exist_ok=True)
     encode(marked, fps, out)
     exported, _ = read_frames(out)  # verify the exact exported file
     result = watermark.verify(exported, tokens)
     report = {"clip": clip, "brand": brand, "campaign_token": c["campaign_token"], "output": str(out),
-              "frames": len(frames), "tracked_frames": int(np.isfinite(quads).all(axis=(1, 2)).sum()),
+              "frames": len(frames), "label": label, "tracked_frames": int(np.isfinite(quads).all(axis=(1, 2)).sum()),
               "timings": timings, "verify": result, "verified": result["campaign"] == c["campaign_token"]}
     out.with_suffix(".json").write_text(json.dumps(report, indent=2))
     return report
