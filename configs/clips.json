@@ -1,0 +1,22 @@
+{
+  "assets/clips/billboard_night.mp4": {
+    "context_tags": [],
+    "surface": "billboard",
+    "emissive": true
+  },
+  "assets/clips/billboard_night_occluded.mp4": {
+    "context_tags": [
+      "synthetic_occluder"
+    ],
+    "surface": "billboard",
+    "emissive": true
+  },
+  "assets/clips/roadside_sign.mp4": {
+    "context_tags": [
+      "safety_signage"
+    ],
+    "surface": "sign",
+    "emissive": false,
+    "note": "Road-safety sign: never a placement in demos; kept as a technical tracking/lighting test."
+  }
+}

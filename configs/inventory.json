@@ -18,7 +18,8 @@
       ],
       "contextual_exclusions": [
         "children",
-        "hospital"
+        "hospital",
+        "safety_signage"
       ],
       "preference_tags": [
         "coffee",
@@ -42,7 +43,8 @@
         "sign"
       ],
       "contextual_exclusions": [
-        "funeral"
+        "funeral",
+        "safety_signage"
       ],
       "preference_tags": [
         "running",
@@ -65,7 +67,9 @@
         "poster",
         "screen"
       ],
-      "contextual_exclusions": [],
+      "contextual_exclusions": [
+        "safety_signage"
+      ],
       "preference_tags": [
         "reading",
         "learning",
