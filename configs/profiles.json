@@ -1,0 +1,8 @@
+{
+  "note": "Synthetic demo profiles. Category preferences only; no personal data is collected.",
+  "profiles": [
+    {"profile_id": "viewer-a", "label": "Morning commuter", "preferences": ["coffee", "morning"]},
+    {"profile_id": "viewer-b", "label": "Weekend runner", "preferences": ["running", "fitness"]},
+    {"profile_id": "viewer-c", "label": "Book lover", "preferences": ["reading", "learning"]}
+  ]
+}

@@ -7,3 +7,4 @@ cache/
 outputs/
 assets/clips/
 .env
+ckpts/
