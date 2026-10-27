@@ -29,16 +29,21 @@ def main():
     p.add_argument("clip")
     p.add_argument("--prompt", default="billboard")
     p.add_argument("--chunk", type=int, default=4)
+    p.add_argument("--frames", help="only segment this range 'start:end' (others stay empty), e.g. to fill gaps")
     args = p.parse_args()
 
-    settings = {"model": "facebook/sam3", "prompt": args.prompt, "chunk": args.chunk, "proc_side": 640}
+    settings = {"model": "facebook/sam3", "prompt": args.prompt, "chunk": args.chunk, "proc_side": 640,
+                "frames": args.frames}
     out = cache_dir(args.clip, settings)
     if (out / "surface_masks.npz").exists():
         print("cached:", out)
         return
     frames, fps = read_frames(args.clip)
     t0 = time.time()
-    masks, scores = segment_video(frames, args.prompt, chunk=args.chunk)
+    a, b = (int(v) for v in args.frames.split(":")) if args.frames else (0, len(frames))
+    masks = np.zeros((len(frames),) + frames[0].shape[:2], bool)
+    scores = np.full(len(frames), np.nan)
+    masks[a:b], scores[a:b] = segment_video(frames[a:b], args.prompt, chunk=args.chunk)
     out.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out / "surface_masks.npz", masks=masks, scores=scores)
     meta = {**settings, "clip": str(args.clip), "frames": len(frames), "fps": fps, "size": frames[0].shape[1::-1],

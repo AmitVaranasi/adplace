@@ -45,6 +45,20 @@ def _order_quad(points):
     return np.roll(q, -int(np.argmin(q.sum(axis=1))), axis=0)
 
 
+def _match_corners(quad, previous):
+    """Choose the nearest cyclic ordering without changing winding."""
+    q = np.asarray(quad, dtype=np.float64)
+    choices = np.stack([np.roll(q, shift, axis=0) for shift in range(4)])
+    costs = np.sum((choices - previous) ** 2, axis=(1, 2))
+    return choices[int(np.argmin(costs))].copy()
+
+
+def _quads_agree(first, second):
+    scale = np.sqrt(min(_signed_area(first), _signed_area(second)))
+    tolerance = max(4.0, 0.035 * scale)
+    return bool(np.max(np.linalg.norm(first - second, axis=1)) <= tolerance)
+
+
 def _polygon_mask(quad, shape):
     result = np.zeros(shape, dtype=np.uint8)
     coordinates = np.rint(np.asarray(quad) * 16.0).astype(np.int32)
@@ -212,31 +226,46 @@ def _prepare_masks(masks, count, original_shape, tracking_size):
     return prepared
 
 
-def _tracking_region(quad, shape):
+def _mask_seed(surface, occluder):
+    """Only complete, unoccluded masks may establish new canonical corners."""
+    if surface is None or not surface.any():
+        return None
+    if (
+        surface[:2].any()
+        or surface[-2:].any()
+        or surface[:, :2].any()
+        or surface[:, -2:].any()
+    ):
+        return None
+
+    quad = quad_from_mask(surface)
+    if quad is None:
+        return None
+
+    if occluder is not None:
+        ignored = cv2.dilate(
+            occluder.astype(np.uint8), np.ones((5, 5), dtype=np.uint8)
+        )
+        if np.any((_polygon_mask(quad, surface.shape) != 0) & (ignored != 0)):
+            return None
+    return quad.astype(np.float64)
+
+
+def _tracking_region(quad, shape, expansion=1.0):
     region = _polygon_mask(quad, shape)
     lengths = np.linalg.norm(np.roll(quad, -1, axis=0) - quad, axis=1)
-    band = int(np.clip(0.28 * float(lengths.min()), 14, 96))
+    band = int(round(expansion * np.clip(0.45 * lengths.min(), 24, 128)))
     kernel = np.ones((2 * band + 1, 2 * band + 1), dtype=np.uint8)
     return cv2.dilate(region, kernel)
 
 
-def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion):
-    region = _tracking_region(quad, first_gray.shape)
-    if first_exclusion is not None:
-        region[first_exclusion != 0] = 0
+def _flow_matches(first, second, points, second_exclusion, initial=None):
+    empty = np.empty((0, 2), dtype=np.float32)
+    if points is None or len(points) == 0:
+        return empty, empty
 
-    detected = cv2.goodFeaturesToTrack(
-        first_gray,
-        maxCorners=600,
-        qualityLevel=0.01,
-        minDistance=6.0,
-        mask=region,
-        blockSize=7,
-    )
-    if detected is None or len(detected) < 12:
-        return None, 0.0, 0
-
-    flow_options = {
+    source = np.asarray(points, dtype=np.float32).reshape(-1, 1, 2)
+    options = {
         "winSize": (25, 25),
         "maxLevel": 3,
         "criteria": (
@@ -245,19 +274,24 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
             0.01,
         ),
     }
+    guess = None
+    flags = 0
+    if initial is not None:
+        guess = np.asarray(initial, dtype=np.float32).reshape(-1, 1, 2).copy()
+        flags = cv2.OPTFLOW_USE_INITIAL_FLOW
+
     try:
         forward, forward_status, _ = cv2.calcOpticalFlowPyrLK(
-            first_gray, second_gray, detected, None, **flow_options
+            first, second, source, guess, flags=flags, **options
         )
     except cv2.error:
-        return None, 0.0, 0
-
+        return empty, empty
     if forward is None or forward_status is None:
-        return None, 0.0, 0
+        return empty, empty
 
-    source = detected.reshape(-1, 2)
+    source = source.reshape(-1, 2)
     target = forward.reshape(-1, 2)
-    height, width = first_gray.shape
+    height, width = first.shape
     keep = (
         forward_status.ravel().astype(bool)
         & np.isfinite(target).all(axis=1)
@@ -272,31 +306,38 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
         keep = second_exclusion[pixels[:, 1], pixels[:, 0]] == 0
         source, target = source[keep], target[keep]
     if len(source) < 12:
-        return None, 0.0, 0
+        return empty, empty
 
     try:
+        # A good forward match supplies the reverse initialization. Starting the
+        # reverse search at the destination loses large pans unnecessarily.
         backward, backward_status, _ = cv2.calcOpticalFlowPyrLK(
-            second_gray,
-            first_gray,
+            second,
+            first,
             target.reshape(-1, 1, 2),
-            None,
-            **flow_options,
+            source.reshape(-1, 1, 2).copy(),
+            flags=cv2.OPTFLOW_USE_INITIAL_FLOW,
+            **options,
         )
     except cv2.error:
-        return None, 0.0, 0
-
+        return empty, empty
     if backward is None or backward_status is None:
-        return None, 0.0, 0
+        return empty, empty
+
     backward = backward.reshape(-1, 2)
     keep = (
         backward_status.ravel().astype(bool)
         & np.isfinite(backward).all(axis=1)
         & (np.linalg.norm(backward - source, axis=1) <= 1.0)
     )
-    source, target = source[keep], target[keep]
+    return source[keep], target[keep]
+
+
+def _fit_motion(source, target, quad, region):
     if len(source) < 12:
         return None, 0.0, 0
 
+    inlier_count = 0
     try:
         homography, consensus = cv2.findHomography(
             source,
@@ -315,9 +356,7 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
         if inlier_count < 12 or ratio < 0.50:
             return None, 0.0, inlier_count
 
-        support_area = float(
-            cv2.contourArea(cv2.convexHull(source[accepted]))
-        )
+        support_area = float(cv2.contourArea(cv2.convexHull(source[accepted])))
         if support_area < max(64.0, 0.02 * np.count_nonzero(region)):
             return None, 0.0, inlier_count
 
@@ -329,7 +368,7 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
             source[accepted].reshape(-1, 1, 2), homography
         ).reshape(-1, 2)
     except cv2.error:
-        return None, 0.0, 0
+        return None, 0.0, inlier_count
 
     residual = float(
         np.median(np.linalg.norm(projected - target[accepted], axis=1))
@@ -345,6 +384,7 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
         return None, 0.0, inlier_count
 
     candidate = homogeneous[:, :2] / denominators[:, None]
+    height, width = region.shape
     if (
         not _valid_quad(candidate)
         or np.max(np.abs(candidate)) > 8.0 * max(height, width)
@@ -372,13 +412,106 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
     return candidate, float(np.clip(confidence, 0.0, 1.0)), inlier_count
 
 
+def _descriptor_matches(first, second, first_region, second_region):
+    empty = np.empty((0, 2), dtype=np.float32)
+    try:
+        detector = cv2.ORB_create(
+            nfeatures=1800,
+            edgeThreshold=15,
+            fastThreshold=7,
+        )
+        first_keys, first_descriptors = detector.detectAndCompute(
+            first, first_region
+        )
+        second_keys, second_descriptors = detector.detectAndCompute(
+            second, second_region
+        )
+        if (
+            first_descriptors is None
+            or second_descriptors is None
+            or len(first_descriptors) < 12
+            or len(second_descriptors) < 12
+        ):
+            return empty, empty
+
+        matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+        pairs = matcher.knnMatch(first_descriptors, second_descriptors, k=2)
+        reverse = {
+            match.queryIdx: match.trainIdx
+            for match in matcher.match(second_descriptors, first_descriptors)
+        }
+        matches = [
+            pair[0]
+            for pair in pairs
+            if len(pair) == 2
+            and pair[0].distance < 0.80 * pair[1].distance
+            and reverse.get(pair[0].trainIdx) == pair[0].queryIdx
+        ]
+    except cv2.error:
+        return empty, empty
+
+    source = np.asarray(
+        [first_keys[match.queryIdx].pt for match in matches], dtype=np.float32
+    ).reshape(-1, 2)
+    target = np.asarray(
+        [second_keys[match.trainIdx].pt for match in matches], dtype=np.float32
+    ).reshape(-1, 2)
+    return source, target
+
+
+def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion):
+    region = _tracking_region(quad, first_gray.shape)
+    if first_exclusion is not None:
+        region[first_exclusion != 0] = 0
+
+    try:
+        detected = cv2.goodFeaturesToTrack(
+            first_gray,
+            maxCorners=800,
+            qualityLevel=0.01,
+            minDistance=5.0,
+            mask=region,
+            blockSize=5,
+        )
+    except cv2.error:
+        detected = None
+
+    source, target = _flow_matches(
+        first_gray, second_gray, detected, second_exclusion
+    )
+    flow_result = _fit_motion(source, target, quad, region)
+    if flow_result[0] is not None and flow_result[1] >= 0.30:
+        return flow_result
+
+    # Descriptors provide a separate initialization when pyramidal LK loses
+    # the surround during a large pan or a change in the surface's content.
+    second_region = _tracking_region(quad, second_gray.shape, expansion=1.8)
+    if second_exclusion is not None:
+        second_region[second_exclusion != 0] = 0
+    source, target = _descriptor_matches(
+        first_gray, second_gray, region, second_region
+    )
+    descriptor_result = _fit_motion(source, target, quad, region)
+    refined_source, refined_target = _flow_matches(
+        first_gray, second_gray, source, second_exclusion, initial=target
+    )
+    refined_result = _fit_motion(refined_source, refined_target, quad, region)
+
+    results = (flow_result, descriptor_result, refined_result)
+    valid = [result for result in results if result[0] is not None]
+    if valid:
+        return max(valid, key=lambda result: result[1])
+    return None, 0.0, max(result[2] for result in results)
+
+
 def _assess_frame(quad, shape, surface_mask, occluder_mask):
     expected = _polygon_mask(quad, shape)
+    expected_pixels = expected != 0
     occluded = False
     usable = np.ones(shape, dtype=bool)
 
     if occluder_mask is not None:
-        occluded = bool(np.any((expected != 0) & occluder_mask))
+        occluded = bool(np.any(expected_pixels & occluder_mask))
         ignored = cv2.dilate(
             occluder_mask.astype(np.uint8), np.ones((5, 5), dtype=np.uint8)
         )
@@ -387,10 +520,12 @@ def _assess_frame(quad, shape, surface_mask, occluder_mask):
     if surface_mask is None:
         return 1.0, occluded
 
-    visible_expected = (expected != 0) & usable
+    visible_expected = expected_pixels & usable
     expected_count = int(np.count_nonzero(visible_expected))
-    # Invisible or nearly invisible surfaces provide no negative mask evidence.
-    if expected_count < 32:
+    total_count = int(np.count_nonzero(expected_pixels))
+    # Small tracking/rasterization errors can leave a thin apparent sliver
+    # around a fully covered surface. That sliver is not negative evidence.
+    if expected_count < max(32, 0.08 * total_count):
         return 1.0, occluded
 
     observed = surface_mask & usable
@@ -407,10 +542,91 @@ def _assess_frame(quad, shape, surface_mask, occluder_mask):
     return float(agreement), occluded
 
 
+def _neighbour_predictions(
+    index, anchor, tracked, seeds, ignored_masks, grays, exclusions
+):
+    predictions = []
+    for neighbour in (index - 1, index + 1):
+        if not 0 <= neighbour < len(grays):
+            continue
+
+        tracked_neighbour = tracked[neighbour]
+        seed = None if ignored_masks[neighbour] else seeds[neighbour]
+        if seed is not None:
+            seed = _match_corners(seed, anchor)
+            if (
+                np.isfinite(tracked_neighbour).all()
+                and _quads_agree(tracked_neighbour, seed)
+            ):
+                source_quad = tracked_neighbour
+            else:
+                source_quad = seed
+        elif np.isfinite(tracked_neighbour).all():
+            source_quad = tracked_neighbour
+        else:
+            continue
+
+        source_quad = _match_corners(source_quad, anchor)
+        prediction, quality, _ = _track_pair(
+            grays[neighbour],
+            grays[index],
+            source_quad,
+            exclusions[neighbour],
+            exclusions[index],
+        )
+        if prediction is not None and quality >= 0.30:
+            predictions.append(prediction)
+    return predictions
+
+
+def _mask_is_outlier(seed, predictions):
+    return bool(
+        len(predictions) == 2
+        and _quads_agree(predictions[0], predictions[1])
+        and all(not _quads_agree(seed, prediction) for prediction in predictions)
+    )
+
+
+def _fill_short_gaps(quads, confidence, status, surfaces, occluders):
+    valid = np.isfinite(quads).all(axis=(1, 2))
+    boundaries = np.diff(np.r_[False, ~valid, False].astype(np.int8))
+    starts = np.flatnonzero(boundaries == 1)
+    stops = np.flatnonzero(boundaries == -1)
+
+    for start, stop in zip(starts, stops):
+        length = int(stop - start)
+        if length > 12 or start == 0 or stop == len(quads):
+            continue
+        if any(surfaces[index] is not None for index in range(start, stop)):
+            continue
+
+        filled = []
+        occluded_gap = False
+        for index in range(start, stop):
+            fraction = (index - start + 1) / (length + 1)
+            quad = (1.0 - fraction) * quads[start - 1] + fraction * quads[stop]
+            if not _valid_quad(quad, min_area=1.0):
+                break
+            if occluders[index] is not None:
+                expected = _polygon_mask(quad, occluders[index].shape) != 0
+                if np.any(expected & occluders[index]):
+                    occluded_gap = True
+                    break
+            filled.append(quad)
+
+        if len(filled) != length or occluded_gap:
+            continue
+
+        quality = 0.5 * min(confidence[start - 1], confidence[stop])
+        quads[start:stop] = np.asarray(filled)
+        confidence[start:stop] = min(0.5, quality)
+        status[start:stop] = ["ok"] * length
+
+
 def propagate_quad(
     frames, ref_idx, ref_quad, surface_masks=None, occluder_masks=None
 ) -> dict:
-    """Track in both directions; masks validate geometry without fitting it."""
+    """Track both ways, re-acquire complete surfaces, and fill short bounded gaps."""
     frames = list(frames)
     count = len(frames)
     if (
@@ -466,49 +682,154 @@ def propagate_quad(
         else cv2.dilate(mask.astype(np.uint8), exclusion_kernel)
         for mask in occluders
     ]
+    seeds = [
+        _mask_seed(surface, occluder)
+        for surface, occluder in zip(surfaces, occluders)
+    ]
 
-    quads = np.full((count, 4, 2), np.nan, dtype=np.float32)
-    confidence = np.zeros(count, dtype=np.float32)
+    tracked = np.full((count, 4, 2), np.nan, dtype=np.float64)
+    quality = np.zeros(count, dtype=np.float64)
     inliers = np.zeros(count, dtype=np.int32)
-    status = ["lost"] * count
+    ignored_masks = np.zeros(count, dtype=bool)
 
     # OpenCV resizing maps pixel centers, rather than pixel-array edges.
     scaled_reference = (reference.astype(np.float64) + 0.5) * scale - 0.5
+    tracked[ref_idx] = scaled_reference
+    quality[ref_idx] = 1.0
 
-    def save(index, tracked_quad, quality):
-        agreement, occluded = _assess_frame(
-            tracked_quad,
-            grays[index].shape,
-            surfaces[index],
-            occluders[index],
-        )
-        if agreement < 0.60:
-            return
-        quads[index] = ((tracked_quad + 0.5) / scale - 0.5).astype(np.float32)
-        confidence[index] = np.clip(quality * agreement, 0.0, 1.0)
-        status[index] = "occluded" if occluded else "ok"
-
-    save(ref_idx, scaled_reference, 1.0)
     for direction in (-1, 1):
         previous = ref_idx
-        current_quad = scaled_reference.copy()
+        active_quad = scaled_reference.copy()
+        last_known_quad = scaled_reference.copy()
         stop = count if direction == 1 else -1
-        for index in range(ref_idx + direction, stop, direction):
-            candidate, quality, support = _track_pair(
-                grays[previous],
-                grays[index],
-                current_quad,
-                exclusions[previous],
-                exclusions[index],
-            )
-            inliers[index] = support
-            if candidate is None:
-                break
 
-            save(index, candidate, quality)
-            # Reliable image motion can bridge a transient segmentation error.
-            current_quad = candidate
+        for index in range(ref_idx + direction, stop, direction):
+            candidate, candidate_quality, support = None, 0.0, 0
+            if active_quad is not None:
+                candidate, candidate_quality, support = _track_pair(
+                    grays[previous],
+                    grays[index],
+                    active_quad,
+                    exclusions[previous],
+                    exclusions[index],
+                )
+            inliers[index] = support
+
+            seed = seeds[index]
+            if seed is not None:
+                anchor = candidate if candidate is not None else last_known_quad
+                seed = _match_corners(seed, anchor)
+                needs_seed = candidate is None or candidate_quality < 0.30
+                disagrees = (
+                    candidate is not None and not _quads_agree(candidate, seed)
+                )
+                if needs_seed or disagrees:
+                    predictions = _neighbour_predictions(
+                        index,
+                        anchor,
+                        tracked,
+                        seeds,
+                        ignored_masks,
+                        grays,
+                        exclusions,
+                    )
+                    if _mask_is_outlier(seed, predictions):
+                        ignored_masks[index] = True
+                    elif needs_seed or any(
+                        _quads_agree(seed, prediction)
+                        for prediction in predictions
+                    ):
+                        candidate = seed
+                        candidate_quality = 0.75
+
+            # Failure ends this local chain, but scanning continues until a
+            # later complete mask establishes a new adjacent-frame chain.
             previous = index
+            active_quad = candidate
+            if candidate is not None:
+                tracked[index] = candidate
+                quality[index] = candidate_quality
+                last_known_quad = candidate
+
+    resolved = np.full_like(tracked, np.nan)
+    confidence = np.zeros(count, dtype=np.float32)
+    status = ["lost"] * count
+
+    for index, candidate in enumerate(tracked):
+        if not np.isfinite(candidate).all():
+            continue
+
+        agreement, occluded = _assess_frame(
+            candidate, grays[index].shape, surfaces[index], occluders[index]
+        )
+        candidate_quality = quality[index]
+        seed = seeds[index]
+        if seed is not None:
+            seed = _match_corners(seed, candidate)
+
+        conflict = agreement < 0.60 or (
+            seed is not None and not _quads_agree(candidate, seed)
+        )
+        if index == ref_idx:
+            # The supplied canonical reference has priority over segmentation.
+            agreement = 1.0
+        elif ignored_masks[index]:
+            agreement = 1.0
+            candidate_quality *= 0.75
+        elif conflict:
+            predictions = _neighbour_predictions(
+                index,
+                candidate,
+                tracked,
+                seeds,
+                ignored_masks,
+                grays,
+                exclusions,
+            )
+            track_supported = len(predictions) == 2 and all(
+                _quads_agree(candidate, prediction)
+                for prediction in predictions
+            )
+            seed_outlier = (
+                seed is not None and _mask_is_outlier(seed, predictions)
+            )
+            if track_supported and (
+                seed is None
+                or all(
+                    not _quads_agree(seed, prediction)
+                    for prediction in predictions
+                )
+            ):
+                agreement = 1.0
+                candidate_quality *= 0.75
+            elif (
+                seed is not None
+                and not seed_outlier
+                and any(
+                    _quads_agree(seed, prediction)
+                    for prediction in predictions
+                )
+            ):
+                candidate = seed
+                candidate_quality = 0.75
+                agreement, occluded = _assess_frame(
+                    candidate,
+                    grays[index].shape,
+                    surfaces[index],
+                    occluders[index],
+                )
+                if agreement < 0.60:
+                    continue
+            else:
+                continue
+
+        resolved[index] = candidate
+        confidence[index] = np.clip(candidate_quality * agreement, 0.0, 1.0)
+        status[index] = "occluded" if occluded else "ok"
+
+    _fill_short_gaps(resolved, confidence, status, surfaces, occluders)
+    quads = ((resolved + 0.5) / scale - 0.5).astype(np.float32)
+    quads[ref_idx] = reference
 
     return {
         "quads": quads,

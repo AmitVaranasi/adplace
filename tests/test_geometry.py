@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
+import pipeline.geometry as geometry
 from pipeline.geometry import propagate_quad, quad_from_mask, smooth_quads
 
 
@@ -137,6 +138,49 @@ def scene():
     }
 
 
+def _small_clip(count):
+    rng = np.random.default_rng(408)
+    height, width = 180, 260
+    texture = rng.integers(0, 256, size=(height, width), dtype=np.uint8)
+    texture = cv2.GaussianBlur(texture, (0, 0), 0.7)
+    wall = cv2.merge((texture, texture, texture))
+    base = np.array(
+        [[60, 50], [170, 50], [170, 125], [60, 125]], dtype=np.float32
+    )
+    wall[_filled_polygon(base, (height, width))] = (205, 205, 205)
+
+    frames, masks, truth = [], [], []
+    for index in range(count):
+        delta = np.array([1.5 * index, 0.75 * index], dtype=np.float32)
+        quad = base + delta
+        motion = np.array(
+            [[1.0, 0.0, delta[0]], [0.0, 1.0, delta[1]]],
+            dtype=np.float32,
+        )
+        frame = cv2.warpAffine(
+            wall,
+            motion,
+            (width, height),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REFLECT_101,
+        )
+        # A marker outside the tracking region identifies frames in test doubles.
+        frame[0, 0] = index
+        frames.append(frame)
+        masks.append(_filled_polygon(quad, (height, width)))
+        truth.append(quad)
+    return frames, masks, np.asarray(truth, dtype=np.float32)
+
+
+def _exact_pair(first, second, quad, first_exclusion, second_exclusion):
+    first_index = int(first[0, 0])
+    second_index = int(second[0, 0])
+    assert abs(second_index - first_index) == 1
+    delta = second_index - first_index
+    motion = np.array([1.5 * delta, 0.75 * delta])
+    return np.asarray(quad, dtype=np.float64) + motion, 0.9, 40
+
+
 def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     reference_index = scene["ref_idx"]
     reference = scene["truth"][reference_index]
@@ -163,7 +207,9 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     assert np.all((confidence > 0.0) & (confidence <= 1.0))
     np.testing.assert_array_equal(quads[reference_index], reference)
     assert inliers[reference_index] == 0
-    assert np.all(np.delete(inliers, reference_index) >= 12)
+    assert np.all(inliers >= 0)
+    # Re-seeding is allowed to have no homography support.
+    assert np.count_nonzero(inliers >= 12) >= count // 2
 
     error = np.linalg.norm(quads - scene["truth"], axis=2)
     assert float(np.median(error)) <= 3.0
@@ -184,7 +230,6 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     ).any(axis=1)
     assert np.count_nonzero(clipped) >= 2
     assert np.isfinite(quads[clipped]).all()
-    # The canonical corners remain outside the image, rather than being refit.
     assert quads[-1, 0, 0] < -20.0
 
     edges = np.roll(quads, -1, axis=1) - quads
@@ -196,7 +241,7 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     assert np.all(crosses > 0.0)
 
 
-def test_mask_disagreement_drops_frame_but_preserves_motion_track(scene):
+def test_empty_mask_outlier_preserves_supported_motion_track(scene):
     indices = [7, 8, 9]
     surfaces = [scene["surfaces"][index] for index in indices]
     surfaces[1] = np.zeros((720, 1280), dtype=bool)
@@ -209,12 +254,13 @@ def test_mask_disagreement_drops_frame_but_preserves_motion_track(scene):
         occluder_masks=[scene["occluders"][index] for index in indices],
     )
 
-    assert result["status"] == ["ok", "lost", "occluded"]
-    assert np.isnan(result["quads"][1]).all()
-    assert result["confidence"][1] == 0.0
+    assert result["status"] == ["ok", "occluded", "occluded"]
+    assert np.isfinite(result["quads"]).all()
     assert result["inliers"][1] >= 12
-    assert np.isfinite(result["quads"][2]).all()
-    error = np.linalg.norm(result["quads"][2] - scene["truth"][9], axis=1)
+    assert result["confidence"][1] > 0.0
+    error = np.linalg.norm(
+        result["quads"] - scene["truth"][indices], axis=2
+    )
     assert float(np.median(error)) <= 3.0
 
 
@@ -237,6 +283,7 @@ def test_fully_occluded_surface_is_not_negative_mask_evidence(scene):
 
     assert result["status"] == ["ok", "occluded"]
     assert np.isfinite(result["quads"][1]).all()
+    assert result["inliers"][1] >= 12
     error = np.linalg.norm(result["quads"][1] - scene["truth"][8], axis=1)
     assert float(np.median(error)) <= 3.0
 
@@ -253,6 +300,181 @@ def test_missing_feature_support_drops_untrackable_direction():
     assert np.isnan(result["quads"][1:]).all()
     assert np.all(result["confidence"][1:] == 0.0)
     assert np.all(result["inliers"] == 0)
+
+
+@pytest.mark.parametrize("ref_idx", [0, 9])
+def test_reacquires_after_forced_noise_failure_in_both_directions(
+    monkeypatch, ref_idx
+):
+    frames, masks, truth = _small_clip(10)
+    rng = np.random.default_rng(901)
+    damaged = {3, 4, 5}
+    for index in damaged:
+        frames[index] = rng.integers(
+            0, 256, size=frames[index].shape, dtype=np.uint8
+        )
+        frames[index][0, 0] = index
+
+    original_track_pair = geometry._track_pair
+
+    def forced_failure(first, second, quad, first_exclusion, second_exclusion):
+        first_index = int(first[0, 0])
+        second_index = int(second[0, 0])
+        assert abs(second_index - first_index) == 1
+        if first_index in damaged or second_index in damaged:
+            return None, 0.0, 0
+        return original_track_pair(
+            first, second, quad, first_exclusion, second_exclusion
+        )
+
+    monkeypatch.setattr(geometry, "_track_pair", forced_failure)
+    surfaces = [
+        masks[index] if index in {0, 2, 6, 9} else None
+        for index in range(10)
+    ]
+    original_frames = [frame.copy() for frame in frames]
+    result = propagate_quad(
+        frames, ref_idx, truth[ref_idx], surface_masks=surfaces
+    )
+
+    assert result["status"] == ["ok"] * 10
+    assert np.isfinite(result["quads"]).all()
+    error = np.linalg.norm(result["quads"] - truth, axis=2)
+    assert float(np.max(error)) <= 3.5
+    assert np.all(result["inliers"][3:6] == 0)
+    assert np.all(result["confidence"][3:6] > 0.0)
+    assert np.all(result["confidence"][3:6] <= 0.5)
+
+    reacquired = 6 if ref_idx == 0 else 2
+    continued = 7 if ref_idx == 0 else 1
+    assert result["inliers"][reacquired] == 0
+    assert result["confidence"][reacquired] > 0.5
+    assert result["inliers"][continued] >= 12
+    np.testing.assert_array_equal(result["quads"][ref_idx], truth[ref_idx])
+    for frame, original in zip(frames, original_frames):
+        np.testing.assert_array_equal(frame, original)
+
+
+def test_single_shifted_mask_outlier_does_not_reseed_or_drop(monkeypatch):
+    frames, masks, truth = _small_clip(5)
+    masks[2] = _filled_polygon(
+        truth[2] + np.array([45.0, 10.0]), frames[2].shape[:2]
+    )
+    original_masks = [mask.copy() for mask in masks]
+    monkeypatch.setattr(geometry, "_track_pair", _exact_pair)
+
+    result = propagate_quad(frames, 0, truth[0], surface_masks=masks)
+
+    assert result["status"] == ["ok"] * 5
+    np.testing.assert_allclose(result["quads"], truth, atol=1e-5, rtol=0)
+    assert 0.0 < result["confidence"][2] < result["confidence"][1]
+    assert result["inliers"][2] == 40
+    for mask, original in zip(masks, original_masks):
+        np.testing.assert_array_equal(mask, original)
+
+
+def test_neighbour_supported_mask_corrects_bad_track_and_continues(monkeypatch):
+    frames, masks, truth = _small_clip(5)
+
+    def bad_forward_pair(first, second, quad, first_exclusion, second_exclusion):
+        candidate, quality, support = _exact_pair(
+            first, second, quad, first_exclusion, second_exclusion
+        )
+        if int(first[0, 0]) == 1 and int(second[0, 0]) == 2:
+            candidate = candidate + np.array([35.0, -8.0])
+        return candidate, quality, support
+
+    monkeypatch.setattr(geometry, "_track_pair", bad_forward_pair)
+    result = propagate_quad(frames, 0, truth[0], surface_masks=masks)
+
+    assert result["status"] == ["ok"] * 5
+    error = np.linalg.norm(result["quads"] - truth, axis=2)
+    assert float(np.max(error)) <= 2.0
+    assert result["confidence"][2] <= 0.75
+    assert result["inliers"][3] == 40
+
+
+def test_low_confidence_reseed_preserves_canonical_corner_identity(monkeypatch):
+    frames, masks, truth = _small_clip(4)
+
+    def weak_pair(first, second, quad, first_exclusion, second_exclusion):
+        candidate, _, _ = _exact_pair(
+            first, second, quad, first_exclusion, second_exclusion
+        )
+        return candidate + np.array([10.0, 0.0]), 0.15, 12
+
+    monkeypatch.setattr(geometry, "_track_pair", weak_pair)
+    canonical = np.roll(truth, 2, axis=1)
+    result = propagate_quad(frames, 0, canonical[0], surface_masks=masks)
+
+    assert result["status"] == ["ok"] * 4
+    error = np.linalg.norm(result["quads"] - canonical, axis=2)
+    assert float(np.max(error)) <= 2.0
+    assert np.all(result["confidence"][1:] > 0.5)
+    np.testing.assert_array_equal(result["quads"][0], canonical[0])
+
+
+@pytest.mark.parametrize("gap_length", [12, 13])
+def test_only_short_bracketed_maskless_gaps_are_interpolated(
+    monkeypatch, gap_length
+):
+    count = gap_length + 2
+    frames, masks, truth = _small_clip(count)
+    monkeypatch.setattr(
+        geometry, "_track_pair", lambda *args: (None, 0.0, 0)
+    )
+    surfaces = [None] * count
+    surfaces[-1] = masks[-1]
+
+    result = propagate_quad(frames, 0, truth[0], surface_masks=surfaces)
+
+    assert result["status"][0] == result["status"][-1] == "ok"
+    assert result["confidence"][-1] > 0.5
+    assert np.all(result["inliers"] == 0)
+    if gap_length == 12:
+        assert result["status"] == ["ok"] * count
+        assert np.all(result["confidence"][1:-1] > 0.0)
+        assert np.all(result["confidence"][1:-1] <= 0.5)
+        error = np.linalg.norm(result["quads"] - truth, axis=2)
+        assert float(np.max(error)) <= 2.0
+    else:
+        assert result["status"][1:-1] == ["lost"] * gap_length
+        assert np.isnan(result["quads"][1:-1]).all()
+        assert np.all(result["confidence"][1:-1] == 0.0)
+
+
+@pytest.mark.parametrize("kind", ["clipped", "occluded"])
+def test_partial_visible_masks_cannot_reseed_canonical_corners(monkeypatch, kind):
+    height, width = 180, 260
+    frames = [np.full((height, width, 3), 127, dtype=np.uint8) for _ in range(2)]
+    reference = np.array(
+        [[40, 40], [180, 40], [180, 140], [40, 140]], dtype=np.float32
+    )
+    occluders = [None, None]
+    if kind == "clipped":
+        visible_quad = reference - np.array([70.0, 0.0])
+        surface = _filled_polygon(visible_quad, (height, width))
+    else:
+        surface = _filled_polygon(reference, (height, width))
+        occluder = np.zeros((height, width), dtype=bool)
+        occluder[20:161, 20:111] = True
+        surface[occluder] = False
+        occluders[1] = occluder
+
+    monkeypatch.setattr(
+        geometry, "_track_pair", lambda *args: (None, 0.0, 0)
+    )
+    result = propagate_quad(
+        frames,
+        0,
+        reference,
+        surface_masks=[None, surface],
+        occluder_masks=occluders,
+    )
+
+    assert result["status"] == ["ok", "lost"]
+    assert np.isnan(result["quads"][1]).all()
+    assert result["confidence"][1] == 0.0
 
 
 def test_quad_from_noisy_slightly_rounded_perspective_mask():
