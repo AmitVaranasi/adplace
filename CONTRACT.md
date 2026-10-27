@@ -57,3 +57,35 @@ def render_clip(frames, quads, creative_rgba, illum=None, occluder_masks=None, e
 
 ## pipeline/sam_track.py, pipeline/watermark.py, scripts/, app/  (owner: Claude)
 SAM 3 analysis, Video Seal, footage, caching, integration and the demo app.
+
+## pipeline/discover.py  (owner: GLM)
+Deterministic slot facts and inventory filtering. The language model (Muse) only ranks what this module marks
+eligible, and its answer is validated here (spec S6). No model calls in this module.
+```python
+def slot_metrics(quads, status, frame_size, fps, occluder_masks=None) -> dict
+    """Facts about one tracked surface. quads (N,4,2) with NaN where lost, status per frame ("ok"|"occluded"|"lost"),
+    frame_size (w, h). Returns {"frames": N, "visible_frames": int, "on_screen_s": float,
+    "visible_fraction": float, "mean_area_frac": float (quad area / frame area over visible frames),
+    "aspect_ratio": float (width/height of the median visible quad, from mean opposite-edge lengths),
+    "edge_clipped_fraction": float (visible frames with any corner outside the frame),
+    "max_occlusion_frac": float (max over frames of occluder pixels inside the quad / quad area; 0 if no masks),
+    "longest_run_s": float (longest run of consecutive visible frames)}."""
+
+def eligible_pairs(slots, inventory, context_tags=(), ratio_tolerance=0.25, min_on_screen_s=1.0,
+                   min_area_frac=0.01) -> list[dict]
+    """slots: list of {"slot_id", "surface" (e.g. "billboard"), "metrics": slot_metrics(...)}.
+    inventory: configs/inventory.json as a dict. Returns one dict per allowed (slot, campaign) pair:
+    {"slot_id", "brand_id", "campaign_token", "creative_key" (best aspect-ratio match among the campaign's
+    creatives), "ratio_error" (|log(creative/surface)|)}. A pair is excluded if the surface is not in the campaign's
+    eligible_surfaces, any contextual_exclusions tag is in context_tags, ratio_error > log(1 + ratio_tolerance), or the
+    slot fails min_on_screen_s / min_area_frac. Sorted by slot_id then brand_id."""
+
+def validate_choice(choice, eligible) -> dict
+    """choice: model output like {"slot_id": ..., "brand_id": ...} or {"none": true}. Returns the matching eligible pair
+    dict with "status": "ok", or {"status": "no_placement", "reason": str} when the choice is none, malformed, or not
+    in `eligible` (never trust model IDs)."""
+
+def fallback_choice(eligible, slots, inventory, preferences=()) -> dict
+    """Deterministic choice when no model is available: highest score = (overlap of preferences with the campaign's preference_tags,
+    then slot on_screen_s * mean_area_frac, then lower ratio_error). Returns like validate_choice."""
+```
