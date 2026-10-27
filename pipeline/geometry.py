@@ -326,7 +326,15 @@ def _tracking_region(quad, shape, expansion=1.0):
     return cv2.dilate(region, kernel)
 
 
-def _flow_matches(first, second, points, second_exclusion, initial=None):
+def _flow_matches(
+    first,
+    second,
+    points,
+    second_exclusion,
+    initial=None,
+    minimum=12,
+    min_eigenvalue=1e-4,
+):
     empty = np.empty((0, 2), dtype=np.float32)
     if points is None or len(points) == 0:
         return empty, empty
@@ -335,6 +343,7 @@ def _flow_matches(first, second, points, second_exclusion, initial=None):
     options = {
         "winSize": (25, 25),
         "maxLevel": 3,
+        "minEigThreshold": min_eigenvalue,
         "criteria": (
             cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
             30,
@@ -372,12 +381,11 @@ def _flow_matches(first, second, points, second_exclusion, initial=None):
         pixels = np.rint(target).astype(np.int32)
         keep = second_exclusion[pixels[:, 1], pixels[:, 0]] == 0
         source, target = source[keep], target[keep]
-    if len(source) < 12:
+    if len(source) < minimum:
         return empty, empty
 
     try:
-        # A good forward match supplies the reverse initialization. Starting the
-        # reverse search at the destination loses large pans unnecessarily.
+        # A good forward match supplies the reverse initialization.
         backward, backward_status, _ = cv2.calcOpticalFlowPyrLK(
             second,
             first,
@@ -400,12 +408,48 @@ def _flow_matches(first, second, points, second_exclusion, initial=None):
     return source[keep], target[keep]
 
 
+def _motion_quad(quad, homography, shape):
+    """Apply one adjacent-frame motion, rejecting implausible extrapolation."""
+    if homography is None or not np.isfinite(homography).all():
+        return None
+
+    homogeneous = np.column_stack((quad, np.ones(4))) @ homography.T
+    denominators = homogeneous[:, 2]
+    if not (
+        np.all(denominators > 1e-6) or np.all(denominators < -1e-6)
+    ):
+        return None
+
+    candidate = homogeneous[:, :2] / denominators[:, None]
+    height, width = shape
+    if (
+        not _valid_quad(candidate)
+        or np.max(np.abs(candidate)) > 8.0 * max(height, width)
+    ):
+        return None
+
+    area_ratio = _signed_area(candidate) / _signed_area(quad)
+    old_lengths = np.linalg.norm(np.roll(quad, -1, axis=0) - quad, axis=1)
+    new_lengths = np.linalg.norm(
+        np.roll(candidate, -1, axis=0) - candidate, axis=1
+    )
+    length_ratios = new_lengths / old_lengths
+    displacement = float(np.linalg.norm(candidate - quad, axis=1).max())
+    if (
+        not 0.60 <= area_ratio <= 1.70
+        or np.any(length_ratios < 0.65)
+        or np.any(length_ratios > 1.55)
+        or displacement > 0.45 * np.hypot(width, height)
+    ):
+        return None
+    return candidate
+
+
 def _fit_motion(source, target, quad, region, camera=False):
     if len(source) < 12:
         return None, 0.0, 0
 
-    # RANSAC must see the same correspondence order regardless of how a
-    # detector or matcher enumerates otherwise identical features.
+    # Canonical correspondence order makes RANSAC independent of enumeration.
     source = np.asarray(source, dtype=np.float32).reshape(-1, 2)
     target = np.asarray(target, dtype=np.float32).reshape(-1, 2)
     order = np.lexsort(
@@ -438,8 +482,8 @@ def _fit_motion(source, target, quad, region, camera=False):
         support_area = float(cv2.contourArea(cv2.convexHull(source[accepted])))
         if camera:
             height, width = region.shape
-            # A compact surviving cluster can fit a convincing homography
-            # whose extrapolation across a covered poster is very unstable.
+            # Keep online propagation conservative. The separate occlusion
+            # bridge can use sparse similarity fits pinned to both anchors.
             span = np.ptp(source[accepted], axis=0)
             if (
                 support_area < max(64.0, 0.08 * region.size)
@@ -465,34 +509,8 @@ def _fit_motion(source, target, quad, region, camera=False):
     if not np.isfinite(residual) or residual > 1.25:
         return None, 0.0, inlier_count
 
-    homogeneous = np.column_stack((quad, np.ones(4))) @ homography.T
-    denominators = homogeneous[:, 2]
-    if not (
-        np.all(denominators > 1e-6) or np.all(denominators < -1e-6)
-    ):
-        return None, 0.0, inlier_count
-
-    candidate = homogeneous[:, :2] / denominators[:, None]
-    height, width = region.shape
-    if (
-        not _valid_quad(candidate)
-        or np.max(np.abs(candidate)) > 8.0 * max(height, width)
-    ):
-        return None, 0.0, inlier_count
-
-    area_ratio = _signed_area(candidate) / _signed_area(quad)
-    old_lengths = np.linalg.norm(np.roll(quad, -1, axis=0) - quad, axis=1)
-    new_lengths = np.linalg.norm(
-        np.roll(candidate, -1, axis=0) - candidate, axis=1
-    )
-    length_ratios = new_lengths / old_lengths
-    displacement = float(np.linalg.norm(candidate - quad, axis=1).max())
-    if (
-        not 0.60 <= area_ratio <= 1.70
-        or np.any(length_ratios < 0.65)
-        or np.any(length_ratios > 1.55)
-        or displacement > 0.45 * np.hypot(width, height)
-    ):
+    candidate = _motion_quad(quad, homography, region.shape)
+    if candidate is None:
         return None, 0.0, inlier_count
 
     confidence = min(1.0, inlier_count / 80.0) * ratio * np.exp(-residual / 2.0)
@@ -519,13 +537,15 @@ def _ordered_features(keypoints, descriptors):
     return [keypoints[index] for index in order], descriptors[order]
 
 
-def _descriptor_matches(first, second, first_region, second_region):
+def _descriptor_matches(
+    first, second, first_region, second_region, minimum=12, fast_threshold=7
+):
     empty = np.empty((0, 2), dtype=np.float32)
     try:
         detector = cv2.ORB_create(
             nfeatures=1800,
             edgeThreshold=15,
-            fastThreshold=7,
+            fastThreshold=fast_threshold,
         )
         first_keys, first_descriptors = detector.detectAndCompute(
             first, first_region
@@ -536,8 +556,8 @@ def _descriptor_matches(first, second, first_region, second_region):
         if (
             first_descriptors is None
             or second_descriptors is None
-            or len(first_descriptors) < 12
-            or len(second_descriptors) < 12
+            or len(first_descriptors) < minimum
+            or len(second_descriptors) < minimum
         ):
             return empty, empty
 
@@ -576,8 +596,7 @@ def _descriptor_matches(first, second, first_region, second_region):
 
 
 def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion):
-    # During an occluder passage, use the mostly static scene throughout the
-    # frame. A weak local fit must not become the next frame's geometry.
+    # Online propagation remains conservative during an occluder passage.
     camera = first_exclusion is not None or second_exclusion is not None
     region = (
         np.ones(first_gray.shape, dtype=np.uint8)
@@ -611,8 +630,6 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
     if flow_result[0] is not None and flow_result[1] >= 0.30:
         return flow_result
 
-    # Descriptors provide a separate initialization when pyramidal LK loses
-    # the surround during a large pan or a change in the surface's content.
     second_region = (
         np.ones(second_gray.shape, dtype=np.uint8)
         if camera
@@ -640,6 +657,296 @@ def _track_pair(first_gray, second_gray, quad, first_exclusion, second_exclusion
     return None, 0.0, max(result[2] for result in results)
 
 
+def _camera_regions(quad, shape, exclusion, surface=None):
+    """Separate static background and visible surface, with patch margins."""
+    polygon = _polygon_mask(quad, shape)
+    full_surface = polygon.copy()
+    if surface is not None:
+        full_surface |= surface.astype(np.uint8)
+
+    # Include uncertainty in the interpolated guide and ORB's patch radius.
+    outside = cv2.dilate(
+        full_surface, np.ones((33, 33), dtype=np.uint8)
+    )
+    background = (outside == 0).astype(np.uint8)
+
+    observed = polygon if surface is None else polygon & surface.astype(np.uint8)
+    visible = cv2.erode(
+        observed, np.ones((25, 25), dtype=np.uint8)
+    )
+    if exclusion is not None:
+        background[exclusion != 0] = 0
+        visible[exclusion != 0] = 0
+    return background, visible
+
+
+def _fit_camera_motion(source, target, quad, shape):
+    """Fit sparse camera motion; prefer similarity unless perspective earns it."""
+    if len(source) < 8:
+        return None, 0.0, 0
+
+    source = np.asarray(source, dtype=np.float32).reshape(-1, 2)
+    target = np.asarray(target, dtype=np.float32).reshape(-1, 2)
+    finite = np.isfinite(source).all(axis=1) & np.isfinite(target).all(axis=1)
+    source, target = source[finite], target[finite]
+    if len(source) < 8:
+        return None, 0.0, 0
+
+    order = np.lexsort(
+        (target[:, 1], target[:, 0], source[:, 1], source[:, 0])
+    )
+    source = np.ascontiguousarray(source[order])
+    target = np.ascontiguousarray(target[order])
+    maximum_support = 0
+
+    def assess(matrix, consensus, projective):
+        nonlocal maximum_support
+        if matrix is None or consensus is None:
+            return None
+
+        accepted = consensus.ravel().astype(bool)
+        support = int(accepted.sum())
+        maximum_support = max(maximum_support, support)
+        ratio = support / len(source)
+        if support < 8 or ratio < 0.50:
+            return None
+
+        first = source[accepted].astype(np.float64)
+        second = target[accepted].astype(np.float64)
+        centered = first - first.mean(axis=0)
+        spread = float(np.mean(np.sum(centered**2, axis=1)))
+        if spread < 36.0 or np.linalg.norm(np.ptp(first, axis=0)) < 16.0:
+            return None
+
+        try:
+            if projective:
+                # A homography needs two-dimensional support. A small or
+                # nearly collinear lamp cluster still permits similarity.
+                singular = np.linalg.svd(centered, compute_uv=False)
+                area = float(
+                    cv2.contourArea(cv2.convexHull(first.astype(np.float32)))
+                )
+                leverage = float(
+                    np.linalg.norm(quad - first.mean(axis=0), axis=1).max()
+                    / np.sqrt(spread)
+                )
+                if (
+                    singular[-1] < 0.08 * singular[0]
+                    or area < max(64.0, 0.04 * _signed_area(quad))
+                    or leverage > 4.0
+                ):
+                    return None
+                matrix, _ = cv2.findHomography(
+                    first.astype(np.float32), second.astype(np.float32), 0
+                )
+            else:
+                # Deterministic least-squares similarity refinement.
+                first_center = first.mean(axis=0)
+                second_center = second.mean(axis=0)
+                destination = second - second_center
+                denominator = float(np.sum(centered**2))
+                a = float(np.sum(centered * destination) / denominator)
+                b = float(
+                    np.sum(
+                        centered[:, 0] * destination[:, 1]
+                        - centered[:, 1] * destination[:, 0]
+                    ) / denominator
+                )
+                linear = np.array([[a, -b], [b, a]], dtype=np.float64)
+                translation = second_center - linear @ first_center
+                matrix = np.eye(3, dtype=np.float64)
+                matrix[:2, :2] = linear
+                matrix[:2, 2] = translation
+
+            if matrix is None or _motion_quad(quad, matrix, shape) is None:
+                return None
+            projected = cv2.perspectiveTransform(
+                first.reshape(-1, 1, 2), matrix
+            ).reshape(-1, 2)
+        except (cv2.error, np.linalg.LinAlgError):
+            return None
+
+        errors = np.linalg.norm(projected - second, axis=1)
+        residual = float(np.median(errors))
+        if (
+            not np.isfinite(errors).all()
+            or residual > 1.25
+            or float(np.percentile(errors, 90)) > 2.2
+        ):
+            return None
+
+        confidence = 0.30 + (
+            0.40
+            * min(1.0, support / 48.0)
+            * ratio
+            * np.exp(-residual / 1.5)
+        )
+        return matrix, float(np.clip(confidence, 0.30, 0.70)), support, residual
+
+    similarity = None
+    projective = None
+    try:
+        affine, consensus = cv2.estimateAffinePartial2D(
+            source,
+            target,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=1.6,
+            maxIters=2000,
+            confidence=0.995,
+            refineIters=10,
+        )
+        similarity = assess(affine, consensus, False)
+    except cv2.error:
+        pass
+
+    try:
+        homography, consensus = cv2.findHomography(
+            source,
+            target,
+            cv2.RANSAC,
+            1.6,
+            maxIters=2000,
+            confidence=0.995,
+        )
+        projective = assess(homography, consensus, True)
+    except cv2.error:
+        pass
+
+    best = similarity
+    if projective is not None:
+        if similarity is None:
+            best = projective
+        else:
+            better_residual = (
+                projective[2] >= 0.90 * similarity[2]
+                and projective[3] < 0.70 * similarity[3]
+                and projective[3] + 0.08 < similarity[3]
+            )
+            better_support = (
+                projective[2] >= 1.25 * similarity[2]
+                and projective[3] <= similarity[3] + 0.10
+            )
+            if better_residual or better_support:
+                best = projective
+
+    if best is None:
+        return None, 0.0, maximum_support
+    return best[:3]
+
+
+def _camera_motion_pair(
+    first_gray,
+    second_gray,
+    first_quad,
+    second_quad,
+    first_exclusion,
+    second_exclusion,
+    first_surface=None,
+    second_surface=None,
+):
+    """Estimate camera motion from dark background and visible surface features."""
+    try:
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        first = clahe.apply(first_gray)
+        second = clahe.apply(second_gray)
+    except cv2.error:
+        return None, 0.0, 0
+
+    first_regions = _camera_regions(
+        first_quad, first.shape, first_exclusion, first_surface
+    )
+    second_regions = _camera_regions(
+        second_quad, second.shape, second_exclusion, second_surface
+    )
+
+    results = {}
+    maximum_support = 0
+    # Evaluate both sources independently: background parallax must not drown
+    # out a useful fit on the surviving part of the actual surface.
+    for name, region_index in (("surface", 1), ("background", 0)):
+        region = first_regions[region_index]
+        second_region = second_regions[region_index]
+        if (
+            np.count_nonzero(region) < 64
+            or np.count_nonzero(second_region) < 64
+        ):
+            continue
+
+        try:
+            detected = cv2.goodFeaturesToTrack(
+                first,
+                maxCorners=1600,
+                qualityLevel=0.001,
+                minDistance=4.0,
+                mask=region,
+                blockSize=3,
+            )
+        except cv2.error:
+            detected = None
+
+        if detected is not None:
+            points = detected.reshape(-1, 2)
+            order = np.lexsort((points[:, 0], points[:, 1]))
+            detected = points[order].reshape(-1, 1, 2)
+
+        forbidden = (second_region == 0).astype(np.uint8)
+        source, target = _flow_matches(
+            first,
+            second,
+            detected,
+            forbidden,
+            minimum=8,
+            min_eigenvalue=1e-5,
+        )
+        candidates = [
+            _fit_camera_motion(source, target, first_quad, first.shape)
+        ]
+
+        if candidates[0][0] is None or candidates[0][1] < 0.52:
+            source, target = _descriptor_matches(
+                first,
+                second,
+                region,
+                second_region,
+                minimum=8,
+                fast_threshold=3,
+            )
+            candidates.append(
+                _fit_camera_motion(source, target, first_quad, first.shape)
+            )
+            refined_source, refined_target = _flow_matches(
+                first,
+                second,
+                source,
+                forbidden,
+                initial=target,
+                minimum=8,
+                min_eigenvalue=1e-5,
+            )
+            candidates.append(
+                _fit_camera_motion(
+                    refined_source, refined_target, first_quad, first.shape
+                )
+            )
+
+        maximum_support = max(
+            maximum_support, max(candidate[2] for candidate in candidates)
+        )
+        valid = [candidate for candidate in candidates if candidate[0] is not None]
+        if valid:
+            results[name] = max(valid, key=lambda candidate: candidate[1])
+
+    surface = results.get("surface")
+    background = results.get("background")
+    if surface is not None and (
+        background is None or surface[1] >= 0.85 * background[1]
+    ):
+        return surface
+    if background is not None:
+        return background
+    return None, 0.0, maximum_support
+
+
 def _assess_frame(
     quad, shape, surface_mask, occluder_mask, exclusion_mask=None
 ):
@@ -663,8 +970,7 @@ def _assess_frame(
     visible_expected = expected_pixels & usable
     expected_count = int(np.count_nonzero(visible_expected))
     total_count = int(np.count_nonzero(expected_pixels))
-    # Small tracking/rasterization errors can leave a thin apparent sliver
-    # around a fully covered surface. That sliver is not negative evidence.
+    # Thin rasterization slivers are not negative evidence of full coverage.
     if expected_count < max(32, 0.08 * total_count):
         return 1.0, occluded
 
@@ -727,6 +1033,219 @@ def _mask_is_outlier(seed, predictions):
     )
 
 
+def _interpolate_quad(left, right, fraction):
+    quad = (1.0 - fraction) * left + fraction * right
+    if not _valid_quad(quad, min_area=1.0):
+        endpoint = left if fraction <= 0.5 else right
+        quad = endpoint - endpoint.mean(axis=0) + quad.mean(axis=0)
+    return quad
+
+
+def _bridge_occlusions(
+    quads,
+    confidence,
+    inliers,
+    status,
+    occluders,
+    grays,
+    exclusions,
+    surfaces,
+    ref_idx=None,
+):
+    """Pin occluded camera-motion chains to their available temporal anchors."""
+    count = len(quads)
+    pending = np.array(
+        [
+            mask is not None and status[index] != "ok"
+            for index, mask in enumerate(occluders)
+        ],
+        dtype=bool,
+    )
+    if ref_idx is not None:
+        pending[ref_idx] = False
+    boundaries = np.diff(np.r_[False, pending, False].astype(np.int8))
+    starts = np.flatnonzero(boundaries == 1)
+    stops = np.flatnonzero(boundaries == -1)
+
+    def find_anchor(index, direction):
+        while 0 <= index < count:
+            if (
+                np.isfinite(quads[index]).all()
+                and (status[index] == "ok" or index == ref_idx)
+                and (confidence[index] >= 0.30 or index == ref_idx)
+            ):
+                return index
+            index += direction
+        return None
+
+    for start, stop in zip(starts, stops):
+        left = find_anchor(int(start) - 1, -1)
+        right = find_anchor(int(stop), 1)
+        if left is None and right is None:
+            continue
+
+        low = int(start) if left is None else left
+        high = int(stop) - 1 if right is None else right
+        guides = {}
+        for index in range(low, high + 1):
+            if left is not None and right is not None:
+                fraction = (index - left) / (right - left)
+                guides[index] = _interpolate_quad(
+                    quads[left], quads[right], fraction
+                )
+            elif np.isfinite(quads[index]).all():
+                guides[index] = quads[index].copy()
+            else:
+                anchor = left if left is not None else right
+                guides[index] = quads[anchor].copy()
+
+        # Each edge is estimated once. Inverting an accepted edge preserves
+        # the same motion when composing from the right anchor backwards.
+        motions = {}
+        for index in range(low, high):
+            motion, quality, support = _camera_motion_pair(
+                grays[index],
+                grays[index + 1],
+                guides[index],
+                guides[index + 1],
+                exclusions[index],
+                exclusions[index + 1],
+                surfaces[index],
+                surfaces[index + 1],
+            )
+            if motion is None:
+                reverse, quality, support = _camera_motion_pair(
+                    grays[index + 1],
+                    grays[index],
+                    guides[index + 1],
+                    guides[index],
+                    exclusions[index + 1],
+                    exclusions[index],
+                    surfaces[index + 1],
+                    surfaces[index],
+                )
+                if reverse is not None:
+                    try:
+                        motion = np.linalg.inv(reverse)
+                    except np.linalg.LinAlgError:
+                        motion = None
+            motions[index] = motion, quality, support
+
+        def chain(anchor, direction):
+            if anchor is None:
+                return {}
+            predictions = {
+                anchor: (quads[anchor].copy(), float(confidence[anchor]), 0)
+            }
+            previous = anchor
+            total_quality = 0.0
+            steps = 0
+            end = high + 1 if direction == 1 else low - 1
+            for index in range(anchor + direction, end, direction):
+                motion, edge_quality, support = motions[min(previous, index)]
+                if motion is None:
+                    break
+                if direction == -1:
+                    try:
+                        motion = np.linalg.inv(motion)
+                    except np.linalg.LinAlgError:
+                        break
+
+                candidate = _motion_quad(
+                    predictions[previous][0], motion, grays[index].shape
+                )
+                if candidate is None:
+                    break
+                steps += 1
+                total_quality += edge_quality
+                quality = (
+                    min(float(confidence[anchor]), total_quality / steps)
+                    * np.exp(-steps / 80.0)
+                )
+                predictions[index] = (
+                    candidate,
+                    float(np.clip(quality, 0.30, 0.70)),
+                    support,
+                )
+                previous = index
+            return predictions
+
+        forward = chain(left, 1)
+        backward = chain(right, -1)
+        estimates = np.full((high - low + 1, 4, 2), np.nan, dtype=np.float64)
+        qualities = np.zeros(high - low + 1, dtype=np.float64)
+        supports = np.zeros(high - low + 1, dtype=np.int32)
+
+        for index in range(low, high + 1):
+            first = forward.get(index)
+            second = backward.get(index)
+            offset = index - low
+            if first is not None and second is not None:
+                fraction = (index - left) / (right - left)
+                candidate = (1.0 - fraction) * first[0] + fraction * second[0]
+                if not _valid_quad(candidate):
+                    candidate = first[0] if fraction <= 0.5 else second[0]
+                disagreement = float(
+                    np.mean(np.linalg.norm(first[0] - second[0], axis=1))
+                )
+                quality = (
+                    (1.0 - fraction) * first[1] + fraction * second[1]
+                ) * np.exp(-disagreement / 6.0)
+                support = max(first[2], second[2])
+            elif first is not None or second is not None:
+                candidate, quality, support = first if first is not None else second
+            else:
+                continue
+            estimates[offset] = candidate
+            qualities[offset] = np.clip(quality, 0.30, 0.70)
+            supports[offset] = support
+
+        # Anchor values are exact inputs, not outputs of the opposite chain.
+        for anchor in (left, right):
+            if anchor is not None:
+                estimates[anchor - low] = quads[anchor]
+                qualities[anchor - low] = confidence[anchor]
+
+        # Only positions reached by neither chain may use interpolation.
+        # Use the nearest recovered neighbours, rather than discarding motion
+        # estimates on either side of a failed group of edges.
+        missing = ~np.isfinite(estimates).all(axis=(1, 2))
+        boundaries = np.diff(np.r_[False, missing, False].astype(np.int8))
+        missing_starts = np.flatnonzero(boundaries == 1)
+        missing_stops = np.flatnonzero(boundaries == -1)
+        for gap_start, gap_stop in zip(missing_starts, missing_stops):
+            if gap_start == 0 or gap_stop == len(estimates):
+                continue
+            first = estimates[gap_start - 1]
+            second = estimates[gap_stop]
+            quality = float(
+                np.clip(
+                    0.65 * min(qualities[gap_start - 1], qualities[gap_stop]),
+                    0.30,
+                    0.40,
+                )
+            )
+            for offset in range(gap_start, gap_stop):
+                fraction = (offset - gap_start + 1) / (
+                    gap_stop - gap_start + 1
+                )
+                estimates[offset] = _interpolate_quad(first, second, fraction)
+                qualities[offset] = quality
+
+        for index in range(int(start), int(stop)):
+            candidate = estimates[index - low]
+            if not np.isfinite(candidate).all():
+                continue
+            # A detection elsewhere in the scene cannot explain this loss.
+            expected = _polygon_mask(candidate, grays[index].shape) != 0
+            if not np.any(expected & occluders[index]):
+                continue
+            quads[index] = candidate
+            confidence[index] = qualities[index - low]
+            inliers[index] = supports[index - low]
+            status[index] = "occluded"
+
+
 def _fill_short_gaps(quads, confidence, status, occluders):
     """Fill short losses, or long occlusions bounded by confident geometry."""
     valid = np.isfinite(quads).all(axis=(1, 2))
@@ -759,12 +1278,7 @@ def _fill_short_gaps(quads, confidence, status, occluders):
 
         for index in range(start, stop):
             fraction = (index - start + 1) / (length + 1)
-            quad = (1.0 - fraction) * left + fraction * right
-            if not _valid_quad(quad, min_area=1.0):
-                # Extreme endpoint rotations can collapse a corner blend.
-                # Preserve an endpoint's convex shape at the blended center.
-                endpoint = left if fraction <= 0.5 else right
-                quad = endpoint - endpoint.mean(axis=0) + quad.mean(axis=0)
+            quad = _interpolate_quad(left, right, fraction)
 
             occluded = False
             if occluders[index] is not None:
@@ -774,8 +1288,6 @@ def _fill_short_gaps(quads, confidence, status, occluders):
             interpolated.append(quad)
             occluded_flags.append(occluded)
 
-        # A person elsewhere in the frame cannot explain a long geometry
-        # loss. Every interpolated surface must actually meet its occluder.
         if long_gap and not all(occluded_flags):
             continue
 
@@ -790,7 +1302,7 @@ def _fill_short_gaps(quads, confidence, status, occluders):
 def propagate_quad(
     frames, ref_idx, ref_quad, surface_masks=None, occluder_masks=None
 ) -> dict:
-    """Track deterministically, re-acquire surfaces, and bridge bounded occlusions."""
+    """Track, re-acquire surfaces, and bridge occlusions with anchored motion."""
     frames = list(frames)
     count = len(frames)
     if (
@@ -815,8 +1327,7 @@ def propagate_quad(
     if not _valid_quad(reference):
         raise ValueError("ref_quad must be a finite clockwise convex quad")
 
-    # Reset stochastic OpenCV operations for each invocation. This module
-    # does not use a NumPy RNG or alter NumPy's global random state.
+    # This module does not alter NumPy's global random state.
     cv2.setRNGSeed(0)
 
     height, width = frame_shape[:2]
@@ -887,9 +1398,6 @@ def propagate_quad(
                     candidate is not None and not _quads_agree(candidate, seed)
                 )
 
-                # A complete mask agreeing with current or last accepted
-                # geometry, backed by twice the minimum homography support,
-                # must not be vetoed by missing or contradictory neighbours.
                 supported_masks[index] = support >= 24 and (
                     _quads_agree(seed, last_known_quad)
                     or (
@@ -920,15 +1428,13 @@ def propagate_quad(
                         candidate = seed
                         candidate_quality = 0.75
 
-            # Failure ends this local chain, but scanning continues until a
-            # later complete mask establishes a new adjacent-frame chain.
+            # Continue scanning after a failed chain until a complete mask
+            # establishes another adjacent-frame chain.
             previous = index
             active_quad = candidate
             if candidate is not None:
                 tracked[index] = candidate
                 quality[index] = candidate_quality
-                # An unresolved mask conflict must not replace the temporal
-                # anchor used to recognize the next agreeing complete mask.
                 if (
                     seed is None
                     or ignored_masks[index]
@@ -938,8 +1444,6 @@ def propagate_quad(
 
     resolved = np.full_like(tracked, np.nan)
     confidence = np.zeros(count, dtype=np.float32)
-    # Pending occlusions still need bounded geometry and an actual surface
-    # intersection before interpolation can resolve them.
     status = [
         "occluded" if mask is not None else "lost"
         for mask in occluders
@@ -965,10 +1469,8 @@ def propagate_quad(
             seed is not None and not _quads_agree(candidate, seed)
         )
         if index == ref_idx:
-            # The supplied canonical reference has priority over segmentation.
             agreement = 1.0
         elif supported_masks[index]:
-            # Preserve the independently supported decision from propagation.
             agreement = 1.0
         elif ignored_masks[index]:
             agreement = 1.0
@@ -1025,6 +1527,19 @@ def propagate_quad(
         confidence[index] = np.clip(candidate_quality * agreement, 0.0, 1.0)
         status[index] = "occluded" if occluded else "ok"
 
+    # This also replaces finite one-way occlusion tracks, preventing their
+    # accumulated drift from bypassing the bidirectional bridge.
+    _bridge_occlusions(
+        resolved,
+        confidence,
+        inliers,
+        status,
+        occluders,
+        grays,
+        exclusions,
+        surfaces,
+        ref_idx=ref_idx,
+    )
     _fill_short_gaps(resolved, confidence, status, occluders)
     for index in range(count):
         if not np.isfinite(resolved[index]).all():

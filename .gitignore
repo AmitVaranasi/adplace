@@ -8,3 +8,5 @@ outputs/
 assets/clips/
 .env
 ckpts/
+.playwright-mcp/
+__pycache__/

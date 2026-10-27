@@ -2,14 +2,18 @@
   "assets/clips/billboard_night.mp4": {
     "context_tags": [],
     "surface": "billboard",
-    "emissive": true
+    "emissive": true,
+    "title": "Night billboard (handheld)",
+    "analysis": "cache/billboard_night-1643266c99a8-d977f070"
   },
   "assets/clips/billboard_night_occluded.mp4": {
     "context_tags": [
       "synthetic_occluder"
     ],
     "surface": "billboard",
-    "emissive": true
+    "emissive": true,
+    "title": "Night billboard + passer-by (synthetic occluder)",
+    "analysis": "cache/billboard_night_occluded-a90ba89b4960-dd14ad90"
   },
   "assets/clips/roadside_sign.mp4": {
     "context_tags": [
@@ -17,6 +21,8 @@
     ],
     "surface": "sign",
     "emissive": false,
-    "note": "Road-safety sign: never a placement in demos; kept as a technical tracking/lighting test."
+    "note": "Road-safety sign: never a placement in demos; kept as a technical tracking/lighting test.",
+    "title": "Roadside sign (daylight, safety sign: no placement)",
+    "analysis": "cache/roadside_sign-e18134e7f0ea-5f19cf92"
   }
 }

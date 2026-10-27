@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AdPlace</title>
+<style>
+  :root { --bg: #0f1115; --panel: #181b22; --text: #e8eaef; --muted: #9aa1ad; --accent: #e07a3a; --ok: #3fb47a; --bad: #e0574f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 20px 24px 8px; }
+  h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  main { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px 24px 32px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border-radius: 10px; padding: 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  select, button, input[type=file] { width: 100%; padding: 8px 10px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #2a2f3a; background: #11141a; color: var(--text); font: inherit; }
+  button { background: var(--accent); border: 0; color: #fff; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .videos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 860px) { .videos { grid-template-columns: 1fr; } }
+  video { width: 100%; border-radius: 8px; background: #000; }
+  .cap { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 13px; font-weight: 600; }
+  .ok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+  .bad { background: color-mix(in srgb, var(--bad) 20%, transparent); color: var(--bad); }
+  #choice { font-size: 16px; margin: 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AdPlace</h1>
+  <p>Same scene, a different brand for each viewer, always disclosed. Brands are fictional; footage is openly licensed.</p>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>1. Clip</h2>
+      <select id="clip"></select>
+      <h2>2. Viewer</h2>
+      <select id="profile"></select>
+      <button id="go">Choose and render placement</button>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Verify a file</h2>
+      <input type="file" id="file" accept="video/*">
+      <button id="verify">Check for a placement watermark</button>
+      <div id="vresult" class="cap"></div>
+    </section>
+  </div>
+  <div>
+    <section>
+      <div class="videos">
+        <div><video id="orig" controls muted loop playsinline></video><p class="cap">Original</p></div>
+        <div><video id="placed" controls muted loop playsinline></video><p class="cap" id="placedcap">Placement appears here</p></div>
+      </div>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Why this ad</h2>
+      <div id="choice" class="cap">Pick a clip and a viewer.</div>
+      <dl id="facts"></dl>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+  .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
+
+let catalog;
+fetch("/api/catalog").then((r) => r.json()).then((c) => {
+  catalog = c;
+  for (const clip of c.clips) $("clip").add(new Option(clip.title, clip.id));
+  for (const p of c.profiles) $("profile").add(new Option(p.label, p.profile_id));
+  showOriginal();
+});
+$("clip").onchange = showOriginal;
+
+function showOriginal() {
+  const clip = catalog.clips.find((c) => c.id === $("clip").value);
+  $("orig").src = clip.url; $("orig").play();
+  $("placed").removeAttribute("src"); $("placed").load();
+  $("placedcap").textContent = "Placement appears here";
+}
+
+$("go").onclick = async () => {
+  $("go").disabled = true; $("choice").textContent = "Choosing…"; $("facts").innerHTML = "";
+  try {
+    const r = await post("/api/choose", { clip: $("clip").value, profile_id: $("profile").value });
+    const m = r.slot.metrics;
+    $("facts").innerHTML = `
+      <dt>Surface</dt><dd>${r.slot.surface}, on screen ${m.on_screen_s.toFixed(1)} s, ${(100 * m.mean_area_frac).toFixed(1)}% of frame</dd>
+      <dt>Eligible</dt><dd>${r.eligible.map((e) => e.brand_id).join(", ") || "none"}</dd>
+      <dt>Chooser</dt><dd>${r.chooser}</dd>`;
+    if (r.choice.status !== "ok") {
+      $("choice").innerHTML = `<span class="pill bad">No placement</span> ${r.choice.reason}`;
+      return;
+    }
+    $("choice").innerHTML = `<span class="pill ok">${r.choice.brand_id}</span> ${r.choice.rationale}`;
+    $("placedcap").textContent = "Rendering (first time takes about a minute)…";
+    const v = await post("/api/render", { clip: $("clip").value, brand: r.choice.brand_id });
+    $("placed").src = v.video_url + "?t=" + Date.now(); $("placed").play(); $("orig").currentTime = 0;
+    $("placedcap").innerHTML = `${v.brand} · watermark ${v.verified ? '<span class="pill ok">verified</span>' : '<span class="pill bad">not verified</span>'}
+      · ${v.cached ? "cached render" : `rendered in ${v.seconds} s`} · composite ${v.timings.composite_ms_per_frame} ms/frame`;
+  } catch (e) {
+    $("choice").innerHTML = `<span class="pill bad">Error</span> ${e.message}`;
+  } finally { $("go").disabled = false; }
+};
+
+$("verify").onclick = async () => {
+  const f = $("file").files[0];
+  if (!f) { $("vresult").textContent = "Choose a video file first."; return; }
+  $("verify").disabled = true; $("vresult").textContent = "Checking…";
+  const fd = new FormData(); fd.append("file", f);
+  try {
+    const r = await fetch("/api/verify", { method: "POST", body: fd }).then((r) => r.json());
+    $("vresult").innerHTML = r.campaign
+      ? `<span class="pill ok">Placement detected</span> campaign ${r.campaign} (${(100 * r.bit_accuracy).toFixed(1)}% bits)`
+      : `<span class="pill bad">No placement watermark</span> best match ${(100 * r.bit_accuracy).toFixed(1)}% bits (chance is 50%)`;
+  } finally { $("verify").disabled = false; }
+};
+</script>
+</body>
+</html>

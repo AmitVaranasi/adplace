@@ -208,7 +208,6 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     np.testing.assert_array_equal(quads[reference_index], reference)
     assert inliers[reference_index] == 0
     assert np.all(inliers >= 0)
-    # Re-seeding is allowed to have no homography support.
     assert np.count_nonzero(inliers >= 12) >= count // 2
 
     error = np.linalg.norm(quads - scene["truth"], axis=2)
@@ -241,7 +240,10 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     assert np.all(crosses > 0.0)
 
 
-def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
+@pytest.mark.parametrize("ref_idx", [0, 32])
+def test_dark_blurred_occluder_sweep_with_handheld_jitter(
+    monkeypatch, ref_idx
+):
     rng = np.random.default_rng(651)
     height, width = 360, 640
     count = 34
@@ -256,7 +258,6 @@ def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
     )
     texture = cv2.GaussianBlur(texture, (0, 0), 0.6)
     background = np.full((height, width), 8, dtype=np.uint8)
-    # Useful static texture lies beyond the dark local poster surround.
     remote = np.zeros((height, width), dtype=bool)
     remote[:, :115] = True
     remote[:, -115:] = True
@@ -264,6 +265,12 @@ def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
     background[remote] = texture[remote]
     wall = cv2.merge((background, background, background))
     wall[world_surface] = (185, 190, 195)
+
+    jitter_rng = np.random.default_rng(1729)
+    jitter = np.cumsum(
+        jitter_rng.normal(0.0, 3.0, size=(count, 2)), axis=0
+    )
+    jitter -= jitter[0]
 
     frames, surfaces, occluders, truth, coverage = [], [], [], [], []
     missing = {12, 19, 20, 21}
@@ -274,8 +281,8 @@ def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
             0.035 * index,
             1.0 + 0.0005 * index,
         )
-        motion[0, 2] -= 0.55 * index
-        motion[1, 2] += 0.20 * index
+        motion[0, 2] += -0.55 * index + jitter[index, 0]
+        motion[1, 2] += 0.20 * index + jitter[index, 1]
         quad = cv2.transform(base[None], motion)[0]
         frame = cv2.warpAffine(
             wall,
@@ -344,13 +351,41 @@ def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
         occluders.append(person_mask)
         truth.append(quad)
 
+    truth = np.asarray(truth, dtype=np.float32)
     coverage = np.asarray(coverage)
     assert 0.78 <= float(coverage.max()) <= 0.84
     occluded = coverage > 0.0
     assert np.count_nonzero(occluded) > 12
     assert all(occluded[index] for index in missing)
 
-    ref_idx = count - 2
+    # Establish that corner interpolation cannot meet this test's target.
+    covered_indices = np.flatnonzero(occluded)
+    left = int(covered_indices[0]) - 1
+    right = int(covered_indices[-1]) + 1
+    fractions = (
+        (covered_indices - left) / (right - left)
+    )[:, None, None]
+    linear = (
+        (1.0 - fractions) * truth[left] + fractions * truth[right]
+    )
+    linear_errors = np.linalg.norm(linear - truth[occluded], axis=2)
+    assert float(np.median(linear_errors)) > 3.0
+    assert float(linear_errors.max()) > 6.0
+
+    # Reproduce the production failure: the conservative online tracker
+    # rejects occlusion pairs. Actual image-based camera bridging must recover.
+    original_track_pair = geometry._track_pair
+
+    def reject_local_occlusion(
+        first, second, quad, first_exclusion, second_exclusion
+    ):
+        if first_exclusion is not None or second_exclusion is not None:
+            return None, 0.0, 0
+        return original_track_pair(
+            first, second, quad, first_exclusion, second_exclusion
+        )
+
+    monkeypatch.setattr(geometry, "_track_pair", reject_local_occlusion)
     reference = quad_from_mask(surfaces[ref_idx])
     assert reference is not None
     result = propagate_quad(
@@ -362,17 +397,233 @@ def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
     )
 
     assert np.isfinite(result["quads"]).all()
-    errors = np.linalg.norm(
-        result["quads"] - np.asarray(truth), axis=2
-    )
+    assert "lost" not in result["status"]
+    errors = np.linalg.norm(result["quads"] - truth, axis=2)
     assert float(np.median(errors[occluded])) <= 3.0
     assert float(errors[occluded].max()) <= 6.0
     assert all(
         result["status"][index] == "occluded"
-        for index in np.flatnonzero(occluded)
+        for index in covered_indices
     )
-    assert np.all(result["confidence"][occluded] > 0.0)
+    assert np.all(result["confidence"][occluded] >= 0.30 - 1e-6)
+    assert np.all(result["confidence"][occluded] <= 0.70 + 1e-6)
+    assert (
+        np.count_nonzero(result["inliers"][occluded] >= 8)
+        > np.count_nonzero(occluded) // 2
+    )
     np.testing.assert_array_equal(result["quads"][ref_idx], reference)
+
+
+def test_camera_regions_separate_background_and_visible_surface():
+    shape = (120, 180)
+    quad = np.array(
+        [[50, 30], [130, 30], [130, 90], [50, 90]],
+        dtype=np.float64,
+    )
+    surface = _filled_polygon(quad, shape)
+    occluder = np.zeros(shape, dtype=np.uint8)
+    occluder[40:81, 80:111] = 1
+    surface[occluder != 0] = False
+    exclusion = cv2.dilate(
+        occluder, np.ones((11, 11), dtype=np.uint8)
+    )
+
+    background, visible = geometry._camera_regions(
+        quad, shape, exclusion, surface
+    )
+
+    assert background.any()
+    assert visible.any()
+    assert not np.any(background & _filled_polygon(quad, shape))
+    assert not np.any(background[exclusion != 0])
+    assert not np.any(visible[exclusion != 0])
+    assert np.all(surface[visible != 0])
+    assert not np.any(background & visible)
+
+
+@pytest.mark.parametrize("projective", [False, True])
+def test_camera_motion_accepts_eight_inliers_with_appropriate_model(projective):
+    quad = np.array(
+        [[200, 110], [440, 110], [440, 260], [200, 260]],
+        dtype=np.float64,
+    )
+    if projective:
+        source = np.array(
+            [
+                [20, 20], [320, 20], [620, 20], [20, 180],
+                [620, 180], [20, 330], [320, 330], [620, 330],
+            ],
+            dtype=np.float32,
+        )
+        expected = np.array(
+            [[1.002, -0.005, 2.0],
+             [0.004, 0.999, -1.5],
+             [0.0003, -0.00015, 1.0]],
+            dtype=np.float64,
+        )
+    else:
+        # A narrow lamp cluster cannot safely support projective extrapolation.
+        source = np.array(
+            [
+                [20, 20], [30, 20], [40, 20], [50, 20],
+                [20, 24], [30, 24], [40, 24], [50, 24],
+            ],
+            dtype=np.float32,
+        )
+        expected = np.vstack(
+            (
+                cv2.getRotationMatrix2D((0, 0), 0.6, 1.001),
+                [0.0, 0.0, 1.0],
+            )
+        )
+        expected[:2, 2] += [2.25, -1.5]
+
+    target = cv2.perspectiveTransform(source[None], expected)[0]
+    motion, confidence, support = geometry._fit_camera_motion(
+        source, target, quad, (360, 640)
+    )
+
+    assert motion is not None
+    assert support == 8
+    assert 0.30 <= confidence <= 0.70
+    actual_quad = cv2.perspectiveTransform(quad[None], motion)[0]
+    expected_quad = cv2.perspectiveTransform(quad[None], expected)[0]
+    np.testing.assert_allclose(actual_quad, expected_quad, atol=0.02, rtol=0)
+    if not projective:
+        np.testing.assert_array_equal(motion[2], [0.0, 0.0, 1.0])
+
+
+@pytest.fixture
+def bridge_case():
+    count = 19
+    shape = (180, 260)
+    rng = np.random.default_rng(997)
+    walk = np.cumsum(rng.normal(0.0, 2.5, size=(count, 2)), axis=0)
+    walk -= walk[0]
+    base = np.array(
+        [[60, 50], [170, 50], [170, 125], [60, 125]],
+        dtype=np.float64,
+    )
+    truth = base[None] + walk[:, None, :]
+    quads = np.full_like(truth, np.nan)
+    quads[[0, -1]] = truth[[0, -1]]
+    confidence = np.zeros(count, dtype=np.float32)
+    confidence[[0, -1]] = [1.0, 0.9]
+    occluders = [
+        _filled_polygon(quad, shape) if 0 < index < count - 1 else None
+        for index, quad in enumerate(truth)
+    ]
+    return {
+        "truth": truth,
+        "quads": quads,
+        "confidence": confidence,
+        "inliers": np.zeros(count, dtype=np.int32),
+        "status": ["ok"] + ["occluded"] * (count - 2) + ["ok"],
+        "occluders": occluders,
+        "grays": [
+            np.full(shape, index, dtype=np.uint8)
+            for index in range(count)
+        ],
+        "exclusions": occluders,
+        "surfaces": [None] * count,
+    }
+
+
+@pytest.mark.parametrize("finite_one_way_track", [False, True])
+def test_bidirectional_bridge_cancels_accumulated_drift_and_pins_anchors(
+    monkeypatch, bridge_case, finite_one_way_track
+):
+    case = bridge_case
+    truth = case["truth"]
+    count = len(truth)
+    bias = np.array([0.40, -0.25])
+    if finite_one_way_track:
+        case["quads"][1:-1] = (
+            truth[1:-1]
+            + np.arange(1, count - 1)[:, None, None] * bias
+        )
+        case["confidence"][1:-1] = 0.6
+
+    def biased_camera_pair(first, second, *unused):
+        first_index = int(first[0, 0])
+        second_index = int(second[0, 0])
+        assert abs(second_index - first_index) == 1
+        motion = np.eye(3, dtype=np.float64)
+        motion[:2, 2] = (
+            truth[second_index, 0] - truth[first_index, 0]
+            + (second_index - first_index) * bias
+        )
+        return motion, 0.65, 8
+
+    monkeypatch.setattr(geometry, "_camera_motion_pair", biased_camera_pair)
+    original_anchors = case["quads"][[0, -1]].copy()
+    geometry._bridge_occlusions(
+        case["quads"],
+        case["confidence"],
+        case["inliers"],
+        case["status"],
+        case["occluders"],
+        case["grays"],
+        case["exclusions"],
+        case["surfaces"],
+        ref_idx=0,
+    )
+
+    np.testing.assert_allclose(case["quads"], truth, atol=1e-6, rtol=0)
+    np.testing.assert_array_equal(case["quads"][[0, -1]], original_anchors)
+    assert case["status"] == ["ok"] + ["occluded"] * (count - 2) + ["ok"]
+    assert np.all(case["inliers"][1:-1] == 8)
+    assert np.all(case["confidence"][1:-1] >= 0.30 - 1e-6)
+    assert np.all(case["confidence"][1:-1] <= 0.70 + 1e-6)
+
+
+@pytest.mark.parametrize("failed_edges", [{8}, {5, 12}])
+def test_bridge_uses_one_surviving_chain_before_interpolating(
+    monkeypatch, bridge_case, failed_edges
+):
+    case = bridge_case
+    truth = case["truth"]
+
+    def camera_pair(first, second, *unused):
+        first_index = int(first[0, 0])
+        second_index = int(second[0, 0])
+        assert abs(second_index - first_index) == 1
+        if min(first_index, second_index) in failed_edges:
+            return None, 0.0, 0
+        motion = np.eye(3, dtype=np.float64)
+        motion[:2, 2] = truth[second_index, 0] - truth[first_index, 0]
+        return motion, 0.65, 8
+
+    monkeypatch.setattr(geometry, "_camera_motion_pair", camera_pair)
+    geometry._bridge_occlusions(
+        case["quads"],
+        case["confidence"],
+        case["inliers"],
+        case["status"],
+        case["occluders"],
+        case["grays"],
+        case["exclusions"],
+        case["surfaces"],
+        ref_idx=0,
+    )
+
+    expected = truth.copy()
+    if len(failed_edges) == 2:
+        for index in range(6, 13):
+            fraction = (index - 5) / 8.0
+            expected[index] = (
+                (1.0 - fraction) * truth[5] + fraction * truth[13]
+            )
+        assert np.all(case["inliers"][6:13] == 0)
+        assert np.all(case["confidence"][6:13] <= 0.40 + 1e-6)
+    else:
+        # An edge failure disconnects the two chains but leaves every frame
+        # reachable from one anchor. No interpolation is appropriate.
+        assert np.all(case["inliers"][1:-1] == 8)
+
+    np.testing.assert_allclose(case["quads"], expected, atol=1e-6, rtol=0)
+    assert "lost" not in case["status"]
+    assert case["status"][1:-1] == ["occluded"] * (len(truth) - 2)
 
 
 @pytest.mark.parametrize("missing_length", [1, 3])
@@ -396,7 +647,6 @@ def test_occluder_holes_and_motion_margins_are_conservative(missing_length):
         shifted_left = 20 + 20 * index
         assert repaired[index][40, shifted_left + 8]
 
-    # A 20 px/frame motion enlarges the static rim/patch margin.
     _, stationary = geometry._prepare_occluders([first, first])
     assert exclusions[0][40, 60] != 0
     assert stationary[0][40, 60] == 0
@@ -585,8 +835,6 @@ def test_many_inliers_and_temporally_agreeing_mask_are_never_lost(
         frames, ref_idx, truth[ref_idx], surface_masks=surfaces
     )
 
-    # The target is an endpoint, so interpolation cannot conceal rejection.
-    # Its only neighbour also predicts the misleading homography.
     assert result["status"][target_index] == "ok"
     assert result["status"] == ["ok"] * len(frames)
     assert result["inliers"][target_index] == 60
@@ -673,6 +921,9 @@ def test_short_bracketed_gaps_with_masks_and_occlusion_are_interpolated(
     monkeypatch.setattr(
         geometry, "_track_pair", lambda *args: (None, 0.0, 0)
     )
+    monkeypatch.setattr(
+        geometry, "_camera_motion_pair", lambda *args: (None, 0.0, 0)
+    )
     surfaces = [None] + [
         np.zeros(frames[0].shape[:2], dtype=bool)
         for _ in range(count - 2)
@@ -711,6 +962,9 @@ def test_long_occlusion_is_bridged_after_feature_failure(
     monkeypatch.setattr(
         geometry, "_track_pair", lambda *args: (None, 0.0, 0)
     )
+    monkeypatch.setattr(
+        geometry, "_camera_motion_pair", lambda *args: (None, 0.0, 0)
+    )
     surfaces = [
         masks[index] if index in {0, count - 1}
         else np.zeros(frames[0].shape[:2], dtype=bool)
@@ -720,7 +974,6 @@ def test_long_occlusion_is_bridged_after_feature_failure(
         masks[index] if 0 < index < count - 1 else None
         for index in range(count)
     ]
-    # Exercise both an isolated miss and the reported three-frame hole.
     for index in (8, 13, 14, 15):
         occluders[index] = None
 
@@ -769,7 +1022,6 @@ def test_long_bridge_requires_confident_ends_and_only_occlusion(
         for index, quad in enumerate(truth)
     ]
     if broken_evidence:
-        # Even a person detection cannot explain loss away from the poster.
         occluders[8] = np.zeros((160, 220), dtype=bool)
         occluders[8][:10, :10] = True
         status[8] = "lost"
