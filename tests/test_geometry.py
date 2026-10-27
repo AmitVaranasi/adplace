@@ -241,6 +241,171 @@ def test_tracking_blank_poster_pan_zoom_occlusion_and_clipping(scene):
     assert np.all(crosses > 0.0)
 
 
+def test_dark_blurred_occluder_sweep_uses_static_scene_motion():
+    rng = np.random.default_rng(651)
+    height, width = 360, 640
+    count = 34
+    base = np.array(
+        [[200, 110], [440, 110], [440, 260], [200, 260]],
+        dtype=np.float32,
+    )
+    world_surface = _filled_polygon(base, (height, width))
+
+    texture = rng.integers(
+        0, 181, size=(height, width), dtype=np.uint8
+    )
+    texture = cv2.GaussianBlur(texture, (0, 0), 0.6)
+    background = np.full((height, width), 8, dtype=np.uint8)
+    # Useful static texture lies beyond the dark local poster surround.
+    remote = np.zeros((height, width), dtype=bool)
+    remote[:, :115] = True
+    remote[:, -115:] = True
+    remote[:40] = True
+    background[remote] = texture[remote]
+    wall = cv2.merge((background, background, background))
+    wall[world_surface] = (185, 190, 195)
+
+    frames, surfaces, occluders, truth, coverage = [], [], [], [], []
+    missing = {12, 19, 20, 21}
+
+    for index in range(count):
+        motion = cv2.getRotationMatrix2D(
+            (width / 2, height / 2),
+            0.035 * index,
+            1.0 + 0.0005 * index,
+        )
+        motion[0, 2] -= 0.55 * index
+        motion[1, 2] += 0.20 * index
+        quad = cv2.transform(base[None], motion)[0]
+        frame = cv2.warpAffine(
+            wall,
+            motion,
+            (width, height),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REFLECT_101,
+        )
+        surface = cv2.warpAffine(
+            world_surface.astype(np.uint8),
+            motion,
+            (width, height),
+            flags=cv2.INTER_NEAREST,
+        ).astype(bool)
+
+        body = np.zeros((height, width), dtype=np.uint8)
+        present = 4 <= index <= 28
+        if present:
+            center_x = 65 + 23 * (index - 4)
+            cv2.rectangle(
+                body,
+                (center_x - 96, 78),
+                (center_x + 96, 300),
+                1,
+                cv2.FILLED,
+            )
+            cv2.ellipse(
+                body, (center_x, 66), (31, 32),
+                0, 0, 360, 1, cv2.FILLED,
+            )
+            alpha = cv2.GaussianBlur(
+                body.astype(np.float32), (0, 0), 2.0
+            )
+            alpha = cv2.blur(alpha, (13, 1))
+            outer = cv2.dilate(body, np.ones((7, 7), dtype=np.uint8))
+            halo = np.maximum(
+                cv2.GaussianBlur(
+                    outer.astype(np.float32), (0, 0), 2.0
+                ) - alpha,
+                0.0,
+            )
+            frame = np.clip(
+                (1.0 - alpha[..., None]) * frame.astype(np.float32)
+                + 3.0 * alpha[..., None]
+                + 7.0 * halo[..., None],
+                0,
+                255,
+            ).astype(np.uint8)
+
+        binary_body = body.astype(bool)
+        coverage.append(
+            np.count_nonzero(surface & binary_body)
+            / np.count_nonzero(surface)
+        )
+        surface[binary_body] = False
+        person_mask = (
+            binary_body if present and index not in missing else None
+        )
+
+        frame.setflags(write=False)
+        surface.setflags(write=False)
+        if person_mask is not None:
+            person_mask.setflags(write=False)
+        frames.append(frame)
+        surfaces.append(surface)
+        occluders.append(person_mask)
+        truth.append(quad)
+
+    coverage = np.asarray(coverage)
+    assert 0.78 <= float(coverage.max()) <= 0.84
+    occluded = coverage > 0.0
+    assert np.count_nonzero(occluded) > 12
+    assert all(occluded[index] for index in missing)
+
+    ref_idx = count - 2
+    reference = quad_from_mask(surfaces[ref_idx])
+    assert reference is not None
+    result = propagate_quad(
+        frames,
+        ref_idx,
+        reference,
+        surface_masks=surfaces,
+        occluder_masks=occluders,
+    )
+
+    assert np.isfinite(result["quads"]).all()
+    errors = np.linalg.norm(
+        result["quads"] - np.asarray(truth), axis=2
+    )
+    assert float(np.median(errors[occluded])) <= 3.0
+    assert float(errors[occluded].max()) <= 6.0
+    assert all(
+        result["status"][index] == "occluded"
+        for index in np.flatnonzero(occluded)
+    )
+    assert np.all(result["confidence"][occluded] > 0.0)
+    np.testing.assert_array_equal(result["quads"][ref_idx], reference)
+
+
+@pytest.mark.parametrize("missing_length", [1, 3])
+def test_occluder_holes_and_motion_margins_are_conservative(missing_length):
+    first = np.zeros((80, 240), dtype=bool)
+    first[32:48, 20:36] = True
+    last = np.zeros_like(first)
+    offset = 20 * (missing_length + 1)
+    last[32:48, 20 + offset:36 + offset] = True
+    first_original, last_original = first.copy(), last.copy()
+    first.setflags(write=False)
+    last.setflags(write=False)
+
+    masks = [first] + [None] * missing_length + [last]
+    repaired, exclusions = geometry._prepare_occluders(masks)
+    union = first | last
+
+    for index in range(1, missing_length + 1):
+        assert repaired[index] is not None
+        assert np.all(repaired[index][union])
+        shifted_left = 20 + 20 * index
+        assert repaired[index][40, shifted_left + 8]
+
+    # A 20 px/frame motion enlarges the static rim/patch margin.
+    _, stationary = geometry._prepare_occluders([first, first])
+    assert exclusions[0][40, 60] != 0
+    assert stationary[0][40, 60] == 0
+    assert exclusions[0][40, 70] == 0
+
+    np.testing.assert_array_equal(first, first_original)
+    np.testing.assert_array_equal(last, last_original)
+
+
 def test_empty_mask_outlier_preserves_supported_motion_track(scene):
     indices = [7, 8, 9]
     surfaces = [scene["surfaces"][index] for index in indices]
@@ -535,6 +700,89 @@ def test_short_bracketed_gaps_with_masks_and_occlusion_are_interpolated(
     assert np.all(result["confidence"][1:-1] <= 0.5)
     error = np.linalg.norm(result["quads"] - truth, axis=2)
     assert float(error.max()) <= 2.0
+
+
+@pytest.mark.parametrize("ref_idx", [0, 23])
+def test_long_occlusion_is_bridged_after_feature_failure(
+    monkeypatch, ref_idx
+):
+    count = 24
+    frames, masks, truth = _small_clip(count)
+    monkeypatch.setattr(
+        geometry, "_track_pair", lambda *args: (None, 0.0, 0)
+    )
+    surfaces = [
+        masks[index] if index in {0, count - 1}
+        else np.zeros(frames[0].shape[:2], dtype=bool)
+        for index in range(count)
+    ]
+    occluders = [
+        masks[index] if 0 < index < count - 1 else None
+        for index in range(count)
+    ]
+    # Exercise both an isolated miss and the reported three-frame hole.
+    for index in (8, 13, 14, 15):
+        occluders[index] = None
+
+    result = propagate_quad(
+        frames,
+        ref_idx,
+        truth[ref_idx],
+        surface_masks=surfaces,
+        occluder_masks=occluders,
+    )
+
+    assert result["status"] == ["ok"] + ["occluded"] * 22 + ["ok"]
+    assert np.isfinite(result["quads"]).all()
+    assert np.all(result["inliers"] == 0)
+    assert np.all(result["confidence"][1:-1] > 0.0)
+    assert np.all(result["confidence"][1:-1] <= 0.5)
+    errors = np.linalg.norm(result["quads"] - truth, axis=2)
+    assert float(errors.max()) <= 2.0
+    np.testing.assert_array_equal(result["quads"][ref_idx], truth[ref_idx])
+
+
+@pytest.mark.parametrize(
+    "endpoint_confidence,broken_evidence,should_fill",
+    [(0.8, False, True), (0.49, False, False), (0.8, True, False)],
+)
+def test_long_bridge_requires_confident_ends_and_only_occlusion(
+    endpoint_confidence, broken_evidence, should_fill
+):
+    count = 18
+    base = np.array(
+        [[40, 30], [140, 30], [140, 100], [40, 100]],
+        dtype=np.float64,
+    )
+    truth = base[None] + np.arange(count)[:, None, None] * np.array(
+        [1.0, 0.5]
+    )
+    quads = np.full((count, 4, 2), np.nan, dtype=np.float64)
+    quads[[0, -1]] = truth[[0, -1]]
+    confidence = np.zeros(count, dtype=np.float32)
+    confidence[0] = 1.0
+    confidence[-1] = endpoint_confidence
+    status = ["ok"] + ["occluded"] * (count - 2) + ["ok"]
+    occluders = [
+        _filled_polygon(quad, (160, 220))
+        if 0 < index < count - 1 else None
+        for index, quad in enumerate(truth)
+    ]
+    if broken_evidence:
+        # Even a person detection cannot explain loss away from the poster.
+        occluders[8] = np.zeros((160, 220), dtype=bool)
+        occluders[8][:10, :10] = True
+        status[8] = "lost"
+
+    geometry._fill_short_gaps(quads, confidence, status, occluders)
+
+    if should_fill:
+        np.testing.assert_allclose(quads, truth, atol=1e-6, rtol=0)
+        assert status[1:-1] == ["occluded"] * (count - 2)
+        assert np.all(confidence[1:-1] > 0.0)
+    else:
+        assert np.isnan(quads[1:-1]).all()
+        assert np.all(confidence[1:-1] == 0.0)
 
 
 def test_short_gap_with_collapsing_corner_blend_remains_finite_and_convex():
