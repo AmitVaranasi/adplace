@@ -1,19 +1,76 @@
 {
   "campaigns": [
-    {"brand_id": "brewlark", "campaign_token": "brewlark-2026-q4", "category": "coffee",
-     "creatives": {"16x9": "assets/creatives/brewlark_16x9.png", "4x3": "assets/creatives/brewlark_4x3.png", "9x16": "assets/creatives/brewlark_9x16.png"},
-     "eligible_surfaces": ["billboard", "poster", "screen", "sign"],
-     "contextual_exclusions": ["children", "hospital"],
-     "preference_tags": ["coffee", "food", "morning"]},
-    {"brand_id": "kestrel", "campaign_token": "kestrel-2026-q4", "category": "sportswear",
-     "creatives": {"16x9": "assets/creatives/kestrel_16x9.png", "4x3": "assets/creatives/kestrel_4x3.png", "9x16": "assets/creatives/kestrel_9x16.png"},
-     "eligible_surfaces": ["billboard", "poster", "sign"],
-     "contextual_exclusions": ["funeral"],
-     "preference_tags": ["running", "fitness", "outdoors"]},
-    {"brand_id": "paperwhale", "campaign_token": "paperwhale-2026-q4", "category": "books",
-     "creatives": {"16x9": "assets/creatives/paperwhale_16x9.png", "4x3": "assets/creatives/paperwhale_4x3.png", "9x16": "assets/creatives/paperwhale_9x16.png"},
-     "eligible_surfaces": ["billboard", "poster", "screen"],
-     "contextual_exclusions": [],
-     "preference_tags": ["reading", "learning", "quiet"]}
+    {
+      "brand_id": "brewlark",
+      "campaign_token": "brewlark-2026-q4",
+      "category": "coffee",
+      "creatives": {
+        "16x9": "assets/creatives/brewlark_16x9.png",
+        "4x3": "assets/creatives/brewlark_4x3.png",
+        "3x4": "assets/creatives/brewlark_3x4.png",
+        "9x16": "assets/creatives/brewlark_9x16.png"
+      },
+      "eligible_surfaces": [
+        "billboard",
+        "poster",
+        "screen",
+        "sign"
+      ],
+      "contextual_exclusions": [
+        "children",
+        "hospital"
+      ],
+      "preference_tags": [
+        "coffee",
+        "food",
+        "morning"
+      ]
+    },
+    {
+      "brand_id": "kestrel",
+      "campaign_token": "kestrel-2026-q4",
+      "category": "sportswear",
+      "creatives": {
+        "16x9": "assets/creatives/kestrel_16x9.png",
+        "4x3": "assets/creatives/kestrel_4x3.png",
+        "3x4": "assets/creatives/kestrel_3x4.png",
+        "9x16": "assets/creatives/kestrel_9x16.png"
+      },
+      "eligible_surfaces": [
+        "billboard",
+        "poster",
+        "sign"
+      ],
+      "contextual_exclusions": [
+        "funeral"
+      ],
+      "preference_tags": [
+        "running",
+        "fitness",
+        "outdoors"
+      ]
+    },
+    {
+      "brand_id": "paperwhale",
+      "campaign_token": "paperwhale-2026-q4",
+      "category": "books",
+      "creatives": {
+        "16x9": "assets/creatives/paperwhale_16x9.png",
+        "4x3": "assets/creatives/paperwhale_4x3.png",
+        "3x4": "assets/creatives/paperwhale_3x4.png",
+        "9x16": "assets/creatives/paperwhale_9x16.png"
+      },
+      "eligible_surfaces": [
+        "billboard",
+        "poster",
+        "screen"
+      ],
+      "contextual_exclusions": [],
+      "preference_tags": [
+        "reading",
+        "learning",
+        "quiet"
+      ]
+    }
   ]
 }

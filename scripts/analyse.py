@@ -5,6 +5,7 @@
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -16,6 +17,7 @@ sys.path.insert(0, str(ROOT))
 from pipeline.sam_track import read_frames, segment_video  # noqa: E402
 
 CACHE_VERSION = 1
+SEGMENT = 48  # frames per SAM process; one long process accumulates memory until an 18 GB Mac swaps
 
 
 def cache_dir(clip, settings):
@@ -43,7 +45,16 @@ def main():
     a, b = (int(v) for v in args.frames.split(":")) if args.frames else (0, len(frames))
     masks = np.zeros((len(frames),) + frames[0].shape[:2], bool)
     scores = np.full(len(frames), np.nan)
-    masks[a:b], scores[a:b] = segment_video(frames[a:b], args.prompt, chunk=args.chunk)
+    if b - a > SEGMENT:
+        # Run each segment in a fresh process (cached on its own), then merge.
+        for s0 in range(a, b, SEGMENT):
+            seg = f"{s0}:{min(s0 + SEGMENT, b)}"
+            subprocess.run([sys.executable, __file__, args.clip, "--prompt", args.prompt, "--chunk", str(args.chunk),
+                            "--frames", seg], check=True)
+            z = np.load(cache_dir(args.clip, {**settings, "frames": seg}) / "surface_masks.npz")
+            masks[s0:s0 + SEGMENT], scores[s0:s0 + SEGMENT] = z["masks"][s0:s0 + SEGMENT], z["scores"][s0:s0 + SEGMENT]
+    else:
+        masks[a:b], scores[a:b] = segment_video(frames[a:b], args.prompt, chunk=args.chunk)
     out.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out / "surface_masks.npz", masks=masks, scores=scores)
     meta = {**settings, "clip": str(args.clip), "frames": len(frames), "fps": fps, "size": frames[0].shape[1::-1],

@@ -18,7 +18,7 @@ BRANDS = {
     "paperwhale": {"name": "PAPERWHALE", "tagline": "Books for deep dives", "bg": (232, 238, 240), "fg": (20, 50, 70),
                    "accent": (40, 140, 170)},
 }
-RATIOS = {"16x9": (1600, 900), "4x3": (1600, 1200), "9x16": (900, 1600)}
+RATIOS = {"16x9": (1600, 900), "4x3": (1600, 1200), "3x4": (1200, 1600), "9x16": (900, 1600)}
 
 
 def font(size):

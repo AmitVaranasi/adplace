@@ -30,7 +30,7 @@ def pick_creative(c, quad):
     """The creative whose aspect ratio is closest to the surface's (measured on the reference quad)."""
     w = (np.linalg.norm(quad[1] - quad[0]) + np.linalg.norm(quad[2] - quad[3])) / 2
     h = (np.linalg.norm(quad[3] - quad[0]) + np.linalg.norm(quad[2] - quad[1])) / 2
-    ratios = {"16x9": 16 / 9, "4x3": 4 / 3, "9x16": 9 / 16}
+    ratios = {"16x9": 16 / 9, "4x3": 4 / 3, "3x4": 3 / 4, "9x16": 9 / 16}
     key = min(c["creatives"], key=lambda k: abs(np.log(ratios[k] / (w / h))))
     return cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
 
@@ -70,13 +70,15 @@ def main():
 
     frames, fps = read_frames(args.clip)
     quads = np.load(Path(args.cache) / "quads.npy")
+    occ_file = Path(args.cache) / "occluders.npz"
+    occluders = list(np.load(occ_file)["masks"]) if occ_file.exists() else None
     c, tokens = campaign(args.brand)
     ref = int(np.argmax(np.isfinite(quads).all(axis=(1, 2))))
     creative = pick_creative(c, quads[ref])
     timings = {}
 
     t0 = time.time()
-    placed = composite.render_clip(frames, quads, creative, emissive=args.emissive)
+    placed = composite.render_clip(frames, quads, creative, occluder_masks=occluders, emissive=args.emissive)
     timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
     placed = [add_label(f) for f in placed]
     t0 = time.time()
