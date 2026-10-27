@@ -15,7 +15,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from pipeline import composite, watermark  # noqa: E402
+from pipeline import composite, exposure, watermark  # noqa: E402
 from pipeline.sam_track import read_frames  # noqa: E402
 
 LABEL = "AI product placement"
@@ -75,6 +75,16 @@ def main():
     c, tokens = campaign(args.brand)
     ref = int(np.argmax(np.isfinite(quads).all(axis=(1, 2))))
     creative = pick_creative(c, quads[ref])
+    if not args.emissive:
+        # Printed surface: bring the creative into the scene's tonal range (no blank reference shot available).
+        tone = exposure.scene_tone(frames[ref], quads[ref])
+        if tone is not None:
+            # The ring around a sign is often bright sky; printed paper is lit by it but never as bright, so cap paper
+            # white at 1.6x the frame's mean linear luminance (chosen by eye on the overcast roadside clip).
+            gray = cv2.cvtColor(frames[ref], cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+            frame_mean = float(np.mean(np.where(gray <= 0.04045, gray / 12.92, ((gray + 0.055) / 1.055) ** 2.4)))
+            tone["white"] = min(tone["white"], 1.6 * frame_mean / 0.92)
+            creative = np.dstack([exposure.fit_creative_tone(creative[:, :, :3], tone), creative[:, :, 3]])
     timings = {}
 
     t0 = time.time()
