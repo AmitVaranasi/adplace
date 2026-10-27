@@ -94,7 +94,8 @@ $("go").onclick = async () => {
     $("facts").innerHTML = `
       <dt>Surface</dt><dd>${r.slot.surface}, on screen ${m.on_screen_s.toFixed(1)} s, ${(100 * m.mean_area_frac).toFixed(1)}% of frame</dd>
       <dt>Eligible</dt><dd>${r.eligible.map((e) => e.brand_id).join(", ") || "none"}</dd>
-      <dt>Chooser</dt><dd>${r.chooser}</dd>`;
+      <dt>Chooser</dt><dd>${r.chooser}</dd>
+      <dt>Tried</dt><dd>${r.attempts.map((a) => `${a.provider}: ${a.result}`).join("; ") || "none (rules only)"}</dd>`;
     if (r.choice.status !== "ok") {
       $("choice").innerHTML = `<span class="pill bad">No placement</span> ${r.choice.reason}`;
       return;

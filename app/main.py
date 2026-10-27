@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from pipeline import discover, watermark  # noqa: E402
+from pipeline import discover, rank, watermark  # noqa: E402
 from pipeline.sam_track import read_frames  # noqa: E402
 from scripts.render import render_campaign  # noqa: E402
 
@@ -69,7 +69,7 @@ class ChooseRequest(BaseModel):
 
 @app.post("/api/choose")
 def choose(req: ChooseRequest):
-    """Deterministic facts and filtering, then a choice. Muse will rank here once connected; the fallback is used now."""
+    """Deterministic facts and filtering, then a model choice (Muse, then Llama), validated, else the rules."""
     entry = clip_entry(req.clip)
     profile = next((p for p in load("profiles.json")["profiles"] if p["profile_id"] == req.profile_id), None)
     if profile is None:
@@ -77,13 +77,8 @@ def choose(req: ChooseRequest):
     inventory = load("inventory.json")
     slot = slot_for(req.clip)
     eligible = discover.eligible_pairs([slot], inventory, entry["context_tags"])
-    choice = discover.fallback_choice(eligible, [slot], inventory, profile["preferences"])
-    if choice.get("status") == "ok":
-        tags = next(c["preference_tags"] for c in inventory["campaigns"] if c["brand_id"] == choice["brand_id"])
-        shared = sorted(set(tags) & set(profile["preferences"]))
-        choice["rationale"] = (f"{choice['brand_id']} matches this viewer's interest in {', '.join(shared)}" if shared
-                               else f"{choice['brand_id']} is the best-fitting eligible campaign for this surface")
-    return {"slot": slot, "eligible": eligible, "choice": choice, "chooser": "deterministic fallback (Muse pending)"}
+    result = rank.choose([slot], eligible, inventory, profile, entry["context_tags"])
+    return {"slot": slot, "eligible": eligible, **result}
 
 
 class RenderRequest(BaseModel):
