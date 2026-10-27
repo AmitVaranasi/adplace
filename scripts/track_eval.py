@@ -24,6 +24,28 @@ def load_masks(dirs, n):
     return masks
 
 
+def fill_occluder_gaps(masks, max_gap=2):
+    """SAM sometimes misses a moving occluder for a frame; a missing mask would paint the ad over the person. Fill gaps
+    of up to max_gap frames by moving the mask before the gap along the occluder's motion (centroid shift between the
+    masks on either side). A union of the two would be too wide for a fast walker and expose the original surface."""
+    import cv2
+
+    masks = list(masks)
+    for i in range(len(masks)):
+        if masks[i] is not None:
+            continue
+        b = next((j for j in range(i - 1, max(-1, i - 1 - max_gap), -1) if masks[j] is not None), None)
+        a = next((j for j in range(i + 1, min(len(masks), i + 1 + max_gap)) if masks[j] is not None), None)
+        if b is None or a is None:
+            continue
+        cb, ca = (np.argwhere(masks[k]).mean(axis=0)[::-1] for k in (b, a))  # (x, y) centroids
+        dx, dy = (ca - cb) * (i - b) / (a - b)
+        M = np.float32([[1, 0, dx], [0, 1, dy]])
+        h, w = masks[b].shape
+        masks[i] = cv2.warpAffine(masks[b].astype(np.uint8), M, (w, h), flags=cv2.INTER_NEAREST).astype(bool)
+    return masks
+
+
 def main(clip, *dirs):
     occ_dir = None
     if "--occluders" in dirs:
@@ -31,7 +53,7 @@ def main(clip, *dirs):
         occ_dir, dirs = dirs[i + 1], dirs[:i] + dirs[i + 2:]
     frames, _ = read_frames(clip)
     masks = load_masks(dirs, len(frames))
-    occluders = load_masks([occ_dir], len(frames)) if occ_dir else None
+    occluders = fill_occluder_gaps(load_masks([occ_dir], len(frames))) if occ_dir else None
     found = [i for i, m in enumerate(masks) if m is not None]
     # Reference: the found frame with the largest mask (fully visible surface).
     ref = max(found, key=lambda i: masks[i].sum())
