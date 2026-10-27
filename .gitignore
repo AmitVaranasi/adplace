@@ -1,0 +1,9 @@
+runs/
+__pycache__/
+*.mp4
+*.mov
+.venv/
+cache/
+outputs/
+assets/clips/
+.env
