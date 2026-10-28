@@ -1,8 +1,56 @@
 {
   "note": "Synthetic demo profiles. Category preferences only; no personal data is collected.",
   "profiles": [
-    {"profile_id": "viewer-a", "label": "Morning commuter", "preferences": ["coffee", "morning"]},
-    {"profile_id": "viewer-b", "label": "Weekend runner", "preferences": ["running", "fitness"]},
-    {"profile_id": "viewer-c", "label": "Book lover", "preferences": ["reading", "learning"]}
+    {
+      "profile_id": "viewer-a",
+      "label": "Morning commuter",
+      "preferences": [
+        "coffee",
+        "morning"
+      ]
+    },
+    {
+      "profile_id": "viewer-b",
+      "label": "Weekend runner",
+      "preferences": [
+        "running",
+        "fitness"
+      ]
+    },
+    {
+      "profile_id": "viewer-c",
+      "label": "Book lover",
+      "preferences": [
+        "reading",
+        "learning"
+      ]
+    },
+    {
+      "profile_id": "viewer-d",
+      "label": "Weekend traveller",
+      "preferences": [
+        "travel",
+        "holidays",
+        "deals"
+      ]
+    },
+    {
+      "profile_id": "viewer-e",
+      "label": "Home cook",
+      "preferences": [
+        "cooking",
+        "food",
+        "health"
+      ]
+    },
+    {
+      "profile_id": "viewer-f",
+      "label": "Tech commuter",
+      "preferences": [
+        "tech",
+        "commuting",
+        "cycling"
+      ]
+    }
   ]
 }

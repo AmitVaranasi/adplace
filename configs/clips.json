@@ -190,5 +190,125 @@
         "analysis": "cache/billboard_night_occluded-a90ba89b4960-dd14ad90"
       }
     ]
+  },
+  "assets/clips/piccadilly_long.mp4": {
+    "title": "Piccadilly Circus, London (23.5 s, whole screen wall, buses and people)",
+    "context_tags": [
+      "street",
+      "daytime",
+      "city"
+    ],
+    "long": true,
+    "occluder_prompts": [
+      "person",
+      "bus"
+    ],
+    "slots": [
+      {
+        "slot_id": "piccadilly_long-6",
+        "label": "top curved screen",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot6",
+        "area_frac": 0.0829,
+        "neighbours": [
+          "piccadilly_long-4",
+          "piccadilly_long-3",
+          "piccadilly_long-1"
+        ],
+        "shape": {
+          "type": "ribbon",
+          "creative": "16x9"
+        }
+      },
+      {
+        "slot_id": "piccadilly_long-1",
+        "label": "middle-right curved screen",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot1",
+        "area_frac": 0.0441,
+        "neighbours": [
+          "piccadilly_long-6",
+          "piccadilly_long-3",
+          "piccadilly_long-0"
+        ],
+        "shape": {
+          "type": "ribbon",
+          "creative": "16x9"
+        }
+      },
+      {
+        "slot_id": "piccadilly_long-0",
+        "label": "bottom-right curved screen (Hyundai)",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot0",
+        "area_frac": 0.0457,
+        "neighbours": [
+          "piccadilly_long-1",
+          "piccadilly_long-2"
+        ],
+        "shape": {
+          "type": "ribbon",
+          "creative": "16x9"
+        }
+      },
+      {
+        "slot_id": "piccadilly_long-3",
+        "label": "centre screen (McDonald's)",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot3",
+        "area_frac": 0.0288,
+        "neighbours": [
+          "piccadilly_long-6",
+          "piccadilly_long-4",
+          "piccadilly_long-5",
+          "piccadilly_long-1",
+          "piccadilly_long-2"
+        ]
+      },
+      {
+        "slot_id": "piccadilly_long-4",
+        "label": "top-left screen",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot4",
+        "area_frac": 0.0285,
+        "neighbours": [
+          "piccadilly_long-6",
+          "piccadilly_long-3",
+          "piccadilly_long-5"
+        ]
+      },
+      {
+        "slot_id": "piccadilly_long-5",
+        "label": "left screen (Samsung)",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot5",
+        "area_frac": 0.0162,
+        "neighbours": [
+          "piccadilly_long-4",
+          "piccadilly_long-3",
+          "piccadilly_long-2"
+        ]
+      },
+      {
+        "slot_id": "piccadilly_long-2",
+        "label": "bottom-left long screen (Vogue)",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot2",
+        "area_frac": 0.0415,
+        "neighbours": [
+          "piccadilly_long-5",
+          "piccadilly_long-3",
+          "piccadilly_long-0"
+        ]
+      }
+    ],
+    "hidden": true
   }
 }

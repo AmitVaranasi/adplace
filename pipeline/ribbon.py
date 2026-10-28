@@ -298,7 +298,7 @@ def warp_to_ribbon(creative_rgba, ribbon, frame_shape):
 
 
 def composite_ribbon(
-    frame_bgr, creative_rgba, ribbon, occluder_mask=None, emissive=True,
+    frame_bgr, creative_rgba, ribbon, occluder_mask=None, emissive=True, match_energy=True,
 ):
     """Match appearance, preserving every zero-alpha and occluded pixel."""
     frame = np.asarray(frame_bgr)
@@ -335,7 +335,9 @@ def composite_ribbon(
         colour = numerator / np.maximum(denominator, 1e-6)
 
     target_luma = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
-    if emissive:
+    # match_energy=False for a creative already graded to the screen (render.grade_to_scene): matching the old
+    # content's light frame by frame made the ad jump 52 -> 100 luma whenever the original screen flashed.
+    if emissive and match_energy:
         source_luma = cv2.cvtColor(colour, cv2.COLOR_BGR2GRAY)
         weights = alpha[..., 0] * visible
         source_total = float(np.sum(source_luma * weights, dtype=np.float64))

@@ -112,7 +112,7 @@ def render_ribbon(frames, cache, c, shape):
     key = shape.get("creative", "16x9")
     art = grade_to_scene(cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED),
                                       cv2.COLOR_BGRA2RGBA), frames, cache)
-    out = [composite_ribbon(f, art, r, emissive=shape.get("emissive", True)) if r is not None
+    out = [composite_ribbon(f, art, r, emissive=shape.get("emissive", True), match_energy=False) if r is not None
            else f.copy() for f, r in zip(frames, ribbons)]
     return soft_occlude(frames, out, occ), sum(r is not None for r in ribbons)
 

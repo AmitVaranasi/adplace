@@ -21,3 +21,7 @@
 {"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.0975, "purpose": "backfill ESTIMATE: API probes/smoke tests"}
 {"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.1176, "purpose": "backfill ESTIMATE: piccadilly_long person stream that broke mid-response", "frames": 588}
 {"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.3, "purpose": "backfill ESTIMATE: unrecorded early SAM runs (tests, superseded caches)", "frames": 1500}
+{"t": "2026-10-28T00:19:10", "kind": "sam", "usd": 0.1176, "purpose": "person", "frames": 588}
+{"t": "2026-10-28T00:20:21", "kind": "sam", "usd": 0.1176, "purpose": "bus", "frames": 588}
+{"t": "2026-10-28T00:40:46", "kind": "muse", "usd": 0.005025, "purpose": "rank", "prompt_tokens": 1154, "completion_tokens": 843}
+{"t": "2026-10-28T00:52:10", "kind": "muse", "usd": 0.004343, "purpose": "rank", "prompt_tokens": 1159, "completion_tokens": 681}
