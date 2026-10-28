@@ -15,7 +15,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from pipeline import composite, exposure, watermark  # noqa: E402
+from pipeline import composite, watermark  # noqa: E402
 from pipeline.sam_track import read_frames  # noqa: E402
 
 LABEL = "AI product placement"
@@ -60,6 +60,24 @@ def encode(frames, fps, path, crf=18):
         raise SystemExit(f"ffmpeg failed writing {path}")
 
 
+def grade_to_scene(creative_rgba, frames, cache, strength=1.0):
+    """Grade the creative into the light of the surface it replaces (black level, white point, cast, chroma ceiling),
+    measured once per clip on the middle frame so it cannot flicker. Flat sRGB brand colours are far more saturated
+    and contrasty than anything a camera records in a real scene, which is what gives a placement away."""
+    from pipeline.grade import apply_grade, scene_grade
+    masks = np.load(Path(cache) / "surface_masks.npz")["masks"]
+    seen = [i for i in range(len(masks)) if masks[i].any()]
+    if not seen:
+        return creative_rgba
+    i = seen[len(seen) // 2]
+    region = masks[i].copy()
+    occ_file = Path(cache) / "occluders.npz"
+    if occ_file.exists():
+        region &= ~np.load(occ_file)["masks"][i]
+    ring = (cv2.dilate(masks[i].astype(np.uint8), np.ones((41, 41), np.uint8)) > 0) & ~masks[i]
+    return apply_grade(creative_rgba, scene_grade(frames[i][region], frames[i][ring], strength=strength))
+
+
 def render_cylinder(frames, cache, c, shape):
     """Wrap the creative around an upright cylinder (mug, cup, column) found in each frame's SAM mask."""
     from pipeline.curved_fit import cylinder_from_mask, hold_static, smooth_cylinders
@@ -70,7 +88,8 @@ def render_cylinder(frames, cache, c, shape):
     cyls = hold_static(smooth_cylinders([cylinder_from_mask(m, band=band, frame=f, top=top) if m.any() else None
                                          for m, f in zip(masks, frames)]))
     key = shape.get("creative", "4x3")
-    art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
+    art = grade_to_scene(cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED),
+                                      cv2.COLOR_BGRA2RGBA), frames, cache)
     arc = shape.get("arc_deg", 110)
     return [composite_curved(f, art, cy, arc_deg=arc) if cy is not None else f.copy() for f, cy in zip(frames, cyls)], \
         sum(cy is not None for cy in cyls)
@@ -91,7 +110,8 @@ def render_ribbon(frames, cache, c, shape):
         ribbons = lock_ribbons(frames, ribbons, list(masks), None if occ[0] is None else list(occ),
                                H=np.load(Path(cache) / "camera_H.npy"))
     key = shape.get("creative", "16x9")
-    art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
+    art = grade_to_scene(cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED),
+                                      cv2.COLOR_BGRA2RGBA), frames, cache)
     out = [composite_ribbon(f, art, r, emissive=shape.get("emissive", True)) if r is not None
            else f.copy() for f, r in zip(frames, ribbons)]
     return soft_occlude(frames, out, occ), sum(r is not None for r in ribbons)
@@ -129,18 +149,11 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
     occluders = list(np.load(occ_file)["masks"]) if occ_file.exists() else None
     ref = int(np.argmax(np.isfinite(quads).all(axis=(1, 2))))
     creative = pick_creative(c, quads[ref])
-    if not emissive:
-        # Printed surface: bring the creative into the scene's tonal range (no blank reference shot available).
-        tone = exposure.scene_tone(frames[ref], quads[ref])
-        if tone is not None:
-            # The ring around a sign is often bright sky; printed paper is lit by it but never as bright, so cap paper
-            # white at 1.6x the frame's mean linear luminance (chosen by eye on the overcast roadside clip).
-            gray = cv2.cvtColor(frames[ref], cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
-            frame_mean = float(np.mean(np.where(gray <= 0.04045, gray / 12.92, ((gray + 0.055) / 1.055) ** 2.4)))
-            tone["white"] = min(tone["white"], 1.6 * frame_mean / 0.92)
-            creative = np.dstack([exposure.fit_creative_tone(creative[:, :, :3], tone), creative[:, :, 3]])
+    # Printed or lit, the ad takes the black level, white point, cast and chroma ceiling of the surface it replaces
+    # (this replaced the old printed-only tone fit, which left pure blacks on the sunlit Dundas board).
+    creative = grade_to_scene(creative, frames, cache)
     t0 = time.time()
-    placed = composite.render_clip(frames, quads, creative, emissive=emissive)
+    placed = composite.render_clip(frames, quads, creative, emissive=emissive, match_energy=False)
     if occluders is not None:
         placed = soft_occlude(frames, placed, occluders)
     timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)

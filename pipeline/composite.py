@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import zlib
+
 import cv2
 import numpy as np
 from scipy.optimize import least_squares
@@ -284,8 +286,14 @@ def composite_frame(
     blur_sigma=None,
     grain_sigma=None,
     bleed_px=2.0,
+    match_energy=True,
 ) -> np.ndarray:
-    """Warp premultiplied artwork, match scene appearance, and preserve occluders."""
+    """Warp premultiplied artwork, match scene appearance, and preserve occluders.
+
+    match_energy rescales an emissive creative each frame to the original screen's total light. Pass False for a
+    creative already graded to the screen's white point (render.grade_to_scene): matching totals dims a white ad to
+    grey on a mostly red screen, and makes it pulse with the old content's animation.
+    """
     frame = _frame_array(frame)
     result = frame.copy()
     points = _quad_array(quad)
@@ -391,7 +399,7 @@ def composite_frame(
         else ~mask[top:bottom, left:right]
     )
 
-    if emissive:
+    if emissive and match_energy:
         source_luma = cv2.cvtColor(premultiplied, cv2.COLOR_BGR2GRAY)
         target_luma = cv2.cvtColor(original.astype(np.float32), cv2.COLOR_BGR2GRAY)
         source_total = float(source_luma[visible].sum(dtype=np.float64))
@@ -409,7 +417,9 @@ def composite_frame(
 
     if grain > 0:
         # A local generator makes repeated calls deterministic without global state.
-        noise = np.random.default_rng(0).normal(0.0, grain, premultiplied.shape)
+        # Seeded from the frame itself: repeatable, yet different every frame as real grain is (seed 0 froze it).
+        seed = zlib.crc32(np.ascontiguousarray(original).tobytes())
+        noise = np.random.default_rng(seed).normal(0.0, grain, premultiplied.shape)
         premultiplied += noise.astype(np.float32) * alpha
 
     visible_alpha = alpha * visible[..., None]
@@ -430,6 +440,7 @@ def render_clip(
     illum=None,
     occluder_masks=None,
     emissive=False,
+    match_energy=True,
 ) -> list:
     """Composite a clip using one appearance estimate from its first valid quad."""
     frames = list(frames)
@@ -459,6 +470,7 @@ def render_clip(
             emissive=emissive,
             blur_sigma=blur,
             grain_sigma=grain,
+            match_energy=match_energy,
         )
         for frame, quad, mask in zip(frames, quads, masks)
     ]
