@@ -74,6 +74,20 @@ def render_cylinder(frames, cache, c, shape):
         sum(cy is not None for cy in cyls)
 
 
+def render_ribbon(frames, cache, c, shape):
+    """Bend the creative along a surface curved in one direction (a facade screen wrapping a corner)."""
+    from pipeline.ribbon import composite_ribbon, ribbon_from_mask, smooth_ribbons
+    masks = np.load(Path(cache) / "surface_masks.npz")["masks"]
+    occ_file = Path(cache) / "occluders.npz"
+    occ = np.load(occ_file)["masks"] if occ_file.exists() else [None] * len(masks)
+    ribbons = smooth_ribbons([ribbon_from_mask(m, occluder=o) if m.any() else None for m, o in zip(masks, occ)])
+    key = shape.get("creative", "16x9")
+    art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
+    out = [composite_ribbon(f, art, r, occluder_mask=o, emissive=shape.get("emissive", True)) if r is not None
+           else f.copy() for f, r, o in zip(frames, ribbons, occ)]
+    return out, sum(r is not None for r in ribbons)
+
+
 def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None, shape=None, tag=None):
     """Composite, label, watermark, export and verify one campaign on one analysed clip. Returns the report dict.
 
@@ -82,9 +96,9 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
     frames, fps = read_frames(clip)
     c, tokens = campaign(brand)
     timings = {}
-    if shape and shape.get("type") == "cylinder":
+    if shape and shape.get("type") in ("cylinder", "ribbon"):
         t0 = time.time()
-        placed, tracked = render_cylinder(frames, cache, c, shape)
+        placed, tracked = (render_cylinder if shape["type"] == "cylinder" else render_ribbon)(frames, cache, c, shape)
         timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
         return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir, tag)
     quads = np.load(Path(cache) / "quads.npy")

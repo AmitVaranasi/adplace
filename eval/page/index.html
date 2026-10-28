@@ -65,12 +65,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 
 <div class="wrap">
   <header style="display:grid; gap:10px">
-    <div class="eyebrow">Video review · about 3 minutes</div>
+    <div class="eyebrow">Video review · about 4 minutes</div>
     <h1>How natural do these signs look?</h1>
   </header>
 
   <section class="card" id="intro">
-    <p>You'll watch 8 short clips of street signs and screens, 5 seconds each. Some are untouched footage and some have been edited. For each one, rate how natural the main sign or screen looks.</p>
+    <p>You'll watch 13 short clips, 5 seconds each: street screens and signs, and mugs on a table. Some are untouched footage and some have been edited. For each one, rate how natural the screens, signs and mugs look.</p>
     <ol class="steps">
       <li>Watch the clip at least once. It loops, so watch it again if you like.</li>
       <li>Pick a score from 1 (obvious editing artefacts) to 5 (no visible artefacts).</li>
@@ -88,7 +88,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     <div class="slate"><span>Clip <b id="num">1</b> of <b id="total">8</b></span><span>5.0 s loop</span><span>sound off</span></div>
     <div class="progress"><i id="bar"></i></div>
     <div class="screen"><video id="video" muted playsinline loop preload="auto"></video></div>
-    <div class="question">How visually natural is the main sign or screen in this clip?</div>
+    <div class="question">How visually natural do the screens, signs or mugs in this clip look?</div>
     <div class="scale" id="scale" role="group" aria-label="Score from 1 to 5"></div>
     <div class="ends"><span>1 = obvious artefacts</span><span>5 = no visible artefacts</span></div>
     <div class="row"><button id="next" disabled>Next clip</button><span class="hint" id="wait">Watch the clip once to unlock the scores.</span></div>
@@ -104,13 +104,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
     </div>
   </section>
 
-  <p class="muted" style="font-size:13px">Footage from Wikimedia Commons: "Wikipedia Times Square Billboard 20" by Wikimedia Foundation (CC BY-SA 4.0) and "WACN - Video clip of newiki digital billboard at Biratnagar" by WACN Wiki Awareness Campaign in Nepal (CC BY 3.0), trimmed and edited. One scene includes a computer-generated passer-by. Brands shown are fictional. Edited clips are for this test only.</p>
+  <p class="muted" style="font-size:13px">Footage from Wikimedia Commons, trimmed and edited: Times Square by Wikimedia Foundation (CC BY-SA 4.0); Piccadilly Circus by Kauko Helavuo (CC BY 3.0); Shibuya Crossing by Basile Morin (CC BY-SA 4.0); Yonge-Dundas by Raysonho (CC0); Thermochromic mug by The wub (CC BY-SA 4.0); Morning Mug by Manuel Stadelmann (CC BY 3.0). Brands shown are fictional. Edited clips are for this test only.</p>
 </div>
 
 <script>
-const IDS = ["s01", "s02", "s03", "s04", "s05", "s06", "s07", "s08"];
+const IDS = ["s01", "s02", "s03", "s04", "s05", "s06", "s07", "s08", "s09", "s10", "s11", "s12", "s13"];
 const LABELS = ["Obvious", "Noticeable", "Slight", "Barely", "None"];
-const STORE = "realism-v1";
+const STORE = "realism-v2";
 const $ = (id) => document.getElementById(id);
 
 function load() { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } }
@@ -144,14 +144,14 @@ if (state.finished) showDone();
 function persist() {
   if (!dbRef) return Promise.resolve(false);
   const body = { initials: state.initials, scores: state.scores, order: state.order,
-                 started: state.started, finished: state.finished, version: 1 };
+                 started: state.started, finished: state.finished, version: 2 };
   saving = saving.then(() => dbRef.set(body).then(() => true, () => false));
   return saving;
 }
 
 function code() {
   const s = state.order.filter((id) => state.scores[id]).map((id) => id.slice(1) + state.scores[id]).join("");
-  return `RC1-${(state.initials || "anon").replace(/[^A-Za-z0-9]/g, "")}-${s}`;
+  return `RC2-${(state.initials || "anon").replace(/[^A-Za-z0-9]/g, "")}-${s}`;
 }
 
 $("scale").innerHTML = LABELS.map((l, i) =>

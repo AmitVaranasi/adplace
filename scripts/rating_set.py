@@ -24,13 +24,16 @@ from scripts.render import render_campaign  # noqa: E402
 EVAL = ROOT / "eval"
 OUT = EVAL / "rating"
 KEY = EVAL / "rating_key.json"
-# (clip id in configs/clips.json, brand or None for the untouched original)
+# (clip id in configs/clips.json, slot id or None for the untouched original, brand). v2: daylight only; the night
+# clips were dropped after round 1 (raters scored the untouched night footage itself 1/5). v1 key: eval/rating_key_v1.json.
 STIMULI = [
-    ("assets/clips/times_square.mp4", None), ("assets/clips/times_square.mp4", "kestrel"),
-    ("assets/clips/times_square.mp4", "paperwhale"),
-    ("assets/clips/billboard_night.mp4", None), ("assets/clips/billboard_night.mp4", "brewlark"),
-    ("assets/clips/billboard_night_occluded.mp4", None), ("assets/clips/billboard_night_occluded.mp4", "kestrel"),
-    ("assets/clips/billboard_night_occluded.mp4", "paperwhale"),
+    ("assets/clips/times_square.mp4", None, None), ("assets/clips/times_square.mp4", "times_square-main", "kestrel"),
+    ("assets/clips/piccadilly.mp4", None, None), ("assets/clips/piccadilly.mp4", "piccadilly-0", "brewlark"),
+    ("assets/clips/piccadilly.mp4", "piccadilly-5", "kestrel"), ("assets/clips/piccadilly.mp4", "piccadilly-1", "paperwhale"),
+    ("assets/clips/shibuya.mp4", None, None), ("assets/clips/shibuya.mp4", "shibuya-0", "paperwhale"),
+    ("assets/clips/dundas.mp4", None, None), ("assets/clips/dundas.mp4", "dundas-0", "brewlark"),
+    ("assets/clips/mug_print.mp4", None, None), ("assets/clips/mug_print.mp4", "mug_print-0", "brewlark"),
+    ("assets/clips/mug_pair.mp4", "mug_pair-0", "paperwhale"),
 ]
 
 
@@ -49,17 +52,17 @@ def build(seed):
     order = list(STIMULI)
     random.Random(seed).shuffle(order)
     key = {}
-    for i, (clip, brand) in enumerate(order, 1):
+    for i, (clip, slot_id, brand) in enumerate(order, 1):
         sid = f"s{i:02d}"
         if brand is None:
             src = ROOT / clip
         else:
-            entry = clips[clip]
-            src = render_campaign(clip, str(ROOT / entry["analysis"]), brand, entry["emissive"], label=False,
-                                  out_dir=stage)["output"]
+            sl = next(x for x in clips[clip]["slots"] if x["slot_id"] == slot_id)
+            src = render_campaign(clip, str(ROOT / sl["analysis"]), brand, sl["emissive"], label=False,
+                                  out_dir=stage, shape=sl.get("shape"), tag=slot_id)["output"]
         transcode(src, OUT / f"{sid}.mp4")
-        key[sid] = {"clip": Path(clip).stem, "brand": brand}
-        print(sid, Path(clip).stem, brand or "original")
+        key[sid] = {"clip": Path(clip).stem, "slot": slot_id, "brand": brand}
+        print(sid, Path(clip).stem, slot_id or "", brand or "original")
     KEY.write_text(json.dumps(key, indent=2))
     shutil.rmtree(stage, ignore_errors=True)
 
@@ -74,7 +77,7 @@ def score(path):
     else:
         raters = []
         for line in text.split():
-            _, initials, digits = line.strip().split("-", 2)
+            _, initials, digits = line.strip().split("-", 2)  # RC1-/RC2- codes share the format
             raters.append({"initials": initials,
                            "scores": {f"s{digits[i:i + 2]}": int(digits[i + 2]) for i in range(0, len(digits), 3)}})
     by = {}

@@ -40,6 +40,26 @@
         "surface": "screen",
         "emissive": true,
         "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot4"
+      },
+      {
+        "slot_id": "piccadilly-5",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot5",
+        "shape": {
+          "type": "ribbon",
+          "creative": "16x9"
+        }
+      },
+      {
+        "slot_id": "piccadilly-1",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot1",
+        "shape": {
+          "type": "ribbon",
+          "creative": "16x9"
+        }
       }
     ]
   },

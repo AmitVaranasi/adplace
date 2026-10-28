@@ -1,0 +1,34 @@
+{
+  "s01": {
+    "clip": "billboard_night_occluded",
+    "brand": "kestrel"
+  },
+  "s02": {
+    "clip": "billboard_night_occluded",
+    "brand": "paperwhale"
+  },
+  "s03": {
+    "clip": "times_square",
+    "brand": "paperwhale"
+  },
+  "s04": {
+    "clip": "billboard_night",
+    "brand": "brewlark"
+  },
+  "s05": {
+    "clip": "times_square",
+    "brand": null
+  },
+  "s06": {
+    "clip": "billboard_night",
+    "brand": null
+  },
+  "s07": {
+    "clip": "times_square",
+    "brand": "kestrel"
+  },
+  "s08": {
+    "clip": "billboard_night_occluded",
+    "brand": null
+  }
+}
