@@ -1,4 +1,4 @@
-"""Generate artwork for the three fictional demo brands at each supported aspect ratio.
+"""Generate artwork for the fictional demo brands at each supported aspect ratio.
 
   python scripts/make_creatives.py      # writes assets/creatives/<brand>_<ratio>.png
 """
@@ -17,6 +17,12 @@ BRANDS = {
                 "accent": (255, 92, 70)},
     "paperwhale": {"name": "PAPERWHALE", "tagline": "Books for deep dives", "bg": (232, 238, 240), "fg": (20, 50, 70),
                    "accent": (40, 140, 170)},
+    "nimbus": {"name": "NIMBUS AIR", "tagline": "Fly further for less", "bg": (24, 92, 170), "fg": (255, 255, 255),
+               "accent": (255, 196, 64)},
+    "fernleaf": {"name": "FERNLEAF", "tagline": "Groceries grown nearby", "bg": (34, 92, 62), "fg": (242, 236, 214),
+                 "accent": (178, 208, 92)},
+    "voltway": {"name": "VOLTWAY", "tagline": "Ride electric across town", "bg": (22, 22, 28), "fg": (120, 250, 200),
+                "accent": (240, 240, 240)},
 }
 RATIOS = {"16x9": (1600, 900), "4x3": (1600, 1200), "3x4": (1200, 1600), "9x16": (900, 1600), "2x1": (1800, 900)}
 

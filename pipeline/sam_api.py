@@ -97,6 +97,13 @@ def stream_events(file_id, prompt):
                 value = value[1:]
             if field == "data":
                 data_lines.append(value)
+                if '"video_frames_processed"' in value:  # the final usage block: log spend against the budget
+                    try:
+                        frames = json.loads(value)["response"]["usage"]["video_frames_processed"]
+                        from pipeline.usage import record_sam
+                        record_sam(frames, purpose=prompt)
+                    except (ValueError, KeyError, TypeError):
+                        pass
             elif field == "event":
                 event_type = value
         event = _sse_event(data_lines, event_type)

@@ -85,6 +85,90 @@
     "learning",
     "quiet"
    ]
+  },
+  {
+   "brand_id": "nimbus",
+   "campaign_token": "nimbus-2026-q4",
+   "category": "travel",
+   "creatives": {
+    "16x9": "assets/creatives/nimbus_16x9.png",
+    "4x3": "assets/creatives/nimbus_4x3.png",
+    "3x4": "assets/creatives/nimbus_3x4.png",
+    "9x16": "assets/creatives/nimbus_9x16.png",
+    "2x1": "assets/creatives/nimbus_2x1.png"
+   },
+   "eligible_surfaces": [
+    "billboard",
+    "poster",
+    "screen",
+    "sign"
+   ],
+   "contextual_exclusions": [
+    "children",
+    "hospital",
+    "safety_signage"
+   ],
+   "preference_tags": [
+    "travel",
+    "holidays",
+    "deals"
+   ]
+  },
+  {
+   "brand_id": "fernleaf",
+   "campaign_token": "fernleaf-2026-q4",
+   "category": "groceries",
+   "creatives": {
+    "16x9": "assets/creatives/fernleaf_16x9.png",
+    "4x3": "assets/creatives/fernleaf_4x3.png",
+    "3x4": "assets/creatives/fernleaf_3x4.png",
+    "9x16": "assets/creatives/fernleaf_9x16.png",
+    "2x1": "assets/creatives/fernleaf_2x1.png"
+   },
+   "eligible_surfaces": [
+    "billboard",
+    "poster",
+    "screen",
+    "sign"
+   ],
+   "contextual_exclusions": [
+    "children",
+    "hospital",
+    "safety_signage"
+   ],
+   "preference_tags": [
+    "food",
+    "cooking",
+    "health"
+   ]
+  },
+  {
+   "brand_id": "voltway",
+   "campaign_token": "voltway-2026-q4",
+   "category": "mobility",
+   "creatives": {
+    "16x9": "assets/creatives/voltway_16x9.png",
+    "4x3": "assets/creatives/voltway_4x3.png",
+    "3x4": "assets/creatives/voltway_3x4.png",
+    "9x16": "assets/creatives/voltway_9x16.png",
+    "2x1": "assets/creatives/voltway_2x1.png"
+   },
+   "eligible_surfaces": [
+    "billboard",
+    "poster",
+    "screen",
+    "sign"
+   ],
+   "contextual_exclusions": [
+    "children",
+    "hospital",
+    "safety_signage"
+   ],
+   "preference_tags": [
+    "tech",
+    "commuting",
+    "cycling"
+   ]
   }
  ]
 }

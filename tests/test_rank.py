@@ -217,3 +217,105 @@ def test_cache_key_tracks_the_image(tmp_path, monkeypatch):
     assert out1["attempts"][1]["result"] == "used (cached)"  # llama still hits its old image-free entry
     out_again, new_again = go(b"image-one")
     assert not new_again and out_again["attempts"][1]["result"] == "used (cached)"  # same image -> same key
+
+
+# --- Joint assignment tests ---
+
+A_SLOTS = [
+    {"slot_id": "s1", "surface": "screen", "area_frac": 0.20, "neighbours": ["s2"]},
+    {"slot_id": "s2", "surface": "screen", "area_frac": 0.15, "neighbours": ["s1", "s3"]},
+    {"slot_id": "s3", "surface": "screen", "area_frac": 0.05, "neighbours": ["s2"]},
+]
+A_INV = {"campaigns": [
+    {"brand_id": "brewlark", "category": "coffee", "eligible_surfaces": ["screen", "billboard"],
+     "preference_tags": ["coffee"]},
+    {"brand_id": "cafeluna", "category": "coffee", "eligible_surfaces": ["screen", "billboard"],
+     "preference_tags": ["coffee"]},
+    {"brand_id": "kestrel", "category": "sportswear", "eligible_surfaces": ["screen", "billboard"],
+     "preference_tags": ["running"]},
+    {"brand_id": "wallco", "category": "tools", "eligible_surfaces": ["billboard"],
+     "preference_tags": ["tools"]},
+]}
+A_PROFILE = {"profile_id": "viewer-b", "preferences": ["coffee", "running"]}
+A_VALID = {"assignment": {"s1": "brewlark", "s2": "kestrel"}, "rationale": "Coffee plus running."}
+
+
+def fake_seq(map_url_to_replies):
+    calls = []
+    counters = {k: 0 for k in map_url_to_replies}
+
+    def call(base_url, key, model, system, user, extra=None):
+        calls.append((base_url, system, user))
+        seq = map_url_to_replies[base_url]
+        if isinstance(seq, list):
+            r = seq[min(counters[base_url], len(seq) - 1)]
+            counters[base_url] += 1
+        else:
+            r = seq
+        if isinstance(r, Exception):
+            raise r
+        return r
+    return call, calls
+
+
+def arun(seq, max_ads=3, providers=P1):
+    call, calls = fake_seq(seq)
+    out = rank.choose_assignment(A_SLOTS, A_INV, A_PROFILE, ("night",), max_ads=max_ads,
+                                 provider_list=providers, call=call, use_cache=False)
+    return out, calls
+
+
+def test_assignment_valid_model_answer_is_accepted():
+    out, calls = arun({"http://muse": json.dumps(A_VALID)})
+    assert out["assignment"] == A_VALID["assignment"] and out["chooser"].startswith("muse")
+    assert out["attempts"][0]["result"].startswith("used") and len(calls) == 1
+
+
+def test_assignment_duplicate_brand_rejected_and_retry_used():
+    dup = json.dumps({"assignment": {"s1": "brewlark", "s2": "brewlark"}, "rationale": "dup"})
+    out, calls = arun({"http://muse": [dup, json.dumps(A_VALID)]})
+    assert len(calls) == 2 and "violations" in str(calls[1][2]).lower()
+    assert out["assignment"] == A_VALID["assignment"]
+    assert out["attempts"][0]["result"].startswith("rejected") and out["attempts"][1]["result"].startswith("used")
+
+
+def test_assignment_ineligible_surface_rejected_and_retry_used():
+    bad = json.dumps({"assignment": {"s1": "wallco"}, "rationale": "bad surface"})
+    out, calls = arun({"http://muse": [bad, json.dumps(A_VALID)]})
+    assert len(calls) == 2 and out["assignment"] == A_VALID["assignment"]
+    assert out["attempts"][0]["result"].startswith("rejected")
+
+
+def test_assignment_adjacent_same_category_rejected_and_retry_used():
+    bad = json.dumps({"assignment": {"s1": "brewlark", "s2": "cafeluna"}, "rationale": "two coffees"})
+    out, calls = arun({"http://muse": [bad, json.dumps(A_VALID)]})
+    assert len(calls) == 2 and out["assignment"] == A_VALID["assignment"]
+    assert "share category" in out["attempts"][0]["result"]
+
+
+def test_assignment_twice_invalid_falls_back_to_rule():
+    bad1 = json.dumps({"assignment": {"s1": "brewlark", "s2": "brewlark"}, "rationale": "dup"})
+    bad2 = json.dumps({"assignment": {"s1": "wallco"}, "rationale": "bad"})
+    out, calls = arun({"http://muse": [bad1, bad2]})
+    assert len(calls) == 2 and out["chooser"] == "rule"
+    assert rank.validate_assignment(out["assignment"], A_SLOTS, A_INV, 3) == []
+    assert len(out["assignment"]) <= 3 and len(set(out["assignment"].values())) == len(out["assignment"])
+
+
+def test_assignment_max_ads_respected():
+    too_many = json.dumps({"assignment": {"s1": "brewlark", "s2": "kestrel"}, "rationale": "two"})
+    ok_one = json.dumps({"assignment": {"s1": "brewlark"}, "rationale": "one"})
+    out, _ = arun({"http://muse": [too_many, ok_one]}, max_ads=1)
+    assert len(out["assignment"]) <= 1
+    call, _ = fake_seq({})
+    out2 = rank.choose_assignment(A_SLOTS, A_INV, A_PROFILE, max_ads=1, provider_list=[], call=call,
+                                  use_cache=False)
+    assert out2["chooser"] == "rule" and len(out2["assignment"]) <= 1
+    assert rank.validate_assignment(out2["assignment"], A_SLOTS, A_INV, 1) == []
+
+
+def test_assignment_no_provider_uses_rule():
+    call, calls = fake_seq({})
+    out = rank.choose_assignment(A_SLOTS, A_INV, A_PROFILE, provider_list=[], call=call, use_cache=False)
+    assert out["chooser"] == "rule" and calls == []
+    assert rank.validate_assignment(out["assignment"], A_SLOTS, A_INV, 3) == []

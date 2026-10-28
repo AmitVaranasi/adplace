@@ -1,0 +1,23 @@
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.132498, "purpose": "backfill logged: muse_mug.log", "prompt_tokens": 4029, "completion_tokens": 29991}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.107796, "purpose": "backfill logged: long/muse_r1.log", "prompt_tokens": 8353, "completion_tokens": 22907}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.013646, "purpose": "backfill logged: long/muse_plan.log", "prompt_tokens": 863, "completion_tokens": 2957}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.19408, "purpose": "backfill logged: m5/r1.log", "prompt_tokens": 12090, "completion_tokens": 42110}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.071457, "purpose": "backfill logged: m4/r2.log", "prompt_tokens": 21479, "completion_tokens": 10496}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.160441, "purpose": "backfill logged: m4/r1.log", "prompt_tokens": 9849, "completion_tokens": 34854}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.022, "purpose": "backfill recorded: coffee-d46892c76261-47348561-events.jsonl", "frames": 110}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.022, "purpose": "backfill recorded: coffee-d46892c76261-ed4fcd6a-events.jsonl", "frames": 110}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: dundas-3ff676f856f3-fc7fe7ff-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: mug_pair-14927731944c-4a6f3f3c-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: mug_print-0ddd1c739439-d432dcf3-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: piccadilly-db91b6272a2a-17d83ee9-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: piccadilly-db91b6272a2a-367768ab-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: piccadilly-db91b6272a2a-51b0de4f-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.1176, "purpose": "backfill recorded: piccadilly_long-17f56ce3793f-25d53ed2-events.jsonl", "frames": 588}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: shibuya-4784bddb7d6e-f79fb166-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.0168, "purpose": "backfill recorded: shibuya-5ee859742d90-888ed077-events.jsonl", "frames": 84}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.024, "purpose": "backfill recorded: times_square-35b9e4b97711-88afe00d-events.jsonl", "frames": 120}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.3375, "purpose": "backfill ESTIMATE: mug rounds 2-3 (logs not kept)"}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.662625, "purpose": "backfill ESTIMATE: 31 cached ranker calls"}
+{"t": "2026-10-28T00:06:01", "kind": "muse", "usd": 0.0975, "purpose": "backfill ESTIMATE: API probes/smoke tests"}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.1176, "purpose": "backfill ESTIMATE: piccadilly_long person stream that broke mid-response", "frames": 588}
+{"t": "2026-10-28T00:06:01", "kind": "sam", "usd": 0.3, "purpose": "backfill ESTIMATE: unrecorded early SAM runs (tests, superseded caches)", "frames": 1500}

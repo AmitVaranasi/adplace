@@ -28,6 +28,9 @@ def main():
     ap.add_argument("--min-frames", type=float, default=0.8, help="fraction of frames the object must be seen in")
     ap.add_argument("--min-area", type=float, default=0.004, help="mean mask area as a fraction of the frame")
     ap.add_argument("--masks", action="store_true", help="also track each slot with the mask-anchored tracker")
+    ap.add_argument("--store", action="store_true",
+                    help="long clips: write box-local packed masks (masks.npz, pipeline.maskstore) and never build a "
+                         "dense (N, H, W) stack; screens entering/leaving mid-shot are kept with --min-frames lowered")
     args = ap.parse_args()
 
     base = cache_dir(args.clip, {"model": "meta/sam-3.1", "prompt": args.prompt})
@@ -35,6 +38,8 @@ def main():
     if not events_file.exists():
         raise SystemExit(f"no recorded stream at {events_file}; run analyse.py --backend api --prompt {args.prompt!r}")
     events = [json.loads(line) for line in events_file.read_text().splitlines()]
+    if args.store:
+        return store_slots(args, base, events)
     frames, fps = read_frames(args.clip)
     n, (h, w) = len(frames), frames[0].shape[:2]
 
@@ -76,6 +81,49 @@ def main():
                 tracked = False
         slots.append({"slot_id": f"{stem}-{oid}", "analysis": str(out.relative_to(ROOT)),
                       **({} if tracked is None else {"quad_tracked": tracked})})
+    print(json.dumps(slots, indent=2))
+
+
+def store_slots(args, base, events):
+    import cv2
+    from pipeline.maskstore import MaskWriter
+    from pipeline.sam_api import _mask_region
+    cap = cv2.VideoCapture(str(args.clip))
+    n, fps = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), cap.get(cv2.CAP_PROP_FPS)
+    w, h = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    objects = {}
+    for (oid, fi), rec in parse_masks(events).items():
+        if 0 <= fi < n:
+            objects.setdefault(oid, {})[fi] = rec
+    stem = Path(args.clip).stem
+    slots = []
+    for oid, recs in sorted(objects.items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else kv[0]):
+        writer, scores, area = MaskWriter(n, h, w), np.full(n, np.nan), []
+        for fi, rec in recs.items():
+            region = _mask_region(rec, h, w)
+            if region is None or not region[2].any():
+                continue
+            x, y, local = region
+            writer.add(fi, box=(x, y), local=local)
+            scores[fi] = rec.confidence if rec.confidence is not None else 1.0
+            area.append(local.sum() / (h * w))
+        seen = np.isfinite(scores)
+        mean_area = float(np.mean(area)) if area else 0.0
+        keep = seen.mean() >= args.min_frames and mean_area >= args.min_area
+        span = (int(np.argmax(seen)), int(n - 1 - np.argmax(seen[::-1]))) if seen.any() else None
+        print(f"object {oid}: seen {seen.mean():.0%} of frames {span}, area {100 * mean_area:.2f}% of frame",
+              "-> slot" if keep else "-> skipped")
+        if not keep:
+            continue
+        out = base.with_name(f"{base.name}-slot{oid}")
+        out.mkdir(parents=True, exist_ok=True)
+        writer.save(out / "masks.npz")
+        np.save(out / "scores.npy", scores)
+        (out / "meta.json").write_text(json.dumps(
+            {"model": "meta/sam-3.1", "prompt": args.prompt, "object": oid, "clip": str(args.clip), "frames": n,
+             "fps": fps, "size": [w, h], "coverage": float(seen.mean()), "span": span,
+             "mean_area_frac": mean_area, "storage": "maskstore"}, indent=2))
+        slots.append({"slot_id": f"{stem}-{oid}", "analysis": str(out.relative_to(ROOT)), "span": span})
     print(json.dumps(slots, indent=2))
 
 
