@@ -1,6 +1,6 @@
 """Track the surface quad through a clip from cached SAM masks and compare with per-frame mask quads.
 
-  python scripts/track_eval.py assets/clips/billboard_night.mp4 cache/<dir> [cache/<dir2> ...] [--occluders cache/<dir>]
+  python scripts/track_eval.py assets/clips/billboard_night.mp4 cache/<dir> [cache/<dir2> ...] [--occluders cache/<dir>] [--masks]
 Masks from several prompts are merged (union of found frames, first cache wins where both exist). Occluder masks (e.g.
 SAM "person") are passed to the tracker and saved next to the quads for rendering.
 """
@@ -48,6 +48,10 @@ def fill_occluder_gaps(masks, max_gap=2):
 
 def main(clip, *dirs):
     occ_dir = None
+    # --masks: the surface masks are reliable in every frame (e.g. a screen whose content changes, which misleads
+    # feature tracking): fit the quad to each mask and smooth (pipeline/mask_track.py, GPT).
+    use_masks = "--masks" in dirs
+    dirs = tuple(d for d in dirs if d != "--masks")
     if "--occluders" in dirs:
         i = dirs.index("--occluders")
         occ_dir, dirs = dirs[i + 1], dirs[:i] + dirs[i + 2:]
@@ -57,14 +61,18 @@ def main(clip, *dirs):
     found = [i for i, m in enumerate(masks) if m is not None]
     # Reference: the found frame with the largest mask (fully visible surface).
     ref = max(found, key=lambda i: masks[i].sum())
-    r = g.propagate_quad(frames, ref, g.quad_from_mask(masks[ref]), surface_masks=masks, occluder_masks=occluders)
+    if use_masks:
+        from pipeline.mask_track import track_from_masks
+        r = track_from_masks(masks, occluder_masks=occluders)
+    else:
+        r = g.propagate_quad(frames, ref, g.quad_from_mask(masks[ref]), surface_masks=masks, occluder_masks=occluders)
     print("masks :", "".join("#" if m is not None else "." for m in masks))
     print("status:", "".join({"ok": "#", "occluded": "o", "lost": "."}[s] for s in r["status"]))
     errs = [np.linalg.norm(g.quad_from_mask(masks[i]) - r["quads"][i], axis=1).mean() for i in found
             if np.isfinite(r["quads"][i]).all() and g.quad_from_mask(masks[i]) is not None]
     print(f"ref {ref}; tracked vs mask quad: median {np.median(errs):.1f} px, p90 {np.percentile(errs, 90):.1f}, "
           f"max {np.max(errs):.1f} (n={len(errs)}); coverage {np.mean([s != 'lost' for s in r['status']]):.0%}")
-    np.save(Path(dirs[0]) / "quads.npy", g.smooth_quads(r["quads"]))
+    np.save(Path(dirs[0]) / "quads.npy", np.asarray(r["quads"]) if use_masks else g.smooth_quads(r["quads"]))
     if occluders is not None:
         empty = np.zeros(frames[0].shape[:2], bool)
         np.savez_compressed(Path(dirs[0]) / "occluders.npz", masks=np.stack([m if m is not None else empty
