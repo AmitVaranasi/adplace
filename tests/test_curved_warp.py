@@ -7,6 +7,14 @@ def _cyl():
     rows = np.arange(40, 161, dtype=np.int32)
     return dict(a=0.0, b=100.0, y0=40, y1=160, rows=rows, half_width=np.full(len(rows), 50.0))
 
+def _cyl_curved(e=12.0):
+    c = _cyl()
+    c["e0"] = float(e)
+    c["e1"] = float(e)
+    c["sag_top"] = float(e)
+    c["sag_bottom"] = float(e)
+    return c
+
 def _creative(rgb=(180, 100, 40), height=31, width=201):
     image = np.empty((height, width, 4), np.uint8)
     image[..., :3] = rgb
@@ -149,3 +157,25 @@ def test_specular_highlight_brightens_label():
     surr = np.zeros((200, 200), bool); surr[80:121, 75:90] = True
     assert float(spec[hl].mean()) > float(spec[surr].mean()) + 8
     assert float(spec[hl].mean()) > float(base[hl].mean()) + 5
+
+
+def test_bowed_bottom_edge_follows_ellipse():
+    cyl = _cyl_curved(e=12.0)
+    warped = warp_to_cylinder(_creative(), cyl, (200, 200, 3), arc_deg=140, feather_px=0, corner_radius=0)
+    alpha = warped[..., 3]
+    rows_c = np.where(alpha[:, 100] > 0)[0]
+    assert rows_c.size > 0
+    assert abs(int(rows_c.max()) - (160 + 12)) <= 2
+    col_e = 100 + int(round(50.0 * np.sin(np.deg2rad(60.0))))
+    rows_e = np.where(alpha[:, col_e] > 0)[0]
+    assert rows_e.size > 0
+    assert abs(int(rows_e.max()) - (160 + 6)) <= 2
+
+
+def test_zero_sag_matches_flat_behaviour():
+    base = _cyl()
+    zero = _cyl_curved(e=0.0)
+    creative = _creative()
+    w1 = warp_to_cylinder(creative, base, (200, 200, 3))
+    w2 = warp_to_cylinder(creative, zero, (200, 200, 3))
+    np.testing.assert_array_equal(w1, w2)

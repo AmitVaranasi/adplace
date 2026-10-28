@@ -24,6 +24,23 @@ def _cyl(b=100.0, a=0.0, y0=40, y1=160, radius=50.0):
                 half_width=np.full(len(rows), radius, dtype=float))
 
 
+def _elliptical_mug(radius=80.0, e_t=10.0, e_b=14.0, handle=False):
+    H, W = 300, 360
+    cx = 180.0
+    A_t, A_b = 50.0, 210.0
+    yy, xx = np.indices((H, W))
+    u = (xx.astype(float) - cx) / radius
+    s = np.sqrt(np.clip(1.0 - u * u, 0.0, 1.0))
+    top = A_t - e_t * s
+    bot = A_b + e_b * s
+    mask = (np.abs(u) <= 1.0) & (yy >= top) & (yy <= bot)
+    if handle:
+        ring = np.zeros(mask.shape, np.uint8)
+        cv2.ellipse(ring, (int(cx + radius + 8), 130), (28, 40), 0, 0, 360, 1, 7)
+        mask |= ring.astype(bool)
+    return mask
+
+
 def test_tapered_body_ignores_handle():
     mask = _body(handle=True)
     original = mask.copy()
@@ -103,3 +120,25 @@ def test_smoothing_filters_geometry_and_resampled_radii():
         np.testing.assert_allclose([cyl["a"], cyl["b"]], [a, b])
         assert (cyl["y0"], cyl["y1"]) == (y0, y1)
         np.testing.assert_allclose(cyl["half_width"], radius)
+
+
+def test_elliptical_sag_is_recovered():
+    cyl = cylinder_from_mask(_elliptical_mug(radius=80.0, e_t=10.0, e_b=14.0))
+    assert cyl is not None
+    assert abs(float(cyl["sag_top"]) - 10.0) <= 2.0
+    assert abs(float(cyl["sag_bottom"]) - 14.0) <= 2.0
+
+
+def test_flat_rectangle_has_zero_sag():
+    cyl = cylinder_from_mask(_elliptical_mug(radius=80.0, e_t=0.0, e_b=0.0))
+    assert cyl is not None
+    assert abs(float(cyl["sag_top"])) <= 2.0
+    assert abs(float(cyl["sag_bottom"])) <= 2.0
+
+
+def test_handle_does_not_change_sag():
+    plain = cylinder_from_mask(_elliptical_mug(radius=80.0, e_t=10.0, e_b=14.0))
+    with_handle = cylinder_from_mask(_elliptical_mug(radius=80.0, e_t=10.0, e_b=14.0, handle=True))
+    assert plain is not None and with_handle is not None
+    assert abs(float(with_handle["sag_top"]) - float(plain["sag_top"])) <= 2.0
+    assert abs(float(with_handle["sag_bottom"]) - float(plain["sag_bottom"])) <= 2.0

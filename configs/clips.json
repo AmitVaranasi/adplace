@@ -61,6 +61,10 @@
           "creative": "16x9"
         }
       }
+    ],
+    "occluders": [
+      "cache/piccadilly-db91b6272a2a-51b0de4f",
+      "cache/piccadilly-db91b6272a2a-988e30b4"
     ]
   },
   "assets/clips/shibuya.mp4": {
@@ -110,7 +114,7 @@
         "shape": {
           "type": "cylinder",
           "band": [
-            0.06,
+            0.01,
             0.94
           ],
           "arc_deg": 176,

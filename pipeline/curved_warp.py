@@ -7,6 +7,34 @@ except Exception:
     def estimate_blur_and_grain(frame, quad):
         return 0.0, 0.0
 
+def _e0_e1(cyl):
+    try:
+        e0 = float(cyl.get("e0", 0.0))
+    except Exception:
+        e0 = 0.0
+    try:
+        e1 = float(cyl.get("e1", 0.0))
+    except Exception:
+        e1 = 0.0
+    if not np.isfinite(e0):
+        e0 = 0.0
+    if not np.isfinite(e1):
+        e1 = 0.0
+    return e0, e1
+
+def _label_yl(cyl, yy, phi):
+    e0, e1 = _e0_e1(cyl)
+    if e0 == 0.0 and e1 == 0.0:
+        return yy
+    y0f = float(cyl["y0"])
+    y1f = float(cyl["y1"])
+    if y1f == y0f:
+        e = max(e0, 0.0)
+        return yy - e * np.cos(phi)
+    e = e0 + (e1 - e0) * (yy - y0f) / (y1f - y0f)
+    e = np.maximum(e, 0.0)
+    return yy - e * np.cos(phi)
+
 def _geometry(cyl, frame_shape, arc_deg):
     if not np.isfinite(arc_deg) or not 0 < arc_deg <= 180:
         raise ValueError("arc_deg must be finite and in (0, 180]")
@@ -16,7 +44,8 @@ def _geometry(cyl, frame_shape, arc_deg):
     distance = xx - (cyl["a"] * yy + cyl["b"])
     phi = np.arcsin(np.clip(distance / np.maximum(radii, 1e-6), -1, 1))
     half_arc = np.deg2rad(arc_deg) * 0.5
-    valid = ((yy >= cyl["y0"]) & (yy <= cyl["y1"]) & (radii > 0) & (np.abs(distance) < radii) & (np.abs(phi) <= half_arc))
+    yl = _label_yl(cyl, yy, phi)
+    valid = ((yl >= cyl["y0"]) & (yl <= cyl["y1"]) & (radii > 0) & (np.abs(distance) < radii) & (np.abs(phi) <= half_arc))
     return yy, phi, valid, half_arc
 
 def _smooth01(t):
@@ -29,6 +58,7 @@ def warp_to_cylinder(creative_rgba, cyl, frame_shape, arc_deg=110, antialias=Tru
     if (creative.ndim != 3 or creative.shape[2] != 4 or min(creative.shape[:2]) == 0 or creative.dtype != np.uint8):
         raise ValueError("creative must be a nonempty RGBA uint8 image")
     yy, phi, valid, half_arc = _geometry(cyl, frame_shape, arc_deg)
+    yl = _label_yl(cyl, yy, phi)
     Hf, Wf = yy.shape
     work = creative
     if antialias:
@@ -52,7 +82,7 @@ def warp_to_cylinder(creative_rgba, cyl, frame_shape, arc_deg=110, antialias=Tru
             work = np.dstack([rgb, alp]).astype(np.uint8)
     height, width = work.shape[:2]
     map_x = ((phi + half_arc) / (2 * half_arc) * (width - 1)).astype(np.float32)
-    map_y = ((yy - cyl["y0"]) / max(cyl["y1"] - cyl["y0"], 1) * (height - 1)).astype(np.float32)
+    map_y = ((yl - cyl["y0"]) / max(cyl["y1"] - cyl["y0"], 1) * (height - 1)).astype(np.float32)
     map_x[~valid] = -1
     map_y[~valid] = -1
     warped = cv2.remap(work, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
@@ -63,7 +93,7 @@ def warp_to_cylinder(creative_rgba, cyl, frame_shape, arc_deg=110, antialias=Tru
     if feather_px and float(feather_px) > 0 and np.any(valid):
         feather = float(feather_px)
         y0f, y1f = float(cyl["y0"]), float(cyl["y1"])
-        y_fac = _smooth01((yy - y0f + 0.5) / feather) * _smooth01((y1f - yy + 0.5) / feather)
+        y_fac = _smooth01((yl - y0f + 0.5) / feather) * _smooth01((y1f - yl + 0.5) / feather)
         label_h = float(y1f - y0f + 1)
         r = float(corner_radius) if corner_radius is not None else 0.04 * label_h
         corner_fac = np.ones_like(y_fac, dtype=np.float32)
@@ -75,19 +105,19 @@ def warp_to_cylinder(creative_rgba, cyl, frame_shape, arc_deg=110, antialias=Tru
                 xs = np.where(valid[y])[0]
                 if xs.size:
                     xmin_row[y] = float(xs[0]); xmax_row[y] = float(xs[-1])
-            y_idx = np.clip(yy.astype(np.int32), 0, Hf - 1)
+            y_idx = np.clip(yl.astype(np.int32), 0, Hf - 1)
             xmin_pp = xmin_row[y_idx]; xmax_pp = xmax_row[y_idx]
             yt_top, yt_bot = y0f + r, y1f - r
             xcl = xmin_pp + r; xcr = xmax_pp - r
             d = np.full_like(y_fac, np.inf, dtype=np.float64)
-            m_tl = valid & (yy < yt_top) & (xx < xmin_pp + r)
-            d[m_tl] = np.sqrt((xx[m_tl] - xcl[m_tl]) ** 2 + (yy[m_tl] - yt_top) ** 2)
-            m_tr = valid & (yy < yt_top) & (xx > xmax_pp - r)
-            d[m_tr] = np.sqrt((xx[m_tr] - xcr[m_tr]) ** 2 + (yy[m_tr] - yt_top) ** 2)
-            m_bl = valid & (yy > yt_bot) & (xx < xmin_pp + r)
-            d[m_bl] = np.sqrt((xx[m_bl] - xcl[m_bl]) ** 2 + (yy[m_bl] - yt_bot) ** 2)
-            m_br = valid & (yy > yt_bot) & (xx > xmax_pp - r)
-            d[m_br] = np.sqrt((xx[m_br] - xcr[m_br]) ** 2 + (yy[m_br] - yt_bot) ** 2)
+            m_tl = valid & (yl < yt_top) & (xx < xmin_pp + r)
+            d[m_tl] = np.sqrt((xx[m_tl] - xcl[m_tl]) ** 2 + (yl[m_tl] - yt_top) ** 2)
+            m_tr = valid & (yl < yt_top) & (xx > xmax_pp - r)
+            d[m_tr] = np.sqrt((xx[m_tr] - xcr[m_tr]) ** 2 + (yl[m_tr] - yt_top) ** 2)
+            m_bl = valid & (yl > yt_bot) & (xx < xmin_pp + r)
+            d[m_bl] = np.sqrt((xx[m_bl] - xcl[m_bl]) ** 2 + (yl[m_bl] - yt_bot) ** 2)
+            m_br = valid & (yl > yt_bot) & (xx > xmax_pp - r)
+            d[m_br] = np.sqrt((xx[m_br] - xcr[m_br]) ** 2 + (yl[m_br] - yt_bot) ** 2)
             is_corner = m_tl | m_tr | m_bl | m_br
             corner_fac[is_corner] = _smooth01((r - d[is_corner] + 0.5) / feather).astype(np.float32)
         combined = (y_fac.astype(np.float32) * corner_fac).astype(np.float32)

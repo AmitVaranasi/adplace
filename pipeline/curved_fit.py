@@ -12,6 +12,27 @@ def _extents(mask):
     return rows, left, right
 
 
+def _robust_AB(s, y):
+    """Robust fit y = A + B*s. Returns (A, B) or None if <8 samples."""
+    s = np.asarray(s, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    if s.size < 8:
+        return None
+    A = np.column_stack([np.ones_like(s), s])
+    coeff, _, _, _ = np.linalg.lstsq(A, y, rcond=None)
+    pred = coeff[0] + coeff[1] * s
+    res = y - pred
+    med = float(np.median(res))
+    mad = float(np.median(np.abs(res - med)))
+    thr = max(1.5, 3 * 1.4826 * mad)
+    keep = np.abs(res - med) <= thr
+    n_keep = int(np.count_nonzero(keep))
+    if n_keep >= 8 and n_keep < s.size:
+        A2 = np.column_stack([np.ones(n_keep), s[keep]])
+        coeff, _, _, _ = np.linalg.lstsq(A2, y[keep], rcond=None)
+    return float(coeff[0]), float(coeff[1])
+
+
 def cylinder_from_mask(mask, band=(0.25, 0.8)) -> dict | None:
     """Remove thin handles, then fit the body's axis and label-band radii."""
     binary = np.asarray(mask, dtype=bool)
@@ -52,16 +73,100 @@ def cylinder_from_mask(mask, band=(0.25, 0.8)) -> dict | None:
         np.pad(radii, (2, 2), mode="edge"), 5
     )
     radii = np.median(windows, axis=1)
-    top, bottom = rows[0], rows[-1]
+
+    # Width-variation rejection on the original rows, as before.
+    top_old, bottom_old = int(rows[0]), int(rows[-1])
+    y0_old, y1_old = np.rint(top_old + np.asarray(band) * (bottom_old - top_old)).astype(int)
+    if y1_old <= y0_old:
+        return None
+    band_rows_old = np.arange(y0_old, y1_old + 1, dtype=np.int32)
+    half_width_old = np.interp(band_rows_old, rows, radii)
+    if half_width_old.max() <= 0 or half_width_old.min() / half_width_old.max() < 0.4:
+        return None
+
+    radius_med = float(np.median(radii))
+
+    # Ellipse sag from ORIGINAL mask restricted to dilated body component.
+    comp_open = (labels == component)
+    kernel = np.ones((size, size), np.uint8)
+    dilated = cv2.dilate(
+        comp_open.astype(np.uint8), kernel,
+        borderType=cv2.BORDER_CONSTANT, borderValue=0,
+    ).astype(bool)
+    body = binary & dilated
+
+    xs = np.flatnonzero(body.any(axis=0))
+    s_top, y_top, s_bot, y_bot = [], [], [], []
+    for xi in xs:
+        x = int(xi)
+        col = body[:, x]
+        ys = np.flatnonzero(col)
+        if ys.size == 0:
+            continue
+        yt, yb = int(ys[0]), int(ys[-1])
+        ct = float(a * yt + b)
+        cb = float(a * yb + b)
+        if radius_med <= 0:
+            continue
+        ut = (float(x) - ct) / radius_med
+        ub = (float(x) - cb) / radius_med
+        if abs(ut) <= 0.9:
+            s_top.append(float(np.sqrt(max(0.0, 1.0 - ut * ut))))
+            y_top.append(float(yt))
+        if abs(ub) <= 0.9:
+            s_bot.append(float(np.sqrt(max(0.0, 1.0 - ub * ub))))
+            y_bot.append(float(yb))
+    fit_top = _robust_AB(s_top, y_top)
+    fit_bot = _robust_AB(s_bot, y_bot)
+    if fit_top is None:
+        A_t = float(rows[0])
+        e_top = 0.0
+    else:
+        A_t, B_t = fit_top
+        e_top = -B_t
+    if fit_bot is None:
+        A_b = float(rows[-1])
+        e_bottom = 0.0
+    else:
+        A_b, B_b = fit_bot
+        e_bottom = B_b
+    lim = 0.6 * radius_med
+    e_top = float(np.clip(e_top, 0.0, lim))
+    e_bottom = float(np.clip(e_bottom, 0.0, lim))
+
+    if not (np.isfinite(A_t) and np.isfinite(A_b)):
+        return None
+    if A_b <= A_t:
+        return None
+    top, bottom = float(A_t), float(A_b)
     y0, y1 = np.rint(top + np.asarray(band) * (bottom - top)).astype(int)
     if y1 <= y0:
         return None
+    if abs(bottom - top) < 1e-9:
+        e0 = e1 = (e_top + e_bottom) * 0.5
+    else:
+        e0 = e_top + (e_bottom - e_top) * (float(y0) - top) / (bottom - top)
+        e1 = e_top + (e_bottom - e_top) * (float(y1) - top) / (bottom - top)
+    e0 = float(max(0.0, e0))
+    e1 = float(max(0.0, e1))
     band_rows = np.arange(y0, y1 + 1, dtype=np.int32)
     half_width = np.interp(band_rows, rows, radii)
     if half_width.max() <= 0 or half_width.min() / half_width.max() < 0.4:
         return None
     return dict(a=float(a), b=float(b), y0=int(y0), y1=int(y1),
-                rows=band_rows, half_width=half_width)
+                rows=band_rows, half_width=half_width,
+                sag_top=float(e_top), sag_bottom=float(e_bottom),
+                e0=float(e0), e1=float(e1))
+
+
+def _scalar(cyl, key):
+    try:
+        v = float(cyl.get(key, 0.0))
+    except Exception:
+        return 0.0
+    if not np.isfinite(v):
+        return 0.0
+    return v
 
 
 def smooth_cylinders(cyls, alpha=0.6) -> list:
@@ -81,7 +186,10 @@ def smooth_cylinders(cyls, alpha=0.6) -> list:
                 cyl["y0"] + samples * (cyl["y1"] - cyl["y0"]),
                 cyl["rows"], cyl["half_width"],
             )
-            states.append(np.r_[cyl["a"], cyl["b"], cyl["y0"], cyl["y1"], radii])
+            states.append(np.r_[cyl["a"], cyl["b"], cyl["y0"], cyl["y1"],
+                                _scalar(cyl, "e0"), _scalar(cyl, "e1"),
+                                _scalar(cyl, "sag_top"), _scalar(cyl, "sag_bottom"),
+                                radii])
         states = np.asarray(states, dtype=np.float64)
         for i in range(1, len(states)):
             states[i] = alpha * states[i] + (1 - alpha) * states[i - 1]
@@ -90,9 +198,11 @@ def smooth_cylinders(cyls, alpha=0.6) -> list:
         for index, state in enumerate(states, start):
             y0, y1 = np.rint(state[2:4]).astype(int)
             rows = np.arange(y0, y1 + 1, dtype=np.int32)
-            radii = np.interp(np.linspace(0, 1, len(rows)), samples, state[4:])
+            radii = np.interp(np.linspace(0, 1, len(rows)), samples, state[8:])
             result[index] = dict(
                 a=float(state[0]), b=float(state[1]), y0=int(y0), y1=int(y1),
                 rows=rows, half_width=radii,
+                e0=float(state[4]), e1=float(state[5]),
+                sag_top=float(state[6]), sag_bottom=float(state[7]),
             )
     return result
