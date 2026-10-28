@@ -1,6 +1,9 @@
 """Synthetic inverse-cylinder mapping and compositing acceptance tests."""
+import math
+
 import cv2
 import numpy as np
+from pipeline.curved_fit import cylinder_from_mask
 from pipeline.curved_warp import composite_curved, warp_to_cylinder
 
 def _cyl():
@@ -14,6 +17,13 @@ def _cyl_curved(e=12.0):
     c["sag_top"] = float(e)
     c["sag_bottom"] = float(e)
     return c
+
+def _cyl_float(y0, y1, b=100.0, radius=50.0):
+    y0f = float(y0)
+    y1f = float(y1)
+    rows = np.arange(int(math.floor(y0f)), int(math.ceil(y1f)) + 1, dtype=np.int32)
+    return dict(a=0.0, b=float(b), y0=y0f, y1=y1f, rows=rows,
+                half_width=np.full(len(rows), float(radius)))
 
 def _creative(rgb=(180, 100, 40), height=31, width=201):
     image = np.empty((height, width, 4), np.uint8)
@@ -179,3 +189,21 @@ def test_zero_sag_matches_flat_behaviour():
     w1 = warp_to_cylinder(creative, base, (200, 200, 3))
     w2 = warp_to_cylinder(creative, zero, (200, 200, 3))
     np.testing.assert_array_equal(w1, w2)
+
+
+def test_subpixel_top_edge_is_smooth():
+    mask = np.zeros((200, 200), bool)
+    mask[40:161, 50:151] = True
+    cyl = cylinder_from_mask(mask)
+    assert cyl is not None
+    assert isinstance(cyl["y0"], float) and isinstance(cyl["y1"], float)
+    c0 = _cyl_float(100.0, 160.0)
+    c1 = _cyl_float(100.4, 160.0)
+    assert isinstance(c0["y0"], float) and isinstance(c1["y0"], float)
+    creative = _creative()
+    w0 = warp_to_cylinder(creative, c0, (200, 200, 3))
+    w1 = warp_to_cylinder(creative, c1, (200, 200, 3))
+    a0 = int(w0[100, 100, 3])
+    a1 = int(w1[100, 100, 3])
+    assert a0 != a1
+    assert abs(a0 - a1) < 0.6 * 255

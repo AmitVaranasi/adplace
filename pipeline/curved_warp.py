@@ -29,10 +29,9 @@ def _label_yl(cyl, yy, phi):
     y0f = float(cyl["y0"])
     y1f = float(cyl["y1"])
     if y1f == y0f:
-        e = max(e0, 0.0)
-        return yy - e * np.cos(phi)
+        return yy - e0 * np.cos(phi)
+    # Signed and linear in height: rings above the camera bow up, rings below it bow down.
     e = e0 + (e1 - e0) * (yy - y0f) / (y1f - y0f)
-    e = np.maximum(e, 0.0)
     return yy - e * np.cos(phi)
 
 def _geometry(cyl, frame_shape, arc_deg):
@@ -41,11 +40,13 @@ def _geometry(cyl, frame_shape, arc_deg):
     height, width = frame_shape[:2]
     yy, xx = np.indices((height, width), dtype=np.float32)
     radii = np.interp(np.arange(height), cyl["rows"], cyl["half_width"]).astype(np.float32)[:, None]
-    distance = xx - (cyl["a"] * yy + cyl["b"])
+    distance = xx - (float(cyl["a"]) * yy + float(cyl["b"]))
     phi = np.arcsin(np.clip(distance / np.maximum(radii, 1e-6), -1, 1))
     half_arc = np.deg2rad(arc_deg) * 0.5
     yl = _label_yl(cyl, yy, phi)
-    valid = ((yl >= cyl["y0"]) & (yl <= cyl["y1"]) & (radii > 0) & (np.abs(distance) < radii) & (np.abs(phi) <= half_arc))
+    y0f = float(cyl["y0"])
+    y1f = float(cyl["y1"])
+    valid = ((yl >= y0f) & (yl <= y1f) & (radii > 0) & (np.abs(distance) < radii) & (np.abs(phi) <= half_arc))
     return yy, phi, valid, half_arc
 
 def _smooth01(t):
@@ -81,8 +82,11 @@ def warp_to_cylinder(creative_rgba, cyl, frame_shape, arc_deg=110, antialias=Tru
             alp = cv2.resize(creative[..., 3], (new_w, new_h), interpolation=cv2.INTER_AREA)
             work = np.dstack([rgb, alp]).astype(np.uint8)
     height, width = work.shape[:2]
+    y0f = float(cyl["y0"])
+    y1f = float(cyl["y1"])
+    denom = max(y1f - y0f, 1e-6)
     map_x = ((phi + half_arc) / (2 * half_arc) * (width - 1)).astype(np.float32)
-    map_y = ((yl - cyl["y0"]) / max(cyl["y1"] - cyl["y0"], 1) * (height - 1)).astype(np.float32)
+    map_y = ((yl - y0f) / denom * (height - 1)).astype(np.float32)
     map_x[~valid] = -1
     map_y[~valid] = -1
     warped = cv2.remap(work, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
@@ -92,7 +96,6 @@ def warp_to_cylinder(creative_rgba, cyl, frame_shape, arc_deg=110, antialias=Tru
     warped[~valid] = 0
     if feather_px and float(feather_px) > 0 and np.any(valid):
         feather = float(feather_px)
-        y0f, y1f = float(cyl["y0"]), float(cyl["y1"])
         y_fac = _smooth01((yl - y0f + 0.5) / feather) * _smooth01((y1f - yl + 0.5) / feather)
         label_h = float(y1f - y0f + 1)
         r = float(corner_radius) if corner_radius is not None else 0.04 * label_h
@@ -152,8 +155,8 @@ def composite_curved(frame_bgr, creative_rgba, cyl, occluder_mask=None, arc_deg=
     xx = np.broadcast_to(np.arange(W, dtype=np.float32)[None, :], (H, W))
     radii = np.interp(np.arange(H), cyl["rows"], cyl["half_width"]).astype(np.float32)[:, None]
     distance = xx - (float(cyl["a"]) * yy + float(cyl["b"]))
-    mug_mask = (yy >= cyl["y0"]) & (yy <= cyl["y1"]) & (radii > 0) & (np.abs(distance) < radii)
     y0f, y1f = float(cyl["y0"]), float(cyl["y1"])
+    mug_mask = (yy >= y0f) & (yy <= y1f) & (radii > 0) & (np.abs(distance) < radii)
     yc = (y0f + y1f) * 0.5
     half_h = max((y1f - y0f) * 0.5, 1.0)
     label_w = int(np.max(np.count_nonzero(valid, axis=1))) if np.any(valid) else W

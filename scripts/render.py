@@ -62,11 +62,13 @@ def encode(frames, fps, path, crf=18):
 
 def render_cylinder(frames, cache, c, shape):
     """Wrap the creative around an upright cylinder (mug, cup, column) found in each frame's SAM mask."""
-    from pipeline.curved_fit import cylinder_from_mask, smooth_cylinders
+    from pipeline.curved_fit import cylinder_from_mask, hold_static, smooth_cylinders
     from pipeline.curved_warp import composite_curved
     masks = np.load(Path(cache) / "surface_masks.npz")["masks"]
     band = tuple(shape.get("band", (0.25, 0.8)))
-    cyls = smooth_cylinders([cylinder_from_mask(m, band=band) if m.any() else None for m in masks])
+    top = shape.get("top", "band")  # "rim": start the label at the rim lip found in the frame, as a real print does
+    cyls = hold_static(smooth_cylinders([cylinder_from_mask(m, band=band, frame=f, top=top) if m.any() else None
+                                         for m, f in zip(masks, frames)]))
     key = shape.get("creative", "4x3")
     art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
     arc = shape.get("arc_deg", 110)
@@ -76,11 +78,12 @@ def render_cylinder(frames, cache, c, shape):
 
 def render_ribbon(frames, cache, c, shape):
     """Bend the creative along a surface curved in one direction (a facade screen wrapping a corner)."""
-    from pipeline.ribbon import composite_ribbon, ribbon_from_mask, smooth_ribbons
+    from pipeline.ribbon import composite_ribbon, ribbon_from_mask, smooth_edges, smooth_ribbons
     masks = np.load(Path(cache) / "surface_masks.npz")["masks"]
     occ_file = Path(cache) / "occluders.npz"
     occ = np.load(occ_file)["masks"] if occ_file.exists() else [None] * len(masks)
-    ribbons = smooth_ribbons([ribbon_from_mask(m, occluder=o) if m.any() else None for m, o in zip(masks, occ)])
+    ribbons = smooth_ribbons([smooth_edges(ribbon_from_mask(m, occluder=o)) if m.any() else None
+                              for m, o in zip(masks, occ)])
     if (Path(cache) / "camera_H.npy").exists():
         # Lock to the camera (scripts/lock.py) as one rigid shape: a facade does not bend, and any per-frame freedom
         # lets the ad follow SAM's outline where a passing bus cuts into it (30 px drift on Piccadilly before).
@@ -89,9 +92,23 @@ def render_ribbon(frames, cache, c, shape):
                                H=np.load(Path(cache) / "camera_H.npy"))
     key = shape.get("creative", "16x9")
     art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
-    out = [composite_ribbon(f, art, r, occluder_mask=o, emissive=shape.get("emissive", True)) if r is not None
-           else f.copy() for f, r, o in zip(frames, ribbons, occ)]
-    return out, sum(r is not None for r in ribbons)
+    out = [composite_ribbon(f, art, r, emissive=shape.get("emissive", True)) if r is not None
+           else f.copy() for f, r in zip(frames, ribbons)]
+    return soft_occlude(frames, out, occ), sum(r is not None for r in ribbons)
+
+
+def soft_occlude(frames, placed, occluders, radius=4, gain=2.0):
+    """Put the people and vehicles in front back over the ad with edges pulled onto their real outline: SAM's masks are
+    blocky and a few px too large, and in that gap the original billboard showed through as ghosting."""
+    from pipeline.matte import refine_occluder
+    out = []
+    for f, p, o in zip(frames, placed, occluders):
+        if o is None or not o.any():
+            out.append(p)
+            continue
+        a = refine_occluder(f, o, radius=radius, gain=gain)[..., None]  # wider radii smear a moving head
+        out.append(np.rint(a * f + (1 - a) * p).astype(np.uint8))
+    return out
 
 
 def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None, shape=None, tag=None):
@@ -123,7 +140,9 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
             tone["white"] = min(tone["white"], 1.6 * frame_mean / 0.92)
             creative = np.dstack([exposure.fit_creative_tone(creative[:, :, :3], tone), creative[:, :, 3]])
     t0 = time.time()
-    placed = composite.render_clip(frames, quads, creative, occluder_masks=occluders, emissive=emissive)
+    placed = composite.render_clip(frames, quads, creative, emissive=emissive)
+    if occluders is not None:
+        placed = soft_occlude(frames, placed, occluders)
     timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
     tracked = int(np.isfinite(quads).all(axis=(1, 2)).sum())
     return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir, tag)

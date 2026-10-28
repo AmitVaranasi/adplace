@@ -239,3 +239,17 @@ def test_small_boundary_irregularities_are_covered():
     ribbon = ribbon_from_mask(mask)
     alpha = warp_to_ribbon(_creative(), ribbon, mask.shape)[..., 3]
     assert np.count_nonzero(mask & (alpha > 0)) / mask.sum() >= 0.99
+
+
+def test_smooth_edges_removes_an_inward_dent_and_keeps_the_curve():
+    from pipeline.ribbon import smooth_edges
+    x = np.linspace(100, 500, 48)
+    top = 200 + 0.0004 * (x - 300) ** 2
+    bottom = top + 130
+    dented_top, dented_bottom = top.copy(), bottom.copy()
+    dented_top[20:26] += 15     # a head pushes the top edge down
+    dented_bottom[18:28] -= 12  # shoulders push the bottom edge up
+    out = smooth_edges({"x": x, "top": dented_top, "bottom": dented_bottom})
+    assert np.abs(out["top"] - top).max() < 0.5
+    assert np.abs(out["bottom"] - bottom).max() < 0.5
+    assert smooth_edges(None) is None

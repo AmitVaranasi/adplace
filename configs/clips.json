@@ -118,7 +118,8 @@
             0.94
           ],
           "arc_deg": 176,
-          "creative": "2x1"
+          "creative": "2x1",
+          "top": "rim"
         }
       }
     ]
@@ -139,10 +140,11 @@
           "type": "cylinder",
           "band": [
             0.12,
-            0.9
+            0.96
           ],
-          "arc_deg": 150,
-          "creative": "4x3"
+          "arc_deg": 172,
+          "creative": "4x3",
+          "top": "rim"
         }
       }
     ]

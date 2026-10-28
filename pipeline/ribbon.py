@@ -369,3 +369,30 @@ def composite_ribbon(
     destination = result[region]
     destination[visible] = blended[visible]
     return result
+
+
+def smooth_edges(ribbon, degree=3, tolerance=1.5, iterations=6):
+    """Refit top and bottom as smooth polynomials in x, ignoring inward dents.
+
+    A screen's edges are smooth curves. A person standing in front for most of a clip dents the mask in nearly every
+    frame, so even a rigid fit inherits the dent and the creative bends around them. Dents only ever push an edge
+    inward (top down, bottom up), so each pass drops samples lying more than `tolerance` px inside the current fit.
+    """
+    arrays = _arrays(ribbon)
+    if arrays is None:
+        return None
+    x, top, bottom = arrays
+    t = (x - x.mean()) / max(np.ptp(x), 1e-9)
+
+    def fit(y, inward):
+        keep = np.ones(len(y), bool)
+        for _ in range(iterations):
+            coefficients = np.polyfit(t[keep], y[keep], min(degree, int(keep.sum()) - 1))
+            residual = inward * (y - np.polyval(coefficients, t))
+            new = residual <= tolerance
+            if new.sum() < degree + 2 or (new == keep).all():
+                break
+            keep = new
+        return np.polyval(coefficients, t)
+
+    return dict(ribbon, top=fit(top, 1.0), bottom=fit(bottom, -1.0))
