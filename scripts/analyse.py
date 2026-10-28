@@ -1,6 +1,7 @@
 """Analysis pass for one clip: SAM 3 surface masks, cached under cache/<clip>-<hash>/.
 
   python scripts/analyse.py assets/clips/billboard_night.mp4 --prompt "billboard"
+  python scripts/analyse.py assets/clips/times_square.mp4 --prompt "screen" --backend api   # SAM 3.1, Meta Model API
 """
 import argparse
 import hashlib
@@ -31,11 +32,16 @@ def main():
     p.add_argument("clip")
     p.add_argument("--prompt", default="billboard")
     p.add_argument("--chunk", type=int, default=4)
+    p.add_argument("--backend", choices=["local", "api"], default="local",
+                   help="local: SAM 3 on this Mac; api: SAM 3.1 on the Meta Model API (needs MODEL_API_KEY)")
     p.add_argument("--frames", help="only segment this range 'start:end' (others stay empty), e.g. to fill gaps")
     args = p.parse_args()
 
-    settings = {"model": "facebook/sam3", "prompt": args.prompt, "chunk": args.chunk, "proc_side": 640,
-                "frames": args.frames}
+    if args.backend == "api":
+        settings = {"model": "meta/sam-3.1", "prompt": args.prompt}
+    else:
+        settings = {"model": "facebook/sam3", "prompt": args.prompt, "chunk": args.chunk, "proc_side": 640,
+                    "frames": args.frames}
     out = cache_dir(args.clip, settings)
     if (out / "surface_masks.npz").exists():
         print("cached:", out)
@@ -45,7 +51,11 @@ def main():
     a, b = (int(v) for v in args.frames.split(":")) if args.frames else (0, len(frames))
     masks = np.zeros((len(frames),) + frames[0].shape[:2], bool)
     scores = np.full(len(frames), np.nan)
-    if b - a > SEGMENT:
+    api_info = None
+    if args.backend == "api":
+        from pipeline.sam_api import segment_video_api
+        masks, scores, api_info = segment_video_api(args.clip, args.prompt, len(frames), frames[0].shape[1::-1])
+    elif b - a > SEGMENT:
         # Run each segment in a fresh process (cached on its own), then merge.
         for s0 in range(a, b, SEGMENT):
             seg = f"{s0}:{min(s0 + SEGMENT, b)}"
@@ -59,6 +69,8 @@ def main():
     np.savez_compressed(out / "surface_masks.npz", masks=masks, scores=scores)
     meta = {**settings, "clip": str(args.clip), "frames": len(frames), "fps": fps, "size": frames[0].shape[1::-1],
             "coverage": float(np.isfinite(scores).mean()), "sam_seconds": round(time.time() - t0, 1)}
+    if api_info:
+        meta["api"] = api_info
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
     print(json.dumps(meta, indent=2))
     print("cached:", out)
