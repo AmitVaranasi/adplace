@@ -81,6 +81,11 @@ def render_ribbon(frames, cache, c, shape):
     occ_file = Path(cache) / "occluders.npz"
     occ = np.load(occ_file)["masks"] if occ_file.exists() else [None] * len(masks)
     ribbons = smooth_ribbons([ribbon_from_mask(m, occluder=o) if m.any() else None for m, o in zip(masks, occ)])
+    if (Path(cache) / "camera_H.npy").exists():
+        # Lock to the camera (scripts/lock.py) so the ad cannot flinch against the facade; allow only slow bending.
+        from pipeline.scene_lock import lock_ribbons
+        ribbons = lock_ribbons(frames, ribbons, list(masks), None if occ[0] is None else list(occ),
+                               H=np.load(Path(cache) / "camera_H.npy"), deformation_smoothness=1000.0)
     key = shape.get("creative", "16x9")
     art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
     out = [composite_ribbon(f, art, r, occluder_mask=o, emissive=shape.get("emissive", True)) if r is not None

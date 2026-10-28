@@ -1,48 +1,48 @@
 {
   "s01": {
-    "clip": "piccadilly",
-    "slot": "piccadilly-0",
-    "brand": "brewlark"
-  },
-  "s02": {
-    "clip": "mug_print",
-    "slot": null,
-    "brand": null
-  },
-  "s03": {
-    "clip": "mug_pair",
-    "slot": "mug_pair-0",
-    "brand": "paperwhale"
-  },
-  "s04": {
     "clip": "shibuya",
     "slot": "shibuya-0",
     "brand": "paperwhale"
   },
-  "s05": {
+  "s02": {
     "clip": "dundas",
     "slot": "dundas-0",
     "brand": "brewlark"
   },
-  "s06": {
+  "s03": {
     "clip": "piccadilly",
-    "slot": "piccadilly-5",
-    "brand": "kestrel"
+    "slot": "piccadilly-1",
+    "brand": "paperwhale"
   },
-  "s07": {
+  "s04": {
     "clip": "mug_print",
-    "slot": "mug_print-0",
-    "brand": "brewlark"
+    "slot": null,
+    "brand": null
   },
-  "s08": {
+  "s05": {
+    "clip": "piccadilly",
+    "slot": null,
+    "brand": null
+  },
+  "s06": {
     "clip": "dundas",
     "slot": null,
     "brand": null
   },
+  "s07": {
+    "clip": "piccadilly",
+    "slot": "piccadilly-0",
+    "brand": "brewlark"
+  },
+  "s08": {
+    "clip": "shibuya",
+    "slot": null,
+    "brand": null
+  },
   "s09": {
-    "clip": "times_square",
-    "slot": "times_square-main",
-    "brand": "kestrel"
+    "clip": "mug_print",
+    "slot": "mug_print-0",
+    "brand": "brewlark"
   },
   "s10": {
     "clip": "times_square",
@@ -50,18 +50,18 @@
     "brand": null
   },
   "s11": {
-    "clip": "shibuya",
-    "slot": null,
-    "brand": null
+    "clip": "times_square",
+    "slot": "times_square-main",
+    "brand": "kestrel"
   },
   "s12": {
     "clip": "piccadilly",
-    "slot": null,
-    "brand": null
+    "slot": "piccadilly-5",
+    "brand": "kestrel"
   },
   "s13": {
-    "clip": "piccadilly",
-    "slot": "piccadilly-1",
+    "clip": "mug_pair",
+    "slot": "mug_pair-0",
     "brand": "paperwhale"
   }
 }

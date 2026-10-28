@@ -110,7 +110,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 <script>
 const IDS = ["s01", "s02", "s03", "s04", "s05", "s06", "s07", "s08", "s09", "s10", "s11", "s12", "s13"];
 const LABELS = ["Obvious", "Noticeable", "Slight", "Barely", "None"];
-const STORE = "realism-v2";
+const STORE = "realism-v3";
 const $ = (id) => document.getElementById(id);
 
 function load() { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } }
@@ -144,14 +144,14 @@ if (state.finished) showDone();
 function persist() {
   if (!dbRef) return Promise.resolve(false);
   const body = { initials: state.initials, scores: state.scores, order: state.order,
-                 started: state.started, finished: state.finished, version: 2 };
+                 started: state.started, finished: state.finished, version: 3 };
   saving = saving.then(() => dbRef.set(body).then(() => true, () => false));
   return saving;
 }
 
 function code() {
   const s = state.order.filter((id) => state.scores[id]).map((id) => id.slice(1) + state.scores[id]).join("");
-  return `RC2-${(state.initials || "anon").replace(/[^A-Za-z0-9]/g, "")}-${s}`;
+  return `RC3-${(state.initials || "anon").replace(/[^A-Za-z0-9]/g, "")}-${s}`;
 }
 
 $("scale").innerHTML = LABELS.map((l, i) =>

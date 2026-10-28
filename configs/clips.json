@@ -64,7 +64,7 @@
     ]
   },
   "assets/clips/shibuya.mp4": {
-    "title": "Shibuya Crossing, Tokyo (wide, locked-off)",
+    "title": "Shibuya Crossing, Tokyo (wide, slow zoom)",
     "context_tags": [
       "street",
       "daytime",
@@ -75,7 +75,7 @@
         "slot_id": "shibuya-0",
         "surface": "screen",
         "emissive": true,
-        "analysis": "cache/shibuya-4784bddb7d6e-f79fb166-slot0"
+        "analysis": "cache/shibuya-5ee859742d90-888ed077-slot0"
       }
     ]
   },
