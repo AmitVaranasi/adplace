@@ -5,3 +5,8 @@
 - `assets/clips/raw/c3.webm`: WACN - maiwiki digital Billboard clip.webm by WACN Wiki Awareness Campaign in Nepal, CC BY 3.0, https://commons.wikimedia.org/wiki/File:WACN_-_maiwiki_digital_Billboard_clip.webm
 - `assets/clips/raw/c4.webm`: Wikimania 2023 Digital Signage at the Wall of Suntec Singapore Convention and Exhibition Centre.webm by Exec8, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Wikimania_2023_Digital_Signage_at_the_Wall_of_Suntec_Singapore_Convention_and_Exhibition_Centre.webm
 - `assets/clips/raw/c5.webm`: Wikipedia Times Square Billboard 20.webm by Wikimedia Foundation, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Wikipedia_Times_Square_Billboard_20.webm
+
+Derived clips:
+- `assets/clips/times_square.mp4`: c5, 4.0–9.0 s, scaled to 720x1280, 24 fps.
+- `assets/clips/billboard_night.mp4`: c2, trimmed and scaled to 1416x720.
+- `assets/clips/billboard_night_occluded.mp4`: billboard_night with a synthetic (computer-generated) passer-by.

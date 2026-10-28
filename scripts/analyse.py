@@ -34,11 +34,15 @@ def main():
     p.add_argument("--chunk", type=int, default=4)
     p.add_argument("--backend", choices=["local", "api"], default="local",
                    help="local: SAM 3 on this Mac; api: SAM 3.1 on the Meta Model API (needs MODEL_API_KEY)")
+    p.add_argument("--prefer", choices=["confidence", "area"], default="confidence",
+                   help="api backend: among equally persistent objects prefer higher confidence or larger area")
     p.add_argument("--frames", help="only segment this range 'start:end' (others stay empty), e.g. to fill gaps")
     args = p.parse_args()
 
     if args.backend == "api":
         settings = {"model": "meta/sam-3.1", "prompt": args.prompt}
+        if args.prefer != "confidence":
+            settings["prefer"] = args.prefer
     else:
         settings = {"model": "facebook/sam3", "prompt": args.prompt, "chunk": args.chunk, "proc_side": 640,
                     "frames": args.frames}
@@ -53,8 +57,17 @@ def main():
     scores = np.full(len(frames), np.nan)
     api_info = None
     if args.backend == "api":
-        from pipeline.sam_api import segment_video_api
-        masks, scores, api_info = segment_video_api(args.clip, args.prompt, len(frames), frames[0].shape[1::-1])
+        from pipeline.sam_api import segment_video_api, stream_events, upload
+        # The raw stream is kept so a different object choice never needs (or pays for) a second API call.
+        rec = cache_dir(args.clip, {"model": "meta/sam-3.1", "prompt": args.prompt}).with_name(
+            cache_dir(args.clip, {"model": "meta/sam-3.1", "prompt": args.prompt}).name + "-events.jsonl")
+        if rec.exists():
+            events = [json.loads(line) for line in rec.read_text().splitlines()]
+        else:
+            events = list(stream_events(upload(args.clip), args.prompt))
+            rec.write_text("\n".join(json.dumps(e) for e in events))
+        masks, scores, api_info = segment_video_api(args.clip, args.prompt, len(frames), frames[0].shape[1::-1],
+                                                    events=events, prefer=args.prefer)
     elif b - a > SEGMENT:
         # Run each segment in a fresh process (cached on its own), then merge.
         for s0 in range(a, b, SEGMENT):

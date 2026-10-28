@@ -1,4 +1,15 @@
 {
+  "assets/clips/times_square.mp4": {
+    "title": "Times Square screen (daylight, handheld)",
+    "context_tags": [
+      "street",
+      "daytime",
+      "city"
+    ],
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/times_square-35b9e4b97711-30a2242b"
+  },
   "assets/clips/billboard_night.mp4": {
     "context_tags": [],
     "surface": "billboard",
