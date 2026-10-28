@@ -12,7 +12,7 @@ Built for the Meta AI Developer Hackathon (Oct 26 – Nov 4, 2026). Full spec: `
 
 | Day | Added |
 |---|---|
-| 2 (Oct 27, late) | Model ranking (`pipeline/rank.py`): Muse when `MUSE_BASE_URL`/`MUSE_API_KEY`/`MUSE_MODEL` are set, then Llama 3.3 70B (W&B Inference), then the deterministic rules; every reply validated against the eligible set, invented IDs rejected, replies cached by prompt hash; app shows which provider was used |
+| 2 (Oct 27, late) | Model ranking (`pipeline/rank.py`): Muse Spark (Meta Model API) when `MODEL_API_KEY` is set, then Llama 3.3 70B (W&B Inference), then the deterministic rules; every reply validated against the eligible set, invented IDs rejected, replies cached by prompt hash; app shows which provider was used |
 | 2 (Oct 27, evening) | Second surface (daylight roadside sign; road-safety signs excluded from placement); synthetic occluder test clip with ground truth; occlusion-aware tracking that fits the board's visible edges (GPT); occluder-mask gap filling; slot discovery and per-viewer choice (GLM); exposure matching for printed surfaces (GLM); segmented SAM runs; demo web app v0 |
 | 2 (Oct 27) | Spec agreed over 3 review rounds (Claude, GPT-6.1 Sol, GLM-5.3). SAM 3 surface masks with on-disk cache; quad tracking with re-acquisition (GPT); compositing with blur/grain matching, bleed and emissive mode (GPT); Video Seal embed/verify; three fictional brands; render pipeline. Kill test on a handheld night billboard: 95% of frames tracked, 1.6 px median corner error, watermark verified on every exported variant. |
 

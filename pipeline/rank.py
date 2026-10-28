@@ -5,10 +5,11 @@ them for a viewer profile and writes a one-line rationale. Whatever it returns i
 so an invented ID can never reach the renderer. "No suitable placement" is an allowed answer.
 
 Providers are OpenAI-compatible chat endpoints configured from the environment:
-  Muse   MUSE_BASE_URL, MUSE_API_KEY, MUSE_MODEL (skipped until all three are set)
+  Muse   muse-spark-1.3 on the Meta Model API (https://api.meta.ai/v1), key MODEL_API_KEY; MUSE_MODEL overrides the model
   Llama  meta-llama/Llama-3.3-70B-Instruct on W&B Inference, key WANDB_API_KEY
 Responses are cached on disk by prompt hash, so a demo run repeats exactly and costs nothing the second time.
 """
+import functools
 import hashlib
 import json
 import os
@@ -32,14 +33,16 @@ SYSTEM = (
 
 
 def providers():
-    """Configured providers in priority order, as (name, base_url, key, model)."""
+    """Configured providers in priority order, as (name, base_url, key, model, extra request fields)."""
     out = []
-    muse = [os.environ.get(k) for k in ("MUSE_BASE_URL", "MUSE_API_KEY", "MUSE_MODEL")]
-    if all(muse):
-        out.append(("muse", *muse))
+    if os.environ.get("MODEL_API_KEY"):
+        # Muse Spark always reasons: give it room (reasoning counts against the limit) and keep the effort low.
+        out.append(("muse", "https://api.meta.ai/v1", os.environ["MODEL_API_KEY"],
+                    os.environ.get("MUSE_MODEL", "muse-spark-1.3"),
+                    {"max_completion_tokens": 4000, "reasoning_effort": "low"}))
     if os.environ.get("WANDB_API_KEY"):
         out.append(("llama", "https://api.inference.wandb.ai/v1", os.environ["WANDB_API_KEY"],
-                    "meta-llama/Llama-3.3-70B-Instruct"))
+                    "meta-llama/Llama-3.3-70B-Instruct", {"temperature": 0, "max_tokens": 200}))
     return out
 
 
@@ -60,9 +63,9 @@ def build_prompt(slots, eligible, inventory, profile, context_tags):
     return json.dumps(data, indent=1)
 
 
-def chat(base_url, key, model, system, user, timeout=30):
-    """One deterministic chat completion; returns the reply text."""
-    body = {"model": model, "temperature": 0, "max_tokens": 200,
+def chat(base_url, key, model, system, user, extra=None, timeout=60):
+    """One chat completion; `extra` carries provider-specific fields (limits, temperature). Returns the reply text."""
+    body = {"model": model, **(extra or {}),
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     req = urllib.request.Request(base_url.rstrip("/") + "/chat/completions", data=json.dumps(body).encode(),
                                  headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
@@ -88,7 +91,7 @@ def clean_rationale(text):
 
 
 def cached_chat(name, base_url, key, model, user, call):
-    digest = hashlib.sha256(json.dumps([model, SYSTEM, user]).encode()).hexdigest()[:16]
+    digest = hashlib.sha256(json.dumps([name, model, SYSTEM, user]).encode()).hexdigest()[:16]
     path = CACHE / f"{name}-{digest}.txt"
     if path.exists():
         return path.read_text(), True
@@ -109,12 +112,16 @@ def choose(slots, eligible, inventory, profile, context_tags=(), provider_list=N
         return {"choice": {"status": "no_placement", "reason": "no eligible placements for this clip"},
                 "chooser": "rules (nothing eligible, no model asked)", "attempts": attempts}
     user = build_prompt(slots, eligible, inventory, profile, context_tags)
-    for name, base_url, key, model in (providers() if provider_list is None else provider_list):
+    for name, base_url, key, model, *extra in (providers() if provider_list is None else provider_list):
+        if extra and extra[0]:
+            call_with = functools.partial(call, extra=extra[0])
+        else:
+            call_with = call
         try:
             if use_cache:
-                text, hit = cached_chat(name, base_url, key, model, user, call)
+                text, hit = cached_chat(name, base_url, key, model, user, call_with)
             else:
-                text, hit = call(base_url, key, model, SYSTEM, user), False
+                text, hit = call_with(base_url, key, model, SYSTEM, user), False
         except Exception as e:  # network, auth, quota: try the next provider
             attempts.append({"provider": name, "model": model, "result": f"error: {type(e).__name__}"})
             continue
