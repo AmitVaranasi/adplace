@@ -4,12 +4,14 @@
 Analysis (SAM 3 + tracking) is done ahead of time by scripts/analyse.py and scripts/track_eval.py and is shown as
 cached. Rendering a (clip, brand) pair runs for real the first time and is reused afterwards.
 """
+import functools
 import json
 import sys
 import tempfile
 import time
 from pathlib import Path
 
+import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -48,6 +50,19 @@ def slot_for(clip_id):
     return {"slot_id": f"{Path(clip_id).stem}-1", "surface": entry["surface"], "metrics": metrics}
 
 
+@functools.lru_cache(maxsize=16)
+def scene_jpeg(clip_id):
+    """The reference frame with the tracked surface outlined, for image-capable rankers (Muse)."""
+    entry = clip_entry(clip_id)
+    quads = np.load(ROOT / entry["analysis"] / "quads.npy")
+    ref = int(np.argmax(np.isfinite(quads).all(axis=(1, 2))))
+    cap = cv2.VideoCapture(str(ROOT / clip_id))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, ref)
+    ok, frame = cap.read()
+    cap.release()
+    return rank.scene_image(frame, quads[ref]) if ok else None
+
+
 @app.get("/")
 def index():
     return FileResponse(Path(__file__).parent / "static" / "index.html")
@@ -77,7 +92,7 @@ def choose(req: ChooseRequest):
     inventory = load("inventory.json")
     slot = slot_for(req.clip)
     eligible = discover.eligible_pairs([slot], inventory, entry["context_tags"])
-    result = rank.choose([slot], eligible, inventory, profile, entry["context_tags"])
+    result = rank.choose([slot], eligible, inventory, profile, entry["context_tags"], image=scene_jpeg(req.clip))
     return {"slot": slot, "eligible": eligible, **result}
 
 

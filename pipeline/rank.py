@@ -7,8 +7,12 @@ so an invented ID can never reach the renderer. "No suitable placement" is an al
 Providers are OpenAI-compatible chat endpoints configured from the environment:
   Muse   muse-spark-1.3 on the Meta Model API (https://api.meta.ai/v1), key MODEL_API_KEY; MUSE_MODEL overrides the model
   Llama  meta-llama/Llama-3.3-70B-Instruct on W&B Inference, key WANDB_API_KEY
-Responses are cached on disk by prompt hash, so a demo run repeats exactly and costs nothing the second time.
+Muse accepts images and Llama does not: choose(image=...) attaches the scene JPEG (see scene_image) next to the JSON
+prompt for image-capable providers and appends a note about it to the system prompt; text-only providers get the
+plain prompt as before. Responses are cached on disk by prompt hash (an attached image is hashed into the key), so a
+demo run repeats exactly and costs nothing the second time.
 """
+import base64
 import functools
 import hashlib
 import json
@@ -16,6 +20,9 @@ import os
 import re
 import urllib.request
 from pathlib import Path
+
+import cv2
+import numpy as np
 
 from pipeline import discover
 
@@ -31,18 +38,23 @@ SYSTEM = (
     'or {"none": true, "rationale": "..."}. Use only IDs that appear in the eligible list.'
 )
 
+IMAGE_NOTE = (
+    "The attached image shows the scene with the candidate surface outlined in green; use it to judge how well "
+    "each placement fits the setting, but choose only from the eligible list."
+)
+
 
 def providers():
-    """Configured providers in priority order, as (name, base_url, key, model, extra request fields)."""
+    """Configured providers in priority order, as (name, base_url, key, model, extra request fields, accepts images)."""
     out = []
     if os.environ.get("MODEL_API_KEY"):
         # Muse Spark always reasons: give it room (reasoning counts against the limit) and keep the effort low.
         out.append(("muse", "https://api.meta.ai/v1", os.environ["MODEL_API_KEY"],
                     os.environ.get("MUSE_MODEL", "muse-spark-1.3"),
-                    {"max_completion_tokens": 4000, "reasoning_effort": "low"}))
+                    {"max_completion_tokens": 4000, "reasoning_effort": "low"}, True))
     if os.environ.get("WANDB_API_KEY"):
         out.append(("llama", "https://api.inference.wandb.ai/v1", os.environ["WANDB_API_KEY"],
-                    "meta-llama/Llama-3.3-70B-Instruct", {"temperature": 0, "max_tokens": 200}))
+                    "meta-llama/Llama-3.3-70B-Instruct", {"temperature": 0, "max_tokens": 200}, False))
     return out
 
 
@@ -63,8 +75,28 @@ def build_prompt(slots, eligible, inventory, profile, context_tags):
     return json.dumps(data, indent=1)
 
 
+def scene_image(frame_bgr, quad, max_side=768):
+    """JPEG (quality 85) bytes of the frame with the quad outlined in bright green.
+
+    The quad is float (4, 2) TL, TR, BR, BL in frame pixels. The 3 px outline is drawn at frame resolution and
+    scales with the image when the longer side is downscaled to max_side. The input frame is not modified.
+    """
+    img = np.asarray(frame_bgr).copy()
+    pts = np.round(np.asarray(quad, dtype=np.float64).reshape(4, 2)).astype(np.int32)
+    cv2.polylines(img, [pts], isClosed=True, color=(0, 255, 0), thickness=3)
+    h, w = img.shape[:2]
+    scale = min(1.0, max_side / float(max(h, w)))
+    if scale < 1.0:
+        img = cv2.resize(img, (max(1, round(w * scale)), max(1, round(h * scale))), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    if not ok:
+        raise ValueError("encoding the scene image as JPEG failed")
+    return buf.tobytes()
+
+
 def chat(base_url, key, model, system, user, extra=None, timeout=60):
-    """One chat completion; `extra` carries provider-specific fields (limits, temperature). Returns the reply text."""
+    """One chat completion; `extra` carries provider-specific fields (limits, temperature). Returns the reply text.
+    `user` may be a plain string or an OpenAI-style content list (text plus image_url parts); it is sent unchanged."""
     body = {"model": model, **(extra or {}),
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     req = urllib.request.Request(base_url.rstrip("/") + "/chat/completions", data=json.dumps(body).encode(),
@@ -90,38 +122,58 @@ def clean_rationale(text):
     return text if len(text) <= MAX_RATIONALE else text[:MAX_RATIONALE - 1].rstrip() + "…"
 
 
-def cached_chat(name, base_url, key, model, user, call):
-    digest = hashlib.sha256(json.dumps([name, model, SYSTEM, user]).encode()).hexdigest()[:16]
+def cached_chat(name, base_url, key, model, system, user, call, image=None):
+    """Disk-cached model call. The digest covers everything that shapes the request; an attached image enters as the
+    hash of its bytes. With no image the key is exactly the text-only key, so existing cache entries still hit."""
+    parts = [name, model, system, user]
+    if image is not None:
+        parts.append(hashlib.sha256(image).hexdigest())
+    digest = hashlib.sha256(json.dumps(parts).encode()).hexdigest()[:16]
     path = CACHE / f"{name}-{digest}.txt"
     if path.exists():
         return path.read_text(), True
-    text = call(base_url, key, model, SYSTEM, user)
+    text = call(base_url, key, model, system, user)
     CACHE.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     return text, False
 
 
-def choose(slots, eligible, inventory, profile, context_tags=(), provider_list=None, call=chat, use_cache=True):
+def choose(slots, eligible, inventory, profile, context_tags=(), provider_list=None, call=chat, use_cache=True,
+           image=None):
     """Pick a placement for one viewer. Returns {"choice", "chooser", "attempts"}.
 
     `choice` is the validated eligible pair plus "rationale" (status "ok"), or status "no_placement" with a reason.
     `attempts` records each provider tried and why it was or wasn't used, for the demo's "why this ad" panel.
+    `image` is optional JPEG bytes of the scene (see scene_image): image-capable providers get it attached next to
+    the prompt plus a system-prompt note, everyone else the plain text prompt. Provider entries may be 4-6 fields
+    long; missing trailing fields mean no extra request fields and no image support.
     """
     attempts = []
     if not eligible:
         return {"choice": {"status": "no_placement", "reason": "no eligible placements for this clip"},
                 "chooser": "rules (nothing eligible, no model asked)", "attempts": attempts}
     user = build_prompt(slots, eligible, inventory, profile, context_tags)
-    for name, base_url, key, model, *extra in (providers() if provider_list is None else provider_list):
-        if extra and extra[0]:
-            call_with = functools.partial(call, extra=extra[0])
+    for name, base_url, key, model, *flags in (providers() if provider_list is None else provider_list):
+        extra = flags[0] if flags else None
+        accepts_images = bool(flags[1]) if len(flags) > 1 else False
+        if extra:
+            call_with = functools.partial(call, extra=extra)
         else:
             call_with = call
+        send_image = image is not None and accepts_images
+        if send_image:
+            system = SYSTEM + " " + IMAGE_NOTE
+            url = "data:image/jpeg;base64," + base64.b64encode(image).decode("ascii")
+            content = [{"type": "text", "text": user},
+                       {"type": "image_url", "image_url": {"url": url}}]
+        else:
+            system, content = SYSTEM, user
         try:
             if use_cache:
-                text, hit = cached_chat(name, base_url, key, model, user, call_with)
+                text, hit = cached_chat(name, base_url, key, model, system, content, call_with,
+                                        image=image if send_image else None)
             else:
-                text, hit = call_with(base_url, key, model, SYSTEM, user), False
+                text, hit = call_with(base_url, key, model, system, content), False
         except Exception as e:  # network, auth, quota: try the next provider
             attempts.append({"provider": name, "model": model, "result": f"error: {type(e).__name__}"})
             continue
