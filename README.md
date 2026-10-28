@@ -12,6 +12,7 @@ Built for the Meta AI Developer Hackathon (Oct 26 – Nov 4, 2026). Full spec: `
 
 | Day | Added |
 |---|---|
+| 2 (Oct 27, night) | Hero clip: Times Square screen in daylight (vertical, handheld pan). SAM 3.1 through the Meta Model API (no local GPU/memory needed; raw stream recorded so re-selection is free); API client reviewed and tested by GPT. Muse Spark is the live ranker and sees the scene frame with the surface outlined (GLM). Blinded realism-rating page published (8 clips, originals as controls) |
 | 2 (Oct 27, late) | Model ranking (`pipeline/rank.py`): Muse Spark (Meta Model API) when `MODEL_API_KEY` is set, then Llama 3.3 70B (W&B Inference), then the deterministic rules; every reply validated against the eligible set, invented IDs rejected, replies cached by prompt hash; app shows which provider was used |
 | 2 (Oct 27, evening) | Second surface (daylight roadside sign; road-safety signs excluded from placement); synthetic occluder test clip with ground truth; occlusion-aware tracking that fits the board's visible edges (GPT); occluder-mask gap filling; slot discovery and per-viewer choice (GLM); exposure matching for printed surfaces (GLM); segmented SAM runs; demo web app v0 |
 | 2 (Oct 27) | Spec agreed over 3 review rounds (Claude, GPT-6.1 Sol, GLM-5.3). SAM 3 surface masks with on-disk cache; quad tracking with re-acquisition (GPT); compositing with blur/grain matching, bleed and emissive mode (GPT); Video Seal embed/verify; three fictional brands; render pipeline. Kill test on a handheld night billboard: 95% of frames tracked, 1.6 px median corner error, watermark verified on every exported variant. |
@@ -57,6 +58,8 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 | Occluded span (synthetic passer-by covering up to 82% of the board) vs clean-clip truth | 2.5 px median, 5.9 px max, 0 frames lost | ≤ 3 / ≤ 6 px |
 | SAM 3 "person" mask vs ground-truth occluder | IoU 0.977 median (found in 87% of frames; gaps filled) | — |
 | Daylight roadside sign | 100% tracked, 1.6 px median | — |
+| Times Square hero (SAM 3.1 API, 120 frames in 2.7 min) | 100% tracked, 2.7 px median, 6.4 px max; watermark 99.2–100% bits | ≤ 3 px median |
+| Muse Spark choice with scene image | matching brand for each viewer, 1–3 s per choice | matches interests |
 | Llama 3.3 70B choice, 3 viewers on the night billboard | matching brand for each (brewlark / kestrel / paperwhale) | matches interests |
 | Road-safety sign | no placement, no model call | refused |
 
