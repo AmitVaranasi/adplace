@@ -30,8 +30,8 @@ def pick_creative(c, quad):
     """The creative whose aspect ratio is closest to the surface's (measured on the reference quad)."""
     w = (np.linalg.norm(quad[1] - quad[0]) + np.linalg.norm(quad[2] - quad[3])) / 2
     h = (np.linalg.norm(quad[3] - quad[0]) + np.linalg.norm(quad[2] - quad[1])) / 2
-    ratios = {"16x9": 16 / 9, "4x3": 4 / 3, "3x4": 3 / 4, "9x16": 9 / 16}
-    key = min(c["creatives"], key=lambda k: abs(np.log(ratios[k] / (w / h))))
+    ratios = {k: int(k.split("x")[0]) / int(k.split("x")[1]) for k in c["creatives"]}
+    key = min(ratios, key=lambda k: abs(np.log(ratios[k] / (w / h))))
     return cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
 
 
@@ -60,16 +60,36 @@ def encode(frames, fps, path, crf=18):
         raise SystemExit(f"ffmpeg failed writing {path}")
 
 
-def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None):
+def render_cylinder(frames, cache, c, shape):
+    """Wrap the creative around an upright cylinder (mug, cup, column) found in each frame's SAM mask."""
+    from pipeline.curved_fit import cylinder_from_mask, smooth_cylinders
+    from pipeline.curved_warp import composite_curved
+    masks = np.load(Path(cache) / "surface_masks.npz")["masks"]
+    band = tuple(shape.get("band", (0.25, 0.8)))
+    cyls = smooth_cylinders([cylinder_from_mask(m, band=band) if m.any() else None for m in masks])
+    key = shape.get("creative", "4x3")
+    art = cv2.cvtColor(cv2.imread(str(ROOT / c["creatives"][key]), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGRA2RGBA)
+    arc = shape.get("arc_deg", 110)
+    return [composite_curved(f, art, cy, arc_deg=arc) if cy is not None else f.copy() for f, cy in zip(frames, cyls)], \
+        sum(cy is not None for cy in cyls)
+
+
+def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None, shape=None):
     """Composite, label, watermark, export and verify one campaign on one analysed clip. Returns the report dict.
 
     label=False is only for the blinded realism rating (the label would give the edit away); never for distribution.
     """
     frames, fps = read_frames(clip)
+    c, tokens = campaign(brand)
+    timings = {}
+    if shape and shape.get("type") == "cylinder":
+        t0 = time.time()
+        placed, tracked = render_cylinder(frames, cache, c, shape)
+        timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
+        return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir)
     quads = np.load(Path(cache) / "quads.npy")
     occ_file = Path(cache) / "occluders.npz"
     occluders = list(np.load(occ_file)["masks"]) if occ_file.exists() else None
-    c, tokens = campaign(brand)
     ref = int(np.argmax(np.isfinite(quads).all(axis=(1, 2))))
     creative = pick_creative(c, quads[ref])
     if not emissive:
@@ -82,11 +102,15 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
             frame_mean = float(np.mean(np.where(gray <= 0.04045, gray / 12.92, ((gray + 0.055) / 1.055) ** 2.4)))
             tone["white"] = min(tone["white"], 1.6 * frame_mean / 0.92)
             creative = np.dstack([exposure.fit_creative_tone(creative[:, :, :3], tone), creative[:, :, 3]])
-    timings = {}
-
     t0 = time.time()
     placed = composite.render_clip(frames, quads, creative, occluder_masks=occluders, emissive=emissive)
     timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
+    tracked = int(np.isfinite(quads).all(axis=(1, 2)).sum())
+    return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir)
+
+
+def finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir):
+    """Label, watermark, export and verify the exact exported file; write the report."""
     if label:
         placed = [add_label(f) for f in placed]
     t0 = time.time()
@@ -99,7 +123,7 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
     exported, _ = read_frames(out)  # verify the exact exported file
     result = watermark.verify(exported, tokens)
     report = {"clip": clip, "brand": brand, "campaign_token": c["campaign_token"], "output": str(out),
-              "frames": len(frames), "label": label, "tracked_frames": int(np.isfinite(quads).all(axis=(1, 2)).sum()),
+              "frames": len(frames), "label": label, "tracked_frames": int(tracked),
               "timings": timings, "verify": result, "verified": result["campaign"] == c["campaign_token"]}
     out.with_suffix(".json").write_text(json.dumps(report, indent=2))
     return report
