@@ -74,7 +74,7 @@ def render_cylinder(frames, cache, c, shape):
         sum(cy is not None for cy in cyls)
 
 
-def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None, shape=None):
+def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None, shape=None, tag=None):
     """Composite, label, watermark, export and verify one campaign on one analysed clip. Returns the report dict.
 
     label=False is only for the blinded realism rating (the label would give the edit away); never for distribution.
@@ -86,7 +86,7 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
         t0 = time.time()
         placed, tracked = render_cylinder(frames, cache, c, shape)
         timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
-        return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir)
+        return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir, tag)
     quads = np.load(Path(cache) / "quads.npy")
     occ_file = Path(cache) / "occluders.npz"
     occluders = list(np.load(occ_file)["masks"]) if occ_file.exists() else None
@@ -106,10 +106,10 @@ def render_campaign(clip, cache, brand, emissive=False, label=True, out_dir=None
     placed = composite.render_clip(frames, quads, creative, occluder_masks=occluders, emissive=emissive)
     timings["composite_ms_per_frame"] = round(1000 * (time.time() - t0) / len(frames), 1)
     tracked = int(np.isfinite(quads).all(axis=(1, 2)).sum())
-    return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir)
+    return finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir, tag)
 
 
-def finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir):
+def finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings, label, out_dir, tag=None):
     """Label, watermark, export and verify the exact exported file; write the report."""
     if label:
         placed = [add_label(f) for f in placed]
@@ -117,7 +117,7 @@ def finish(clip, cache, brand, c, tokens, frames, fps, placed, tracked, timings,
     marked = watermark.embed(placed, c["campaign_token"])
     timings["watermark_s"] = round(time.time() - t0, 1)
 
-    out = Path(out_dir or ROOT / "outputs") / f"{Path(clip).stem}_{brand}.mp4"
+    out = Path(out_dir or ROOT / "outputs") / f"{Path(clip).stem}{'_' + tag if tag else ''}_{brand}.mp4"
     out.parent.mkdir(parents=True, exist_ok=True)
     encode(marked, fps, out)
     exported, _ = read_frames(out)  # verify the exact exported file

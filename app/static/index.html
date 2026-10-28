@@ -92,8 +92,9 @@ $("go").onclick = async () => {
     const r = await post("/api/choose", { clip: $("clip").value, profile_id: $("profile").value });
     const m = r.slot.metrics;
     $("facts").innerHTML = `
-      <dt>Surface</dt><dd>${r.slot.surface}, on screen ${m.on_screen_s.toFixed(1)} s, ${(100 * m.mean_area_frac).toFixed(1)}% of frame</dd>
-      <dt>Eligible</dt><dd>${r.eligible.map((e) => e.brand_id).join(", ") || "none"}</dd>
+      <dt>Surface</dt><dd>${r.slot.slot_id}: ${r.slot.surface}, on screen ${m.on_screen_s.toFixed(1)} s, ${(100 * m.mean_area_frac).toFixed(1)}% of frame</dd>
+      <dt>Slots found</dt><dd>${r.slots.length}</dd>
+      <dt>Eligible</dt><dd>${r.eligible.map((e) => e.slot_id + " × " + e.brand_id).join(", ") || "none"}</dd>
       <dt>Chooser</dt><dd>${r.chooser}</dd>
       <dt>Tried</dt><dd>${r.attempts.map((a) => `${a.provider}: ${a.result}`).join("; ") || "none (rules only)"}</dd>`;
     if (r.choice.status !== "ok") {
@@ -102,7 +103,7 @@ $("go").onclick = async () => {
     }
     $("choice").innerHTML = `<span class="pill ok">${r.choice.brand_id}</span> ${r.choice.rationale}`;
     $("placedcap").textContent = "Rendering (first time takes about a minute)…";
-    const v = await post("/api/render", { clip: $("clip").value, brand: r.choice.brand_id });
+    const v = await post("/api/render", { clip: $("clip").value, brand: r.choice.brand_id, slot_id: r.choice.slot_id });
     $("placed").src = v.video_url + "?t=" + Date.now(); $("placed").play(); $("orig").currentTime = 0;
     $("placedcap").innerHTML = `${v.brand} · watermark ${v.verified ? '<span class="pill ok">verified</span>' : '<span class="pill bad">not verified</span>'}
       · ${v.cached ? "cached render" : `rendered in ${v.seconds} s`} · composite ${v.timings.composite_ms_per_frame} ms/frame`;

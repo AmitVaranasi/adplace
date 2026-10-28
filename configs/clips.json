@@ -1,39 +1,168 @@
 {
   "assets/clips/times_square.mp4": {
-    "title": "Times Square screen (daylight, handheld)",
+    "title": "Times Square, New York (daylight, handheld)",
     "context_tags": [
       "street",
       "daytime",
       "city"
     ],
-    "surface": "screen",
-    "emissive": true,
-    "analysis": "cache/times_square-35b9e4b97711-30a2242b"
+    "slots": [
+      {
+        "slot_id": "times_square-main",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/times_square-35b9e4b97711-30a2242b"
+      }
+    ]
   },
-  "assets/clips/billboard_night.mp4": {
-    "context_tags": [],
-    "surface": "billboard",
-    "emissive": true,
-    "title": "Night billboard (handheld)",
-    "analysis": "cache/billboard_night-1643266c99a8-d977f070"
-  },
-  "assets/clips/billboard_night_occluded.mp4": {
+  "assets/clips/piccadilly.mp4": {
+    "title": "Piccadilly Circus, London (wide, people passing)",
     "context_tags": [
-      "synthetic_occluder"
+      "street",
+      "daytime",
+      "city"
     ],
-    "surface": "billboard",
-    "emissive": true,
-    "title": "Night billboard + passer-by (synthetic occluder)",
-    "analysis": "cache/billboard_night_occluded-a90ba89b4960-dd14ad90"
+    "slots": [
+      {
+        "slot_id": "piccadilly-0",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot0"
+      },
+      {
+        "slot_id": "piccadilly-3",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot3"
+      },
+      {
+        "slot_id": "piccadilly-4",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot4"
+      }
+    ]
+  },
+  "assets/clips/shibuya.mp4": {
+    "title": "Shibuya Crossing, Tokyo (wide, locked-off)",
+    "context_tags": [
+      "street",
+      "daytime",
+      "city"
+    ],
+    "slots": [
+      {
+        "slot_id": "shibuya-0",
+        "surface": "screen",
+        "emissive": true,
+        "analysis": "cache/shibuya-4784bddb7d6e-f79fb166-slot0"
+      }
+    ]
+  },
+  "assets/clips/dundas.mp4": {
+    "title": "Yonge-Dundas Square, Toronto (wide, pedestrians)",
+    "context_tags": [
+      "street",
+      "daytime",
+      "city"
+    ],
+    "slots": [
+      {
+        "slot_id": "dundas-0",
+        "surface": "billboard",
+        "emissive": false,
+        "analysis": "cache/dundas-3ff676f856f3-fc7fe7ff-slot0"
+      }
+    ]
+  },
+  "assets/clips/mug_print.mp4": {
+    "title": "Printed mug on a counter (curved surface)",
+    "context_tags": [
+      "home",
+      "kitchen"
+    ],
+    "slots": [
+      {
+        "slot_id": "mug_print-0",
+        "surface": "mug",
+        "emissive": false,
+        "analysis": "cache/mug_print-0ddd1c739439-09b80841",
+        "shape": {
+          "type": "cylinder",
+          "band": [
+            0.06,
+            0.94
+          ],
+          "arc_deg": 176,
+          "creative": "2x1"
+        }
+      }
+    ]
+  },
+  "assets/clips/mug_pair.mp4": {
+    "title": "Two mugs (curved surface)",
+    "context_tags": [
+      "home",
+      "kitchen"
+    ],
+    "slots": [
+      {
+        "slot_id": "mug_pair-0",
+        "surface": "mug",
+        "emissive": false,
+        "analysis": "cache/mug_pair-14927731944c-2a18709a",
+        "shape": {
+          "type": "cylinder",
+          "band": [
+            0.12,
+            0.9
+          ],
+          "arc_deg": 150,
+          "creative": "4x3"
+        }
+      }
+    ]
   },
   "assets/clips/roadside_sign.mp4": {
+    "title": "Roadside sign (daylight, safety sign: no placement)",
     "context_tags": [
       "safety_signage"
     ],
-    "surface": "sign",
-    "emissive": false,
-    "note": "Road-safety sign: never a placement in demos; kept as a technical tracking/lighting test.",
-    "title": "Roadside sign (daylight, safety sign: no placement)",
-    "analysis": "cache/roadside_sign-e18134e7f0ea-5f19cf92"
+    "slots": [
+      {
+        "slot_id": "roadside_sign-0",
+        "surface": "sign",
+        "emissive": false,
+        "analysis": "cache/roadside_sign-e18134e7f0ea-5f19cf92"
+      }
+    ]
+  },
+  "assets/clips/billboard_night.mp4": {
+    "title": "Night billboard (handheld)",
+    "context_tags": [],
+    "hidden": true,
+    "slots": [
+      {
+        "slot_id": "billboard_night-0",
+        "surface": "billboard",
+        "emissive": true,
+        "analysis": "cache/billboard_night-1643266c99a8-d977f070"
+      }
+    ]
+  },
+  "assets/clips/billboard_night_occluded.mp4": {
+    "title": "Night billboard + passer-by (synthetic occluder)",
+    "context_tags": [
+      "synthetic_occluder"
+    ],
+    "hidden": true,
+    "slots": [
+      {
+        "slot_id": "billboard_night_occluded-0",
+        "surface": "billboard",
+        "emissive": true,
+        "analysis": "cache/billboard_night_occluded-a90ba89b4960-dd14ad90"
+      }
+    ]
   }
 }
