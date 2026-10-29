@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Place ads in your own clip</title>
+<style>
+  :root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    background: #101216;
+    color: #eef0f4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { max-width: 1040px; margin: auto; padding: 24px; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 21px; margin: 0 0 5px; font-weight: 650; }
+  h2 { font-size: 14px; margin: 0 0 12px; }
+  h3 { font-size: 14px; margin: 0; font-weight: 600; }
+  p { line-height: 1.55; }
+  .lede { margin: 0; font-size: 13px; max-width: 70ch; }
+  .muted, small { color: #a2a9b8; }
+  [hidden] { display: none !important; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  button, .button {
+    display: inline-block;
+    border: 1px solid #353a46;
+    background: #20242d;
+    color: inherit;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  button:hover, .button:hover { background: #2a303b; }
+  .primary {
+    background: #233e38;
+    border-color: #6bd6b2;
+    color: #c9ffec;
+  }
+  .primary:hover { background: #2a4a42; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible, .button:focus-visible, input:focus-visible, a:focus-visible {
+    outline: 2px solid #6bd6b2;
+    outline-offset: 3px;
+  }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .panel {
+    border: 1px solid #2c3039;
+    border-radius: 12px;
+    background: #171a20;
+    padding: 18px;
+  }
+  .panel + .panel { margin-top: 16px; }
+
+  #drop {
+    border: 1px dashed #3a4150;
+    border-radius: 12px;
+    background: #15181e;
+    padding: 34px 20px;
+    text-align: center;
+  }
+  #drop.over { border-color: #6bd6b2; background: #182420; }
+  #drop:focus-within { border-color: #6bd6b2; }
+  #drop p { margin: 0 0 12px; font-size: 14px; }
+  #drop small { display: block; margin-top: 12px; font-size: 12px; }
+  input[type=file] { font: inherit; font-size: 13px; color: #a2a9b8; max-width: 100%; }
+  input[type=file]::file-selector-button {
+    border: 1px solid #353a46;
+    background: #20242d;
+    color: #eef0f4;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 13px;
+    margin-right: 10px;
+    cursor: pointer;
+  }
+  input[type=file]::file-selector-button:hover { background: #2a303b; }
+  #chosen { margin-top: 16px; }
+  #chosen-name { overflow-wrap: anywhere; }
+
+  .bar {
+    height: 8px;
+    border-radius: 999px;
+    background: #20242d;
+    border: 1px solid #2c3039;
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: #6bd6b2;
+    transition: width .25s ease;
+  }
+  .bar-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    margin: 8px 0 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .steps { list-style: none; margin: 18px 0 0; padding: 0; }
+  .steps li {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 16px;
+    position: relative;
+  }
+  .steps li:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 9px;
+    top: 22px;
+    bottom: 2px;
+    width: 1px;
+    background: #303540;
+  }
+  .dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #353a46;
+    background: #20242d;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    line-height: 1;
+  }
+  li.done .dot { border-color: #6bd6b2; background: #233e38; color: #c9ffec; }
+  li.current .dot { border-color: #6bd6b2; }
+  li.failed .dot { border-color: #9c5555; background: #382025; color: #ffd4d4; }
+  li.waiting .label { color: #8d96a8; }
+  .label { font-size: 13px; }
+  .step-msg { display: block; font-size: 12px; margin-top: 3px; overflow-wrap: anywhere; }
+  .spin {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #6bd6b2;
+    border-top-color: transparent;
+    animation: spin .9s linear infinite;
+  }
+  .spin.inline { margin-right: 6px; vertical-align: -1px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spin { animation: none; border-top-color: #6bd6b2; opacity: .6; }
+    .bar > span { transition: none; }
+  }
+
+  .stats { display: flex; gap: 22px; flex-wrap: wrap; margin: 0 0 14px; }
+  .stat strong { display: block; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: #a2a9b8; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .card {
+    border: 1px solid #2c3039;
+    border-radius: 12px;
+    background: #171a20;
+    overflow: hidden;
+  }
+  .card img, .card .noimg {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: #08090c;
+  }
+  .card .noimg { display: grid; place-items: center; color: #8d96a8; font-size: 12px; }
+  .card-body { padding: 14px; display: grid; gap: 8px; }
+  .card-head { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+  .badge {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid #353a46;
+    background: #20242d;
+    color: #a2a9b8;
+    white-space: nowrap;
+  }
+  .badge.placed { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
+  .reasons-title { font-size: 11px; color: #8d96a8; margin: 2px 0 0; }
+  .reasons {
+    margin: 0;
+    padding-left: 17px;
+    font-size: 12px;
+    color: #c0c6d2;
+    line-height: 1.5;
+  }
+  .reasons li { margin-bottom: 3px; overflow-wrap: anywhere; }
+
+  .viewer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-top: 1px solid #303540;
+    padding: 12px 0 0;
+    margin-top: 12px;
+  }
+  .viewer:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+  .viewer strong { display: block; font-size: 13px; }
+  .viewer small { display: block; font-size: 11px; }
+  .vstatus { display: block; font-size: 11px; margin-top: 6px; line-height: 1.5; max-width: 46ch; }
+  .vstatus a { color: #6bd6b2; }
+
+  #error {
+    border: 1px solid #9c5555;
+    border-radius: 8px;
+    background: #382025;
+    padding: 12px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    overflow-wrap: anywhere;
+  }
+  #error-actions { margin-top: 10px; }
+  #demo {
+    border: 1px solid #353a46;
+    border-radius: 8px;
+    background: #1b1f27;
+    padding: 10px 12px;
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+  .foot { font-size: 12px; margin: 18px 0 0; }
+
+  @media (max-width: 700px) {
+    main { padding: 14px; }
+    .cards { grid-template-columns: 1fr; }
+    .viewer { align-items: stretch; }
+    .viewer button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Place ads in your own clip</h1>
+    <p class="lede muted">Upload a clip. We find surfaces that can carry an ad, place ads only where we can show they
+      hold up, and tell you what we declined and why.</p>
+  </header>
+
+  <div id="demo" role="note" hidden>
+    <strong>Demo mode.</strong> <span class="muted">Nothing is uploaded and nothing is rendered: the page is showing
+    example data.</span>
+  </div>
+
+  <div id="error" role="alert" hidden>
+    <div id="error-msg"></div>
+    <div id="error-actions" class="row"></div>
+  </div>
+
+  <!-- 1. choose a file -->
+  <section id="pick" class="panel" aria-labelledby="pick-title" hidden>
+    <h2 id="pick-title">Choose a video</h2>
+    <div id="drop">
+      <p>Drag a video here</p>
+      <label for="file" class="muted">Or pick one from your computer:</label><br>
+      <input id="file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v,.webm"
+             aria-describedby="file-hint">
+      <small id="file-hint" class="muted">An mp4 or mov file, up to 200 MB. One scene works best.</small>
+    </div>
+
+    <div id="chosen" hidden>
+      <p class="row">
+        <strong id="chosen-name"></strong>
+        <span id="chosen-size" class="muted"></span>
+      </p>
+      <div class="row">
+        <button id="start" type="button" class="primary">Upload and start</button>
+        <button id="again" type="button">Choose a different file</button>
+      </div>
+    </div>
+
+    <div id="uploading" hidden>
+      <h2 id="upload-title">Sending your clip</h2>
+      <div class="bar" role="progressbar" aria-labelledby="upload-title" aria-valuemin="0" aria-valuemax="100"
+           aria-valuenow="0" id="upload-bar"><span></span></div>
+      <p class="bar-line">
+        <span id="upload-text" class="muted" role="status">Starting…</span>
+        <button id="cancel" type="button">Cancel</button>
+      </p>
+    </div>
+
+    <p id="demo-start" class="row" hidden>
+      <button type="button" class="primary" id="play-demo">Play the demo</button>
+    </p>
+  </section>
+
+  <!-- 2. progress -->
+  <section id="progress" class="panel" aria-labelledby="progress-title" hidden>
+    <h2 id="progress-title">Working on your clip</h2>
+    <div class="bar" role="progressbar" aria-labelledby="progress-title" aria-valuemin="0" aria-valuemax="100"
+         aria-valuenow="0" id="progress-bar"><span></span></div>
+    <p class="bar-line">
+      <span id="progress-pct" class="muted">0% done</span>
+      <span id="elapsed" class="muted">0:00</span>
+    </p>
+    <p id="live" class="muted" role="status" aria-live="polite" style="font-size:12px;margin:10px 0 0"></p>
+    <ol id="steps" class="steps"></ol>
+    <p class="foot muted">This takes a few minutes. You can close the tab and come back to this address: the run id is
+      in the web address.</p>
+  </section>
+
+  <!-- 3. the report -->
+  <section id="report" aria-labelledby="report-title" hidden>
+    <div class="panel">
+      <h2 id="report-title">What we found in <span id="report-source">your clip</span></h2>
+      <p id="report-meta" class="muted" style="font-size:12px;margin:0 0 14px"></p>
+      <div class="stats">
+        <span class="stat"><strong id="stat-candidates">—</strong><span>surfaces found</span></span>
+        <span class="stat"><strong id="stat-placed">—</strong><span>ads placed</span></span>
+        <span class="stat"><strong id="stat-declined">—</strong><span>declined</span></span>
+      </div>
+      <div class="row">
+        <a id="open-player" class="button primary" href="#">Open the live player</a>
+        <span id="no-player" class="muted" style="font-size:12px" hidden>Nothing was placed, so there is no player to
+          open. The cards below say why.</span>
+        <button id="restart" type="button">Upload another clip</button>
+      </div>
+    </div>
+
+    <div class="panel" id="viewers-panel" aria-labelledby="viewers-title">
+      <h2 id="viewers-title">Keep a copy</h2>
+      <p class="muted" style="font-size:12px;margin:0 0 14px">Each viewer sees different brands. A copy is rendered on
+        the server with the disclosure label and a watermark, so it can take a few minutes.</p>
+      <div id="viewers"></div>
+    </div>
+
+    <div class="panel" aria-labelledby="cards-title">
+      <h2 id="cards-title">Every surface we looked at</h2>
+      <p class="muted" style="font-size:12px;margin:0">Placed first. For the declined ones, the reason is the
+        measurement that fell short.</p>
+      <div id="cards" class="cards"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+(() => {
+  const $ = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+  function make(tag, props, ...kids) {
+    const node = Object.assign(document.createElement(tag), props || {});
+    for (const kid of kids) if (kid != null) node.append(kid);
+    return node;
+  }
+
+  // The stages of scripts/ingest.py (INGEST.md), in plain words. pct in progress.jsonl is per stage.
+  const STAGES = [
+    ["upload", "Reading your clip"],
+    ["shots", "Finding the cuts"],
+    ["segment", "Looking for surfaces"],
+    ["track", "Following each surface"],
+    ["score", "Checking which ones hold up"],
+    ["render", "Placing the ads"],
+    ["export", "Building the player"],
+    ["qa", "Checking the result"],
+    ["done", "Finished"],
+  ];
+  const MAX_BYTES = 200 * 1024 * 1024;
+  const ALLOWED = /\.(mp4|mov|m4v|webm)$/i;
+  const POLL_MS = 1500;
+
+  const params = new URLSearchParams(location.search);
+  const MOCK = params.get("mock") === "1";
+
+  const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+  const clock = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+  const words = s => String(s).replaceAll("_", " ");
+  const titleCase = s => { const t = words(s); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const num = v => typeof v === "boolean" ? (v ? "yes" : "no")
+    : typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/, "")) : String(v);
+
+  // --- the real backend (app/main.py) ------------------------------------------------------------------------------
+
+  async function readJSON(response) {
+    let body = null;
+    try { body = await response.json(); } catch (error) { body = null; }
+    if (!response.ok) throw new Error((body && body.detail) || "the server said " + response.status);
+    return body;
+  }
+
+  const real = {
+    upload(file, onProgress, handle) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        handle.abort = () => xhr.abort();
+        xhr.open("POST", "/api/ingest");
+        xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded, e.total); };
+        xhr.onload = () => {
+          let body = null;
+          try { body = JSON.parse(xhr.responseText); } catch (error) { body = null; }
+          if (xhr.status >= 200 && xhr.status < 300 && body && body.run_id) resolve(body);
+          else reject(new Error((body && body.detail) || "the upload failed (" + xhr.status + ")"));
+        };
+        xhr.onerror = () => reject(new Error("the upload could not reach the server"));
+        xhr.onabort = () => reject(Object.assign(new Error("Upload cancelled."), {cancelled: true}));
+        const form = new FormData();
+        form.append("file", file, file.name);
+        xhr.send(form);
+      });
+    },
+    progress: runId => fetch("/api/runs/" + encodeURIComponent(runId) + "/progress", {cache: "no-store"}).then(readJSON),
+    report: runId => fetch("/api/runs/" + encodeURIComponent(runId) + "/report", {cache: "no-store"}).then(readJSON),
+    viewerRender: (clip, profileId) => fetch("/api/viewer_render", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({clip, profile_id: profileId})
+    }).then(readJSON),
+  };
+
+  // --- ?mock=1: the same shapes, no backend ------------------------------------------------------------------------
+
+  function mockThumb(label, placed) {
+    const stroke = placed ? "#6bd6b2" : "#8d96a8";
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">'
+      + '<rect width="320" height="180" fill="#1d2129"/>'
+      + '<rect y="124" width="320" height="56" fill="#171a20"/>'
+      + '<rect x="42" y="30" width="122" height="82" fill="#2a303b" stroke="' + stroke + '" stroke-width="3"/>'
+      + '<circle cx="246" cy="92" r="28" fill="#242a34"/>'
+      + '<text x="160" y="160" fill="#8d96a8" font-family="system-ui,sans-serif" font-size="14"'
+      + ' text-anchor="middle">' + label + '</text></svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  const MOCK_EVENTS = [
+    ["upload", 0, "normalising the video"],
+    ["upload", 100, "372 frames at 29.97 fps"],
+    ["shots", 0, "looking for cuts"],
+    ["shots", 100, "3 shots; using the longest (12.4 s)"],
+    ["segment", 5, "reading the scene"],
+    ["segment", 15, "surfaces seen: poster, sign, menu; the scene is brand-safe"],
+    ["segment", 100, "9 candidate surfaces found"],
+    ["track", 22, "following the poster on the back wall"],
+    ["track", 61, "following the sign above the counter"],
+    ["track", 100, "9 candidates measured"],
+    ["score", 0, "deciding"],
+    ["score", 100, "3 of 9 accepted"],
+    ["export", 0, "building the live player"],
+    ["export", 100, "live player ready"],
+    ["qa", 100, "checks recorded"],
+    ["done", 100, "3 placed, 6 declined"],
+  ];
+
+  const placedCard = (id, surface, seconds, checks) => ({
+    id, surface, decision: "placed", thumb: mockThumb(surface, true), on_screen_s: seconds,
+    reasons: [], qa: {pass: true, reasons: [], checks},
+  });
+  const declinedCard = (id, surface, seconds, reasons) => ({
+    id, surface, decision: "declined", thumb: mockThumb(surface, false), on_screen_s: seconds, reasons, qa: null,
+  });
+
+  const FIXTURE = {
+    run_id: "r_20261030_1412_ab12", clip_stem: "upload_ab12", source_name: "cafe_terrace.mp4",
+    duration_s: 12.4, status: "done", elapsed_s: 412,
+    summary: {candidates: 9, placed: 3, declined: 6},
+    placements: [
+      placedCard("c03", "poster", 4.12, {
+        edge_sharpness: {value: 0.91, limit: 0.7, pass: true},
+        colour_match: {value: 2.1, limit: 4, pass: true},
+        corner_drift_px: {value: 0.6, limit: 2, pass: true},
+      }),
+      placedCard("c01", "menu", 3.37, {
+        edge_sharpness: {value: 0.84, limit: 0.7, pass: true},
+        colour_match: {value: 3.2, limit: 4, pass: true},
+        corner_drift_px: {value: 1.1, limit: 2, pass: true},
+      }),
+      placedCard("c07", "sign", 2.64, {
+        edge_sharpness: {value: 0.78, limit: 0.7, pass: true},
+        colour_match: {value: 2.8, limit: 4, pass: true},
+        corner_drift_px: {value: 1.4, limit: 2, pass: true},
+      }),
+      declinedCard("c02", "poster", 0.9, ["on screen 0.9 s, needs 2.0 s"]),
+      declinedCard("c04", "screen", 5.2, [
+        "tracking error 4.3 px, limit 2.5 px",
+        "the picture on the screen changes, so an ad would fight it",
+      ]),
+      declinedCard("c05", "sign", 3.1, ["corners jitter 5.1 px, limit 3.0 px"]),
+      declinedCard("c06", "menu", 2.4, ["too small (31 px side, needs 48)"]),
+      declinedCard("c08", "billboard", 1.4, [
+        "on screen 1.4 s, needs 2.0 s",
+        "a person covers it for most of that time (71%, limit 35%)",
+      ]),
+      declinedCard("c09", "poster", 6.8, [
+        "not a plausible ad surface: this is a reflection in the window, not a printed surface",
+      ]),
+    ],
+    player_url: "/player?clip=upload_ab12",
+    viewers: [
+      {profile_id: "viewer-a", label: "Morning commuter"},
+      {profile_id: "viewer-b", label: "Weekend cook"},
+      {profile_id: "viewer-c", label: "Student on a budget"},
+    ],
+  };
+
+  const mock = {
+    started: 0,
+    STEP_MS: 1200,
+    async upload(file, onProgress, handle) {
+      handle.abort = () => {};
+      for (let sent = 0; sent < file.size; sent = Math.min(file.size, sent + file.size / 6)) {
+        onProgress(sent, file.size);
+        await sleep(130);
+      }
+      onProgress(file.size, file.size);
+      mock.started = Date.now();
+      return {run_id: FIXTURE.run_id};
+    },
+    async progress(runId) {
+      if (!mock.started) mock.started = Date.now();
+      await sleep(90);
+      const shown = clamp(1 + Math.floor((Date.now() - mock.started) / mock.STEP_MS), 1, MOCK_EVENTS.length);
+      const events = MOCK_EVENTS.slice(0, shown).map(([stage, pct, msg], i) => ({
+        t: new Date(mock.started + i * mock.STEP_MS).toISOString(), stage, pct, msg,
+      }));
+      const latest = events[events.length - 1];
+      return {events, latest, done: latest.stage === "done" || latest.stage === "error", error: null};
+    },
+    async report() {
+      await sleep(200);
+      return {...FIXTURE, run_id: state.runId || FIXTURE.run_id};
+    },
+    async viewerRender(clip, profileId) {
+      await sleep(2800);
+      return {video_url: "#", assignment: {}, verified: true, manifest_id: "demo-7f3a9c", cached: false,
+        seconds: 164, demo: true};
+    },
+  };
+
+  const API = MOCK ? mock : real;
+
+  // --- state ------------------------------------------------------------------------------------------------------
+
+  const state = {file: null, runId: null, upload: null, timer: 0, ticker: 0, polling: false, misses: 0,
+    finished: false, startedAt: 0, lastLive: ""};
+  const stepNodes = new Map();
+
+  function show(name) {
+    for (const id of ["pick", "progress", "report"]) $(id).hidden = id !== name;
+  }
+
+  function setParam(key, value) {
+    const url = new URL(location.href);
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+    history.replaceState(null, "", url);
+  }
+
+  function hideError() {
+    $("error").hidden = true;
+    $("error-actions").replaceChildren();
+  }
+
+  function showError(message, actions) {
+    $("error-msg").textContent = message;
+    $("error-actions").replaceChildren(...(actions || []));
+    $("error").hidden = false;
+  }
+
+  function stopPolling() {
+    clearInterval(state.timer);
+    state.timer = 0;
+  }
+
+  function stopClock() {
+    clearInterval(state.ticker);
+    state.ticker = 0;
+  }
+
+  function setBar(id, pct, text) {
+    const bar = $(id);
+    bar.firstElementChild.style.width = clamp(pct, 0, 100) + "%";
+    bar.setAttribute("aria-valuenow", String(Math.round(clamp(pct, 0, 100))));
+    bar.setAttribute("aria-valuetext", text);
+  }
+
+  // --- 1. choosing and uploading ----------------------------------------------------------------------------------
+
+  function resetPick() {
+    state.file = null;
+    $("file").value = "";
+    $("chosen").hidden = true;
+    $("uploading").hidden = true;
+    $("drop").hidden = false;
+    $("start").disabled = false;
+    show("pick");
+  }
+
+  function chooseFile(file) {
+    hideError();
+    if (!file) return;
+    if (!ALLOWED.test(file.name)) {
+      showError("That is not a video we can read. Please choose an mp4 or mov file.");
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      showError("That file is " + fmtSize(file.size) + ". We can take videos up to 200 MB — please trim it or "
+        + "export a smaller version.");
+      return;
+    }
+    if (file.size === 0) {
+      showError("That file is empty.");
+      return;
+    }
+    state.file = file;
+    $("chosen-name").textContent = file.name;
+    $("chosen-size").textContent = fmtSize(file.size);
+    $("chosen").hidden = false;
+    $("start").disabled = false;
+    $("start").focus();
+  }
+
+  async function startUpload() {
+    const file = state.file;
+    if (!file) return;
+    hideError();
+    $("chosen").hidden = true;
+    $("drop").hidden = true;
+    $("demo-start").hidden = true;
+    $("uploading").hidden = false;
+    setBar("upload-bar", 0, "0 per cent sent");
+    $("upload-text").textContent = "Starting…";
+    state.upload = {abort: () => {}};
+    try {
+      const body = await API.upload(file, (sent, total) => {
+        const pct = total ? 100 * sent / total : 0;
+        setBar("upload-bar", pct, Math.round(pct) + " per cent sent");
+        $("upload-text").textContent = fmtSize(sent) + " of " + fmtSize(total) + " sent ("
+          + Math.round(pct) + "%)";
+      }, state.upload);
+      $("upload-text").textContent = "Sent. Starting the run…";
+      beginRun(body.run_id);
+    } catch (error) {
+      if (error.cancelled) {
+        resetPick();
+        return;
+      }
+      showError("We could not send the clip: " + (error.message || error) + ".", [
+        make("button", {type: "button", className: "primary", textContent: "Try again", onclick: startUpload}),
+        make("button", {type: "button", textContent: "Choose a different file", onclick: resetPick}),
+      ]);
+      $("uploading").hidden = true;
+      $("drop").hidden = false;
+      $("chosen").hidden = false;
+      $("demo-start").hidden = !MOCK;
+    }
+  }
+
+  // --- 2. the stepper ---------------------------------------------------------------------------------------------
+
+  function buildSteps() {
+    const list = $("steps");
+    list.replaceChildren();
+    stepNodes.clear();
+    for (const [key, label] of STAGES) {
+      const dot = make("span", {className: "dot"});
+      const name = make("span", {className: "label", textContent: label});
+      const said = make("span", {className: "sr-only", textContent: " — waiting"});
+      const msg = make("small", {className: "step-msg muted"});
+      const li = make("li", {className: "waiting"}, dot, make("div", null, name, said, msg));
+      list.append(li);
+      stepNodes.set(key, {li, dot, said, msg});
+    }
+  }
+
+  function applySteps(current, message, failed) {
+    STAGES.forEach(([key], i) => {
+      const node = stepNodes.get(key);
+      const where = i < current ? "done" : i === current ? "current" : "waiting";
+      const broken = where === "current" && failed;
+      node.li.className = broken ? "current failed" : where;
+      if (where === "current") node.li.setAttribute("aria-current", "step");
+      else node.li.removeAttribute("aria-current");
+      node.said.textContent = broken ? " — stopped" : where === "done" ? " — done"
+        : where === "current" ? " — happening now" : " — waiting";
+      node.dot.replaceChildren(
+        where === "done" ? document.createTextNode("✓")
+          : broken ? document.createTextNode("!")
+            : where === "current" ? make("span", {className: "spin"}) : document.createTextNode(""));
+      node.msg.textContent = where === "current" && message ? message : "";
+    });
+  }
+
+  function tickClock() {
+    if (!state.startedAt) return;
+    $("elapsed").textContent = clock(Math.max(0, (Date.now() - state.startedAt) / 1000)) + " so far";
+  }
+
+  function applyProgress(data) {
+    const latest = data.latest || {stage: "upload", pct: 0, msg: ""};
+    const first = (data.events || [])[0];
+    const stamped = first && Date.parse(first.t);
+    if (stamped && !Number.isNaN(stamped)) state.startedAt = stamped;
+    else if (!state.startedAt) state.startedAt = Date.now();
+    tickClock();
+
+    const failed = latest.stage === "error";
+    let index = STAGES.findIndex(s => s[0] === latest.stage);
+    if (failed) {
+      const previous = (data.events || []).filter(e => e.stage !== "error").pop();
+      index = Math.max(0, STAGES.findIndex(s => s[0] === (previous ? previous.stage : "upload")));
+    }
+    if (index < 0) index = 0;
+
+    const everything = STAGES.length - 1;
+    const whole = latest.stage === "done" ? 100
+      : clamp(100 * (index + clamp(Number(latest.pct) || 0, 0, 100) / 100) / everything, 0, 99);
+    setBar("progress-bar", whole, Math.round(whole) + " per cent done");
+    $("progress-pct").textContent = Math.round(whole) + "% done";
+    applySteps(latest.stage === "done" ? STAGES.length : index, latest.msg || "", failed);
+
+    const spoken = failed
+      ? "Stopped: " + (latest.msg || "something went wrong")
+      : latest.stage === "done"
+        ? "Finished. Reading the report."
+        : "Step " + (index + 1) + " of " + everything + ", " + STAGES[index][1].toLowerCase()
+          + (latest.msg ? ": " + latest.msg : "") + ". " + Math.round(whole) + "% done.";
+    if (spoken !== state.lastLive) {
+      state.lastLive = spoken;
+      $("live").textContent = spoken;
+    }
+  }
+
+  function retryActions() {
+    const actions = [];
+    if (state.file) actions.push(make("button", {
+      type: "button", className: "primary", textContent: "Try the same file again",
+      onclick: () => { hideError(); startUpload(); },
+    }));
+    actions.push(make("button", {
+      type: "button", className: state.file ? "" : "primary", textContent: "Start over",
+      onclick: () => { hideError(); restart(); },
+    }));
+    return actions;
+  }
+
+  function fail(message) {
+    stopPolling();
+    stopClock();
+    state.finished = true;
+    showError(message, retryActions());
+  }
+
+  async function poll() {
+    if (state.polling || state.finished) return;
+    state.polling = true;
+    try {
+      const data = await API.progress(state.runId);
+      state.misses = 0;
+      applyProgress(data);
+      if (data.error) fail("The run stopped: " + data.error);
+      else if (data.done) {
+        stopPolling();
+        state.finished = true;
+        await loadReport();
+      }
+    } catch (error) {
+      state.misses += 1;
+      if (state.misses >= 3) fail("We lost touch with the run: " + (error.message || error) + ".");
+    } finally {
+      state.polling = false;
+    }
+  }
+
+  function beginRun(runId) {
+    state.runId = runId;
+    state.finished = false;
+    state.misses = 0;
+    state.lastLive = "";
+    state.startedAt = 0;
+    hideError();
+    setParam("run", runId);
+    buildSteps();
+    applySteps(0, "");
+    setBar("progress-bar", 0, "0 per cent done");
+    $("progress-pct").textContent = "0% done";
+    $("elapsed").textContent = "0:00 so far";
+    show("progress");
+    stopPolling();
+    stopClock();
+    state.ticker = setInterval(tickClock, 1000);
+    poll();
+    state.timer = setInterval(poll, POLL_MS);
+  }
+
+  function restart() {
+    stopPolling();
+    stopClock();
+    state.runId = null;
+    state.finished = false;
+    if (MOCK) mock.started = 0;
+    setParam("run", null);
+    resetPick();
+    $("demo-start").hidden = !MOCK;
+    $("file").focus();
+  }
+
+  // --- 3. the report ----------------------------------------------------------------------------------------------
+
+  async function loadReport() {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        renderReport(await API.report(state.runId));
+        return;
+      } catch (error) {
+        if (attempt === 3) {
+          fail("The run finished but the report could not be read: " + (error.message || error) + ".");
+          return;
+        }
+        await sleep(1200);
+      }
+    }
+  }
+
+  function placedReasons(p) {
+    const out = [];
+    const qa = p.qa;
+    if (qa && qa.checks) {
+      for (const [name, check] of Object.entries(qa.checks)) {
+        if (!check || check.pass === false) continue;
+        out.push(titleCase(name) + " " + num(check.value)
+          + (check.limit != null ? " (limit " + num(check.limit) + ")" : "") + " — passed");
+      }
+    }
+    for (const reason of (qa && qa.reasons) || []) out.push(reason);
+    for (const reason of p.reasons || []) out.push(reason);
+    if (!out.length) {
+      out.push(qa && qa.pass ? "Every check passed."
+        : "The measurements hold up. The final checks were not recorded for this run.");
+    }
+    return out.slice(0, 5);
+  }
+
+  function card(p) {
+    const placed = p.decision === "placed";
+    const surface = titleCase(p.surface || "surface");
+    const picture = p.thumb
+      ? make("img", {src: p.thumb, alt: "A frame from your clip with the " + surface.toLowerCase()
+        + " outlined", loading: "lazy", decoding: "async"})
+      : make("div", {className: "noimg", textContent: "No picture for this one"});
+
+    const head = make("div", {className: "card-head"},
+      make("h3", {textContent: surface}),
+      make("span", {className: "badge" + (placed ? " placed" : ""), textContent: placed ? "Placed" : "Declined"}));
+
+    const seconds = Number(p.on_screen_s);
+    const facts = make("p", {className: "muted", style: "font-size:12px;margin:0"});
+    facts.textContent = (Number.isFinite(seconds) ? "On screen " + seconds.toFixed(1) + " seconds" : "Not on screen")
+      + " · " + (p.id || "");
+
+    const items = placed ? placedReasons(p)
+      : (p.reasons && p.reasons.length ? p.reasons : ["It did not meet one of the checks."]);
+    const list = make("ul", {className: "reasons"});
+    for (const item of items) list.append(make("li", {textContent: item}));
+
+    return make("article", {className: "card"}, picture,
+      make("div", {className: "card-body"}, head, facts,
+        make("p", {className: "reasons-title", textContent: placed ? "Checks it passed" : "Why we declined it"}),
+        list));
+  }
+
+  function viewerRow(report, viewer) {
+    const status = make("small", {className: "vstatus muted", role: "status"});
+    const button = make("button", {type: "button", textContent: "Download this viewer's version"});
+    button.onclick = async () => {
+      button.disabled = true;
+      status.replaceChildren(make("span", {className: "spin inline"}),
+        document.createTextNode("Making this viewer's video, with the disclosure label and a watermark. It is "
+          + "rendered on the server, so it can take a few minutes. You can leave this page open."));
+      try {
+        const body = await API.viewerRender(report.clip_stem, viewer.profile_id);
+        const link = make("a", {href: body.video_url, download: "",
+          textContent: body.demo ? "Save the video (demo, no file)" : "Save the video"});
+        const extras = [
+          "watermark " + (body.verified ? "checked and found" : "NOT found"),
+          body.cached ? "ready from an earlier run" : "took " + clock(Math.round(body.seconds || 0)),
+          body.manifest_id,
+        ].filter(Boolean);
+        status.replaceChildren(link, document.createTextNode(" · " + extras.join(" · ")));
+      } catch (error) {
+        status.textContent = "That did not work: " + (error.message || error) + ". You can try again.";
+        button.disabled = false;
+      }
+    };
+    return make("div", {className: "viewer"},
+      make("div", null,
+        make("strong", {textContent: viewer.label || viewer.profile_id}),
+        make("small", {className: "muted", textContent: viewer.profile_id})),
+      make("div", null, button, status));
+  }
+
+  function renderReport(report) {
+    stopPolling();
+    stopClock();
+    hideError();
+    state.report = report;
+
+    $("report-source").textContent = report.source_name || "your clip";
+    $("report-meta").textContent = [
+      report.duration_s ? Number(report.duration_s).toFixed(1) + " seconds long" : null,
+      report.elapsed_s ? "took " + clock(Number(report.elapsed_s)) : null,
+      report.run_id ? "run " + report.run_id : null,
+    ].filter(Boolean).join(" · ");
+
+    const summary = report.summary || {};
+    const placements = [...(report.placements || [])]
+      .sort((a, b) => (a.decision !== "placed") - (b.decision !== "placed"));
+    $("stat-candidates").textContent = summary.candidates ?? placements.length;
+    $("stat-placed").textContent = summary.placed ?? placements.filter(p => p.decision === "placed").length;
+    $("stat-declined").textContent = summary.declined ?? placements.filter(p => p.decision !== "placed").length;
+
+    const player = $("open-player");
+    if (report.player_url) {
+      player.href = report.player_url;
+      player.hidden = false;
+      $("no-player").hidden = true;
+    } else {
+      player.hidden = true;
+      $("no-player").hidden = false;
+    }
+
+    const viewers = report.viewers || [];
+    $("viewers-panel").hidden = !(viewers.length && report.clip_stem);
+    $("viewers").replaceChildren(...viewers.map(v => viewerRow(report, v)));
+
+    $("cards").replaceChildren(...placements.map(card));
+    show("report");
+    $("report-title").setAttribute("tabindex", "-1");
+    $("report-title").focus();
+  }
+
+  // --- wiring -----------------------------------------------------------------------------------------------------
+
+  $("file").onchange = e => chooseFile(e.target.files && e.target.files[0]);
+  $("start").onclick = startUpload;
+  $("again").onclick = resetPick;
+  $("cancel").onclick = () => { if (state.upload) state.upload.abort(); };
+  $("restart").onclick = restart;
+  $("play-demo").onclick = () => { mock.started = Date.now(); beginRun(FIXTURE.run_id); };
+
+  const drop = $("drop");
+  for (const name of ["dragenter", "dragover"]) drop.addEventListener(name, e => {
+    e.preventDefault();
+    drop.classList.add("over");
+  });
+  for (const name of ["dragleave", "dragend"]) drop.addEventListener(name, () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    chooseFile(file);
+  });
+  // A file dropped beside the zone should not navigate away from a running page.
+  for (const name of ["dragover", "drop"]) window.addEventListener(name, e => {
+    if (!drop.contains(e.target)) e.preventDefault();
+  });
+
+  $("demo").hidden = !MOCK;
+  $("demo-start").hidden = !MOCK;
+  const resuming = params.get("run");
+  if (resuming) {
+    if (MOCK) mock.started = Date.now() - MOCK_EVENTS.length * mock.STEP_MS;  // a reload lands on the report
+    beginRun(resuming);
+  } else {
+    resetPick();
+  }
+})();
+</script>
+</body>
+</html>

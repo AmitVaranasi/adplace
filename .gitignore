@@ -13,3 +13,4 @@ __pycache__/
 eval/stage/
 eval/rating/
 .DS_Store
+configs/uploads.json

@@ -374,7 +374,8 @@
     "area_frac": 0.005, "neighbours": ["drinks"]},
    {"id": "patio_shirt", "surface": "shirt", "kind": "shirt_print", "prompt": "t-shirt logo",
     "area_frac": 0.002, "neighbours": ["waiter", "pizza"]},
-   {"id": "patio_aframe", "surface": "sidewalk_sign", "kind": "aframe", "plane": "floor", "at": [1000, 607],
+   {"id": "patio_aframe", "disabled": "floor scale rests on a guessed planter size; read as a second poster",
+    "surface": "sidewalk_sign", "kind": "aframe", "plane": "floor", "at": [1000, 607],
     "frames": [0, 90], "area_frac": 0.02, "neighbours": ["patio_wall", "plants"]}
   ],
   "occluder_prompts": [

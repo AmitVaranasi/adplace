@@ -11,6 +11,9 @@ import os
 import cv2
 import numpy as np
 import requests
+from pipeline.fast_mask_codec import install as _install_fast_mask_codec  # noqa: E402
+
+_install_fast_mask_codec()  # Numba port of the lossless mask decoder, bit-exact, ~80x faster
 from meta_sam_parser import (
     SegmentationMaskRecord,
     decode_mask_to_raster,

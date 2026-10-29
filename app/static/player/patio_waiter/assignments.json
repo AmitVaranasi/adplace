@@ -12,7 +12,6 @@
    "patio_bottle": "fizzwell",
    "patio_tent": "nimbus",
    "patio_shirt": "kestrel",
-   "patio_aframe": "voltway",
    "patio_glass": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
@@ -31,8 +30,7 @@
    "patio_bottle": "brewlark",
    "patio_tent": "voltway",
    "patio_glass": "fizzwell",
-   "patio_shirt": "kestrel",
-   "patio_aframe": "nimbus"
+   "patio_shirt": "kestrel"
   },
   "chooser": "muse (muse-spark-1.3)",
   "rationale": "All eight brands placed once on eligible surfaces with wall and aframe in different categories."
@@ -50,8 +48,7 @@
    "patio_bottle": "fernleaf",
    "patio_glass": "brewlark",
    "patio_shirt": "kestrel",
-   "patio_tent": "nimbus",
-   "patio_aframe": "voltway"
+   "patio_tent": "nimbus"
   },
   "chooser": "muse (muse-spark-1.3)",
   "rationale": "Matches viewer reading interest with paperwhale on largest poster while fitting all surfaces and keeping neighbours distinct."
@@ -70,8 +67,7 @@
    "patio_bottle": "brewlark",
    "patio_tent": "paperwhale",
    "patio_glass": "fizzwell",
-   "patio_shirt": "kestrel",
-   "patio_aframe": "voltway"
+   "patio_shirt": "kestrel"
   },
   "chooser": "muse (muse-spark-1.3)",
   "rationale": "Matched viewer travel interest with nimbus and food context while respecting all eligibility and neighbour constraints."
@@ -90,8 +86,7 @@
    "patio_bottle": "brewlark",
    "patio_tent": "voltway",
    "patio_glass": "fizzwell",
-   "patio_shirt": "kestrel",
-   "patio_aframe": "paperwhale"
+   "patio_shirt": "kestrel"
   },
   "chooser": "muse (muse-spark-1.3)",
   "rationale": "All surfaces eligible, brands unique, and wall-aframe categories differ."
@@ -110,8 +105,7 @@
    "patio_bottle": "brewlark",
    "patio_tent": "nimbus",
    "patio_glass": "fernleaf",
-   "patio_shirt": "kestrel",
-   "patio_aframe": "paperwhale"
+   "patio_shirt": "kestrel"
   },
   "chooser": "muse (muse-spark-1.3)",
   "rationale": "Matched viewer tech/commuting interests and food context while respecting all eligibility and adjacency constraints."

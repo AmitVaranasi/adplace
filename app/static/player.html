@@ -377,6 +377,9 @@ void main() {
 "use strict";
 (() => {
   const CLIPS = ["patio_waiter", "pizzeria_counter", "pizzeria_box"];
+  // an uploaded clip (scripts/ingest.py) is opened by name from the upload page
+  const asked = new URLSearchParams(location.search).get("clip");
+  if (asked && /^[\w-]+$/.test(asked) && !CLIPS.includes(asked)) CLIPS.unshift(asked);
   const $ = id => document.getElementById(id);
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   const assetKey = (slot, brand) => slot + "/" + brand;

@@ -173,7 +173,8 @@ def table_track(clip, frames):
     if not path.exists():
         from pipeline.planar_track import track_plane
         from scripts.render_dynamic import occluders
-        entry = json.loads((ROOT / "configs" / "clips.json").read_text())[clip]
+        from pipeline.clipcfg import entry as clip_entry
+        entry = clip_entry(clip)
         occ = occluders(clip, entry, frames)
         tr = track_plane(frames, REF, np.float32([[150, 470], [1140, 365], [1125, 700], [150, 700]]),
                          occluder_masks=lambda i: occ.frame(i))
@@ -889,9 +890,14 @@ def make(clip, spec):
     return KINDS[spec.get("kind", "can")](clip, spec)
 
 
+def active(entry):
+    """The clip's objects3d entries that are switched on (a disabled one says why)."""
+    return [s for s in entry.get("objects3d", []) if not s.get("disabled")]
+
+
 def objects_for(clip, entry, assignment=None):
     """The clip's 3D objects / prints (configs/clips.json objects3d), far to near so nearer ones draw on top."""
-    objs = [make(clip, s) for s in entry.get("objects3d", []) if assignment is None or s["id"] in assignment]
+    objs = [make(clip, s) for s in active(entry) if assignment is None or s["id"] in assignment]
     return sorted(objs, key=lambda o: -float(getattr(o, "base", np.array([0, 0, 0]))[2]))
 
 
@@ -902,7 +908,8 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "outputs/place3d/objects.mp4"))
     ap.add_argument("--still", type=int, help="only write this frame as a PNG")
     args = ap.parse_args()
-    entry = json.loads((ROOT / "configs" / "clips.json").read_text())[args.clip]
+    from pipeline.clipcfg import entry as clip_entry
+    entry = clip_entry(args.clip)
     assignment = dict(a.split("=", 1) for a in args.assign)
     objs = objects_for(args.clip, entry, assignment)
     frames = Frames(ROOT / args.clip)

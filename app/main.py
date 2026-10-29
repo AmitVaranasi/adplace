@@ -29,9 +29,14 @@ app = FastAPI(title="AdPlace")
 app.mount("/outputs", StaticFiles(directory=ROOT / "outputs"), name="outputs")
 app.mount("/clips", StaticFiles(directory=ROOT / "assets" / "clips"), name="clips")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+(ROOT / "runs").mkdir(exist_ok=True)
+app.mount("/runs", StaticFiles(directory=ROOT / "runs"), name="runs")
 
 
 def load(name):
+    if name == "clips.json":  # hand-made clips plus uploaded ones
+        from pipeline.clipcfg import all_clips
+        return all_clips()
     return json.loads((ROOT / "configs" / name).read_text())
 
 
@@ -209,3 +214,59 @@ async def verify(file: UploadFile):
         tmp.flush()
         frames, _ = read_frames(tmp.name)
     return watermark.verify(frames, tokens)
+
+
+# --- uploads (scripts/ingest.py; contract in INGEST.md) ------------------------------------------------------------
+
+@app.get("/upload")
+def upload_page():
+    return FileResponse(Path(__file__).parent / "static" / "upload.html")
+
+
+@app.post("/api/ingest")
+async def ingest(file: UploadFile):
+    """Save the upload and start the pipeline in a child process (it calls the Meta API and takes minutes)."""
+    import uuid
+    from datetime import datetime
+    if not (file.filename or "").lower().endswith((".mp4", ".mov", ".m4v", ".webm")):
+        raise HTTPException(400, "please upload an mp4, mov or webm video")
+    run_id = f"r_{datetime.now():%Y%m%d_%H%M}_{uuid.uuid4().hex[:4]}"
+    run_dir = ROOT / "runs" / run_id
+    run_dir.mkdir(parents=True)
+    src = run_dir / ("source" + Path(file.filename).suffix.lower())
+    size = 0
+    with open(src, "wb") as f:
+        while chunk := await file.read(1 << 20):
+            size += len(chunk)
+            if size > 200 << 20:
+                raise HTTPException(413, "videos up to 200 MB")
+            f.write(chunk)
+    log = open(run_dir / "ingest.log", "w")
+    subprocess.Popen([sys.executable, str(ROOT / "scripts" / "ingest.py"), str(src), "--run-id", run_id],
+                     cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+    return {"run_id": run_id}
+
+
+def _run_dir(run_id):
+    d = ROOT / "runs" / run_id
+    if not run_id.replace("_", "").isalnum() or not d.is_dir():
+        raise HTTPException(404, "unknown run")
+    return d
+
+
+@app.get("/api/runs/{run_id}/progress")
+def run_progress(run_id: str):
+    p = _run_dir(run_id) / "progress.jsonl"
+    events = [json.loads(line) for line in p.read_text().splitlines()[-50:]] if p.exists() else []
+    latest = events[-1] if events else {"stage": "upload", "pct": 0, "msg": "waiting to start"}
+    return {"events": events, "latest": latest, "done": latest["stage"] in ("done", "error"),
+            "error": latest["msg"] if latest["stage"] == "error" else None}
+
+
+@app.get("/api/runs/{run_id}/report")
+def run_report(run_id: str):
+    p = _run_dir(run_id) / "report.json"
+    if not p.exists():
+        raise HTTPException(404, "not finished yet")
+    return json.loads(p.read_text())
+

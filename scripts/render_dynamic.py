@@ -225,18 +225,22 @@ def camera_steps(clip, frames, occ, width=640):
     return np.array(steps)
 
 
-def extend_with_camera(quads, valid, steps, seen, limit=60):
+def extend_with_camera(quads, valid, steps, seen, limit=60, still_px=30.0):
     """Carry a lost plane through frames where SAM still sees the surface, using the whole-frame motion from the
     nearest tracked frame. Without this the original surface pops back when the plane tracker lets go: far away
-    behind display glass, or half out of frame on the way out. Only bridges up to `limit` frames per side."""
+    behind display glass, or half out of frame on the way out. Bridges up to `limit` frames per side, and further
+    while the camera has barely moved (a locked-off time-lapse lost its painting after 242 frames at the 60-frame
+    cap, and the original popped back for the last 4.8 s while still in view)."""
     quads, valid = quads.copy(), valid.copy()
     n = len(valid)
     for i in np.flatnonzero(valid):
         for direction in (1, -1):
-            j, q = i + direction, quads[i]
-            while 0 <= j < n and not valid[j] and seen[j] and abs(j - i) <= limit:
+            j, q, moved = i + direction, quads[i], 0.0
+            while 0 <= j < n and not valid[j] and seen[j] and (abs(j - i) <= limit or moved < still_px):
                 H = steps[j - 1] if direction == 1 else np.linalg.inv(steps[j])
-                q = cv2.perspectiveTransform(q[None].astype(np.float64), H)[0]
+                q2 = cv2.perspectiveTransform(q[None].astype(np.float64), H)[0]
+                moved += float(np.linalg.norm(q2 - q, axis=1).mean())
+                q = q2
                 quads[j], valid[j] = q, True
                 j += direction
     return quads, valid
@@ -695,6 +699,47 @@ def finish_ad(g, art, q, motion, sigma, tr, i, slot, inherited=None):
     return out
 
 
+def sam_quads(store, frames, step=1):
+    """Quad fitted to SAM's mask on every frame it sees the surface (None elsewhere)."""
+    from scripts.render_scene import fit_shape
+    out = [None] * frames.n
+    for i in range(0, frames.n, step):
+        if store.any(i):
+            try:
+                out[i] = canonical(np.asarray(fit_shape(store[i], {"type": "quad"})["quad"], float))
+            except Exception:
+                pass
+    return out
+
+
+def static_surface(store, frames, tol_px=2.0):
+    """The surface's fixed quad if SAM's outline holds still all clip (a locked-off camera), else None."""
+    fq = [q for q in sam_quads(store, frames, step=3) if q is not None]
+    if len(fq) < 5:
+        return None
+    fq = np.array(fq)
+    med = np.median(fq, 0)
+    dev = np.linalg.norm(fq - med[None], axis=2).max(1)
+    return med if np.percentile(dev, 90) <= tol_px else None
+
+
+def static_track(clip, slot, frames, occ, store, out):
+    """Locked-off camera: one quad (the median of SAM's outlines) on every frame SAM sees the surface. In a
+    time-lapse the moving crowd and changing light made the camera-motion bridge drift 4 px."""
+    quad = static_surface(store, frames, tol_px=float(slot.get("static_tol_px", 2.0)))
+    if quad is None:
+        raise ValueError("surface is not static")
+    seen = np.array([store.any(i) for i in range(frames.n)])
+    quads = np.repeat(quad[None], frames.n, 0)
+    res = {"quads": quads, "valid": seen, "visible": seen.astype(float),
+           "ref": np.int64(int(np.flatnonzero(seen)[len(np.flatnonzero(seen)) // 2])),
+           "shutter": np.float64(float(slot.get("shutter", 0.5)))}
+    res = photometric_track(clip, slot, frames, occ, res)
+    np.savez_compressed(out, **res)
+    print(f"  {slot['id']}: static surface, held on {seen.sum()} frames", flush=True)
+    return res
+
+
 def track_slot(clip, slot, frames, occ, force=False):
     """Plane track for one slot, cached: (N,4,2) quads, valid, visible, and the shutter fraction."""
     from pipeline.planar_track import track_plane, track_screen
@@ -708,6 +753,8 @@ def track_slot(clip, slot, frames, occ, force=False):
             np.savez_compressed(out, **tr)
         return tr
     s = object_stores(clip, slot["prompt"], frames)[str(slot["object"])]
+    if slot.get("track") == "static":
+        return static_track(clip, slot, frames, occ, s, out)
     ref = slot.get("ref_frame")
     if ref is None:
         # The reference defines the shape, exposure and softness, so it must be sharp: the largest fully visible
@@ -1069,7 +1116,8 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
 
 
 def cmd_render(args):
-    entry = json.loads((ROOT / "configs" / "clips.json").read_text())[args.clip]
+    from pipeline.clipcfg import entry as clip_entry
+    entry = clip_entry(args.clip)
     assignment = dict(a.split("=", 1) for a in args.assign)
     out = Path(args.out) if args.out else ROOT / "outputs" / f"{Path(args.clip).stem}_{args.tag}.mp4"
     report = render(args.clip, entry, assignment, out, label=not args.no_label, retrack=args.retrack,

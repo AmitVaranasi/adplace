@@ -199,7 +199,8 @@ def assignments(clip, entry, slots, inventory, brands):
 
 def main(clip, skip_video=False):
     t0 = time.time()
-    entry = json.loads((ROOT / "configs" / "clips.json").read_text())[clip]
+    from pipeline.clipcfg import entry as clip_entry
+    entry = clip_entry(clip)
     inventory = json.loads((ROOT / "configs" / "inventory.json").read_text())
     frames = Frames(ROOT / clip)
     occ = occluders(clip, entry, frames)
@@ -249,9 +250,9 @@ def main(clip, skip_video=False):
         print(f"  {slot['id']}: {len(per_brand)} brands, valid {sum(q is not None for q in quads)}/{len(quads)}",
               flush=True)
     track["objects"] = []
-    from scripts.place3d import objects_for
+    from scripts.place3d import active, objects_for
     order = [o.id for o in objects_for(clip, entry)]  # far to near: nearer objects draw on top
-    for spec in sorted(entry.get("objects3d", []), key=lambda s: order.index(s["id"])):
+    for spec in sorted(active(entry), key=lambda s: order.index(s["id"])):
         o = export_object(clip, spec, frames, start, inventory, d)
         if o:
             track["objects"].append(o)
@@ -278,7 +279,8 @@ def main(clip, skip_video=False):
         if enc.wait():
             raise SystemExit("ffmpeg failed")
 
-    choice_slots = slots + entry.get("objects3d", [])  # the chooser sees a can as one more surface
+    from scripts.place3d import active
+    choice_slots = slots + active(entry)  # the chooser sees a can as one more surface
     (d / "assignments.json").write_text(json.dumps(assignments(clip, entry, choice_slots, inventory, brands),
                                                    indent=1))
     print(f"exported {d} in {time.time() - t0:.0f} s")
