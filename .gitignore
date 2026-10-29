@@ -12,3 +12,4 @@ ckpts/
 __pycache__/
 eval/stage/
 eval/rating/
+.DS_Store

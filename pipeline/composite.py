@@ -287,8 +287,12 @@ def composite_frame(
     grain_sigma=None,
     bleed_px=2.0,
     match_energy=True,
+    motion_quads=None,
 ) -> np.ndarray:
     """Warp premultiplied artwork, match scene appearance, and preserve occluders.
+
+    motion_quads averages premultiplied exposure warps before appearance and
+    occlusion handling. None preserves the original single-warp path.
 
     match_energy rescales an emissive creative each frame to the original screen's total light. Pass False for a
     creative already graded to the screen's white point (render.grade_to_scene): matching totals dims a white ad to
@@ -342,7 +346,13 @@ def composite_frame(
         colour *= np.minimum(1.0, 255.0 / np.maximum(peak, 1.0))
 
     source = np.concatenate((colour * alpha, alpha), axis=2)
-    expanded = _expanded_quad(points, bleed)
+    exposures = [points]
+    if motion_quads is not None:
+        exposures = [_quad_array(q) for q in motion_quads]
+        if not exposures or any(q is None for q in exposures):
+            raise ValueError("motion_quads must contain finite, convex quads")
+    expanded_quads = [_expanded_quad(q, bleed) for q in exposures]
+    expanded = np.concatenate(expanded_quads, axis=0)
     radius = int(np.ceil(3.0 * blur)) if blur > 0 else 0
     padding = radius + 2
     frame_height, frame_width = frame.shape[:2]
@@ -356,30 +366,38 @@ def composite_frame(
         return result
 
     roi_width, roi_height = x1 - x0, y1 - y0
-    local_quad = expanded - np.array([x0, y0], dtype=np.float32)
-    transform = cv2.getPerspectiveTransform(_corners(width, height), local_quad)
     supersample = np.array(
         [[2.0, 0.0, 0.5], [0.0, 2.0, 0.5], [0.0, 0.0, 1.0]],
         dtype=np.float64,
     )
-    warped = cv2.warpPerspective(
-        source,
-        supersample @ transform,
-        (2 * roi_width, 2 * roi_height),
-        flags=cv2.INTER_LINEAR,
-        borderMode=cv2.BORDER_REPLICATE,
-    )
-    coverage = np.zeros((2 * roi_height, 2 * roi_width), dtype=np.uint8)
-    cv2.fillConvexPoly(
-        coverage,
-        np.rint((2.0 * local_quad + 0.5) * 256.0).astype(np.int32),
-        255,
-        lineType=cv2.LINE_AA,
-        shift=8,
-    )
-    # Identical filtering of premultiplied colour and alpha prevents dark halos.
-    warped *= coverage[..., None].astype(np.float32) / 255.0
-    warped = cv2.resize(warped, (roi_width, roi_height), interpolation=cv2.INTER_AREA)
+    warped = None
+    for expanded_quad in expanded_quads:
+        local_quad = expanded_quad - np.array([x0, y0], dtype=np.float32)
+        transform = cv2.getPerspectiveTransform(_corners(width, height), local_quad)
+        sample = cv2.warpPerspective(
+            source,
+            supersample @ transform,
+            (2 * roi_width, 2 * roi_height),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REPLICATE,
+        )
+        coverage = np.zeros((2 * roi_height, 2 * roi_width), dtype=np.uint8)
+        cv2.fillConvexPoly(
+            coverage,
+            np.rint((2.0 * local_quad + 0.5) * 256.0).astype(np.int32),
+            255,
+            lineType=cv2.LINE_AA,
+            shift=8,
+        )
+        # Filter premultiplied colour and alpha identically at every position.
+        sample *= coverage[..., None].astype(np.float32) / 255.0
+        sample = cv2.resize(sample, (roi_width, roi_height), interpolation=cv2.INTER_AREA)
+        if warped is None:
+            warped = sample
+        else:
+            warped += sample
+    if len(expanded_quads) > 1:
+        warped /= len(expanded_quads)
     if blur > 0:
         warped = cv2.GaussianBlur(
             warped,

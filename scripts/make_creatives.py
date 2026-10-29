@@ -23,6 +23,10 @@ BRANDS = {
                  "accent": (178, 208, 92)},
     "voltway": {"name": "VOLTWAY", "tagline": "Ride electric across town", "bg": (22, 22, 28), "fg": (120, 250, 200),
                 "accent": (240, 240, 240)},
+    "fizzwell": {"name": "FIZZWELL", "tagline": "Crisp cola, real cane sugar", "bg": (176, 18, 36), "fg": (255, 246, 230),
+                 "accent": (20, 20, 24)},
+    "slicedash": {"name": "SLICEDASH", "tagline": "Hot pizza at your door in 20", "bg": (255, 132, 20), "fg": (40, 20, 10),
+                  "accent": (255, 255, 255)},
 }
 RATIOS = {"16x9": (1600, 900), "4x3": (1600, 1200), "3x4": (1200, 1600), "9x16": (900, 1600), "2x1": (1800, 900)}
 
@@ -54,12 +58,22 @@ def render(brand, w, h):
     return img
 
 
+def dark(brand):
+    """The same brand on near-black, for dark surfaces (a black wall sign, a dark menu board): an orange panel where
+    a black sign was reads as pasted on, the brand colour as lettering on black reads as the sign itself."""
+    lum = lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+    ink = brand["bg"] if lum(brand["bg"]) > 60 else brand["fg"]
+    # The accent band is drawn in the lettering colour: a white band on a black sign reads as a lit strip.
+    return {**brand, "bg": (16, 16, 18), "fg": ink, "accent": ink}
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for bid, brand in BRANDS.items():
         for ratio, (w, h) in RATIOS.items():
             render(brand, w, h).save(OUT / f"{bid}_{ratio}.png")
-    print("wrote", len(BRANDS) * len(RATIOS), "creatives to", OUT)
+            render(dark(brand), w, h).save(OUT / f"{bid}_{ratio}_dark.png")
+    print("wrote", 2 * len(BRANDS) * len(RATIOS), "creatives to", OUT)
 
 
 if __name__ == "__main__":

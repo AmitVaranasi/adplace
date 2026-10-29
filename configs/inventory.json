@@ -169,6 +169,66 @@
     "commuting",
     "cycling"
    ]
+  },
+  {
+   "brand_id": "fizzwell",
+   "campaign_token": "fizzwell-2026-q4",
+   "category": "beverages",
+   "creatives": {
+    "16x9": "assets/creatives/fizzwell_16x9.png",
+    "4x3": "assets/creatives/fizzwell_4x3.png",
+    "3x4": "assets/creatives/fizzwell_3x4.png",
+    "9x16": "assets/creatives/fizzwell_9x16.png",
+    "2x1": "assets/creatives/fizzwell_2x1.png"
+   },
+   "eligible_surfaces": [
+    "billboard",
+    "poster",
+    "screen",
+    "sign",
+    "box",
+    "menu"
+   ],
+   "contextual_exclusions": [
+    "children",
+    "hospital",
+    "safety_signage"
+   ],
+   "preference_tags": [
+    "food",
+    "dining",
+    "snacks"
+   ]
+  },
+  {
+   "brand_id": "slicedash",
+   "campaign_token": "slicedash-2026-q4",
+   "category": "food_delivery",
+   "creatives": {
+    "16x9": "assets/creatives/slicedash_16x9.png",
+    "4x3": "assets/creatives/slicedash_4x3.png",
+    "3x4": "assets/creatives/slicedash_3x4.png",
+    "9x16": "assets/creatives/slicedash_9x16.png",
+    "2x1": "assets/creatives/slicedash_2x1.png"
+   },
+   "eligible_surfaces": [
+    "billboard",
+    "poster",
+    "screen",
+    "sign",
+    "box",
+    "menu"
+   ],
+   "contextual_exclusions": [
+    "hospital",
+    "safety_signage"
+   ],
+   "preference_tags": [
+    "food",
+    "dining",
+    "convenience",
+    "tech"
+   ]
   }
  ]
 }

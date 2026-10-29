@@ -1,314 +1,420 @@
 {
-  "assets/clips/times_square.mp4": {
-    "title": "Times Square, New York (daylight, handheld)",
-    "context_tags": [
-      "street",
-      "daytime",
-      "city"
+ "assets/clips/times_square.mp4": {
+  "title": "Times Square, New York (daylight, handheld)",
+  "context_tags": [
+   "street",
+   "daytime",
+   "city"
+  ],
+  "slots": [
+   {
+    "slot_id": "times_square-main",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/times_square-35b9e4b97711-30a2242b"
+   }
+  ]
+ },
+ "assets/clips/piccadilly.mp4": {
+  "title": "Piccadilly Circus, London (wide, people passing)",
+  "context_tags": [
+   "street",
+   "daytime",
+   "city"
+  ],
+  "slots": [
+   {
+    "slot_id": "piccadilly-0",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot0"
+   },
+   {
+    "slot_id": "piccadilly-3",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot3"
+   },
+   {
+    "slot_id": "piccadilly-4",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot4"
+   },
+   {
+    "slot_id": "piccadilly-5",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot5",
+    "shape": {
+     "type": "ribbon",
+     "creative": "16x9"
+    }
+   },
+   {
+    "slot_id": "piccadilly-1",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot1",
+    "shape": {
+     "type": "ribbon",
+     "creative": "16x9"
+    }
+   }
+  ],
+  "occluders": [
+   "cache/piccadilly-db91b6272a2a-51b0de4f",
+   "cache/piccadilly-db91b6272a2a-988e30b4"
+  ]
+ },
+ "assets/clips/shibuya.mp4": {
+  "title": "Shibuya Crossing, Tokyo (wide, slow zoom)",
+  "context_tags": [
+   "street",
+   "daytime",
+   "city"
+  ],
+  "slots": [
+   {
+    "slot_id": "shibuya-0",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/shibuya-5ee859742d90-888ed077-slot0"
+   }
+  ]
+ },
+ "assets/clips/dundas.mp4": {
+  "title": "Yonge-Dundas Square, Toronto (wide, pedestrians)",
+  "context_tags": [
+   "street",
+   "daytime",
+   "city"
+  ],
+  "slots": [
+   {
+    "slot_id": "dundas-0",
+    "surface": "billboard",
+    "emissive": false,
+    "analysis": "cache/dundas-3ff676f856f3-fc7fe7ff-slot0"
+   }
+  ]
+ },
+ "assets/clips/mug_print.mp4": {
+  "title": "Printed mug on a counter (curved surface)",
+  "context_tags": [
+   "home",
+   "kitchen"
+  ],
+  "slots": [
+   {
+    "slot_id": "mug_print-0",
+    "surface": "mug",
+    "emissive": false,
+    "analysis": "cache/mug_print-0ddd1c739439-09b80841",
+    "shape": {
+     "type": "cylinder",
+     "band": [
+      0.01,
+      0.94
+     ],
+     "arc_deg": 176,
+     "creative": "2x1",
+     "top": "rim"
+    }
+   }
+  ]
+ },
+ "assets/clips/mug_pair.mp4": {
+  "title": "Two mugs (curved surface)",
+  "context_tags": [
+   "home",
+   "kitchen"
+  ],
+  "slots": [
+   {
+    "slot_id": "mug_pair-0",
+    "surface": "mug",
+    "emissive": false,
+    "analysis": "cache/mug_pair-14927731944c-2a18709a",
+    "shape": {
+     "type": "cylinder",
+     "band": [
+      0.12,
+      0.96
+     ],
+     "arc_deg": 172,
+     "creative": "4x3",
+     "top": "rim"
+    }
+   }
+  ]
+ },
+ "assets/clips/roadside_sign.mp4": {
+  "title": "Roadside sign (daylight, safety sign: no placement)",
+  "context_tags": [
+   "safety_signage"
+  ],
+  "slots": [
+   {
+    "slot_id": "roadside_sign-0",
+    "surface": "sign",
+    "emissive": false,
+    "analysis": "cache/roadside_sign-e18134e7f0ea-5f19cf92"
+   }
+  ]
+ },
+ "assets/clips/billboard_night.mp4": {
+  "title": "Night billboard (handheld)",
+  "context_tags": [],
+  "hidden": true,
+  "slots": [
+   {
+    "slot_id": "billboard_night-0",
+    "surface": "billboard",
+    "emissive": true,
+    "analysis": "cache/billboard_night-1643266c99a8-d977f070"
+   }
+  ]
+ },
+ "assets/clips/billboard_night_occluded.mp4": {
+  "title": "Night billboard + passer-by (synthetic occluder)",
+  "context_tags": [
+   "synthetic_occluder"
+  ],
+  "hidden": true,
+  "slots": [
+   {
+    "slot_id": "billboard_night_occluded-0",
+    "surface": "billboard",
+    "emissive": true,
+    "analysis": "cache/billboard_night_occluded-a90ba89b4960-dd14ad90"
+   }
+  ]
+ },
+ "assets/clips/piccadilly_long.mp4": {
+  "title": "Piccadilly Circus, London (23.5 s, whole screen wall, buses and people)",
+  "context_tags": [
+   "street",
+   "daytime",
+   "city"
+  ],
+  "long": true,
+  "occluder_prompts": [
+   "person",
+   "bus"
+  ],
+  "slots": [
+   {
+    "slot_id": "piccadilly_long-6",
+    "label": "top curved screen",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot6",
+    "area_frac": 0.0829,
+    "neighbours": [
+     "piccadilly_long-4",
+     "piccadilly_long-3",
+     "piccadilly_long-1"
     ],
-    "slots": [
-      {
-        "slot_id": "times_square-main",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/times_square-35b9e4b97711-30a2242b"
-      }
+    "shape": {
+     "type": "ribbon",
+     "creative": "16x9"
+    }
+   },
+   {
+    "slot_id": "piccadilly_long-1",
+    "label": "middle-right curved screen",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot1",
+    "area_frac": 0.0441,
+    "neighbours": [
+     "piccadilly_long-6",
+     "piccadilly_long-3",
+     "piccadilly_long-0"
+    ],
+    "shape": {
+     "type": "ribbon",
+     "creative": "16x9"
+    }
+   },
+   {
+    "slot_id": "piccadilly_long-0",
+    "label": "bottom-right curved screen (Hyundai)",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot0",
+    "area_frac": 0.0457,
+    "neighbours": [
+     "piccadilly_long-1",
+     "piccadilly_long-2"
+    ],
+    "shape": {
+     "type": "ribbon",
+     "creative": "16x9"
+    }
+   },
+   {
+    "slot_id": "piccadilly_long-3",
+    "label": "centre screen (McDonald's)",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot3",
+    "area_frac": 0.0288,
+    "neighbours": [
+     "piccadilly_long-6",
+     "piccadilly_long-4",
+     "piccadilly_long-5",
+     "piccadilly_long-1",
+     "piccadilly_long-2"
     ]
-  },
-  "assets/clips/piccadilly.mp4": {
-    "title": "Piccadilly Circus, London (wide, people passing)",
-    "context_tags": [
-      "street",
-      "daytime",
-      "city"
-    ],
-    "slots": [
-      {
-        "slot_id": "piccadilly-0",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot0"
-      },
-      {
-        "slot_id": "piccadilly-3",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot3"
-      },
-      {
-        "slot_id": "piccadilly-4",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot4"
-      },
-      {
-        "slot_id": "piccadilly-5",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot5",
-        "shape": {
-          "type": "ribbon",
-          "creative": "16x9"
-        }
-      },
-      {
-        "slot_id": "piccadilly-1",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly-db91b6272a2a-17d83ee9-slot1",
-        "shape": {
-          "type": "ribbon",
-          "creative": "16x9"
-        }
-      }
-    ],
-    "occluders": [
-      "cache/piccadilly-db91b6272a2a-51b0de4f",
-      "cache/piccadilly-db91b6272a2a-988e30b4"
+   },
+   {
+    "slot_id": "piccadilly_long-4",
+    "label": "top-left screen",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot4",
+    "area_frac": 0.0285,
+    "neighbours": [
+     "piccadilly_long-6",
+     "piccadilly_long-3",
+     "piccadilly_long-5"
     ]
-  },
-  "assets/clips/shibuya.mp4": {
-    "title": "Shibuya Crossing, Tokyo (wide, slow zoom)",
-    "context_tags": [
-      "street",
-      "daytime",
-      "city"
-    ],
-    "slots": [
-      {
-        "slot_id": "shibuya-0",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/shibuya-5ee859742d90-888ed077-slot0"
-      }
+   },
+   {
+    "slot_id": "piccadilly_long-5",
+    "label": "left screen (Samsung)",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot5",
+    "area_frac": 0.0162,
+    "neighbours": [
+     "piccadilly_long-4",
+     "piccadilly_long-3",
+     "piccadilly_long-2"
     ]
-  },
-  "assets/clips/dundas.mp4": {
-    "title": "Yonge-Dundas Square, Toronto (wide, pedestrians)",
-    "context_tags": [
-      "street",
-      "daytime",
-      "city"
-    ],
-    "slots": [
-      {
-        "slot_id": "dundas-0",
-        "surface": "billboard",
-        "emissive": false,
-        "analysis": "cache/dundas-3ff676f856f3-fc7fe7ff-slot0"
-      }
+   },
+   {
+    "slot_id": "piccadilly_long-2",
+    "label": "bottom-left long screen (Vogue)",
+    "surface": "screen",
+    "emissive": true,
+    "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot2",
+    "area_frac": 0.0415,
+    "neighbours": [
+     "piccadilly_long-5",
+     "piccadilly_long-3",
+     "piccadilly_long-0"
     ]
-  },
-  "assets/clips/mug_print.mp4": {
-    "title": "Printed mug on a counter (curved surface)",
-    "context_tags": [
-      "home",
-      "kitchen"
+   }
+  ],
+  "hidden": true
+ },
+ "assets/clips/pizzeria_counter.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "occluder_prompts": [
+   "person"
+  ],
+  "source": "YouTube DI9deC0b9_g (POV walk-in, Cousins Wood Fired Pizza) 106-126 s, experiment only, not for publication",
+  "dynamic_slots": [
+   {
+    "id": "counter_sign",
+    "prompt": "poster",
+    "object": 3,
+    "surface": "sign",
+    "dynamic_content": false,
+    "reflections": true
+   },
+   {
+    "id": "counter_tv",
+    "prompt": "television",
+    "object": 0,
+    "surface": "screen",
+    "dynamic_content": true
+   },
+   {
+    "id": "counter_freezer",
+    "prompt": "poster",
+    "object": 5,
+    "surface": "poster",
+    "dynamic_content": false,
+    "reflections": true,
+    "inset_px": 3
+   }
+  ]
+ },
+ "assets/clips/patio_waiter.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "occluder_prompts": [
+   "person",
+   "tree",
+   "pole"
+  ],
+  "source": "Mixkit 44019 'A table being served pizza by a waiter' (Mixkit free license)",
+  "dynamic_slots": [
+   {
+    "id": "patio_wall",
+    "prompt": "wall",
+    "object": 0,
+    "surface": "poster",
+    "dynamic_content": false,
+    "ref_frame": 1,
+    "quad": [
+     [
+      880,
+      110
+     ],
+     [
+      1110,
+      106
+     ],
+     [
+      1110,
+      358
+     ],
+     [
+      880,
+      364
+     ]
     ],
-    "slots": [
-      {
-        "slot_id": "mug_print-0",
-        "surface": "mug",
-        "emissive": false,
-        "analysis": "cache/mug_print-0ddd1c739439-09b80841",
-        "shape": {
-          "type": "cylinder",
-          "band": [
-            0.01,
-            0.94
-          ],
-          "arc_deg": 176,
-          "creative": "2x1",
-          "top": "rim"
-        }
-      }
+    "shading": true,
+    "track": "mask_ring"
+   },
+   {
+    "id": "patio_napkin",
+    "prompt": "napkin",
+    "object": 0,
+    "surface": "menu",
+    "dynamic_content": false,
+    "shading": true
+   }
+  ]
+ },
+ "assets/clips/pizzeria_box.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "occluder_prompts": [
+   "hand",
+   "person",
+   "bracelet"
+  ],
+  "source": "YouTube DI9deC0b9_g (POV, Cousins Wood Fired Pizza) 389-411 s, experiment only, not for publication",
+  "dynamic_slots": [
+   {
+    "id": "box_lid",
+    "prompt": "pizza box lid",
+    "object": 0,
+    "surface": "box",
+    "dynamic_content": false,
+    "shading": true,
+    "reflections": true,
+    "glass_prompts": [
+     "salt shaker"
     ]
-  },
-  "assets/clips/mug_pair.mp4": {
-    "title": "Two mugs (curved surface)",
-    "context_tags": [
-      "home",
-      "kitchen"
-    ],
-    "slots": [
-      {
-        "slot_id": "mug_pair-0",
-        "surface": "mug",
-        "emissive": false,
-        "analysis": "cache/mug_pair-14927731944c-2a18709a",
-        "shape": {
-          "type": "cylinder",
-          "band": [
-            0.12,
-            0.96
-          ],
-          "arc_deg": 172,
-          "creative": "4x3",
-          "top": "rim"
-        }
-      }
-    ]
-  },
-  "assets/clips/roadside_sign.mp4": {
-    "title": "Roadside sign (daylight, safety sign: no placement)",
-    "context_tags": [
-      "safety_signage"
-    ],
-    "slots": [
-      {
-        "slot_id": "roadside_sign-0",
-        "surface": "sign",
-        "emissive": false,
-        "analysis": "cache/roadside_sign-e18134e7f0ea-5f19cf92"
-      }
-    ]
-  },
-  "assets/clips/billboard_night.mp4": {
-    "title": "Night billboard (handheld)",
-    "context_tags": [],
-    "hidden": true,
-    "slots": [
-      {
-        "slot_id": "billboard_night-0",
-        "surface": "billboard",
-        "emissive": true,
-        "analysis": "cache/billboard_night-1643266c99a8-d977f070"
-      }
-    ]
-  },
-  "assets/clips/billboard_night_occluded.mp4": {
-    "title": "Night billboard + passer-by (synthetic occluder)",
-    "context_tags": [
-      "synthetic_occluder"
-    ],
-    "hidden": true,
-    "slots": [
-      {
-        "slot_id": "billboard_night_occluded-0",
-        "surface": "billboard",
-        "emissive": true,
-        "analysis": "cache/billboard_night_occluded-a90ba89b4960-dd14ad90"
-      }
-    ]
-  },
-  "assets/clips/piccadilly_long.mp4": {
-    "title": "Piccadilly Circus, London (23.5 s, whole screen wall, buses and people)",
-    "context_tags": [
-      "street",
-      "daytime",
-      "city"
-    ],
-    "long": true,
-    "occluder_prompts": [
-      "person",
-      "bus"
-    ],
-    "slots": [
-      {
-        "slot_id": "piccadilly_long-6",
-        "label": "top curved screen",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot6",
-        "area_frac": 0.0829,
-        "neighbours": [
-          "piccadilly_long-4",
-          "piccadilly_long-3",
-          "piccadilly_long-1"
-        ],
-        "shape": {
-          "type": "ribbon",
-          "creative": "16x9"
-        }
-      },
-      {
-        "slot_id": "piccadilly_long-1",
-        "label": "middle-right curved screen",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot1",
-        "area_frac": 0.0441,
-        "neighbours": [
-          "piccadilly_long-6",
-          "piccadilly_long-3",
-          "piccadilly_long-0"
-        ],
-        "shape": {
-          "type": "ribbon",
-          "creative": "16x9"
-        }
-      },
-      {
-        "slot_id": "piccadilly_long-0",
-        "label": "bottom-right curved screen (Hyundai)",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot0",
-        "area_frac": 0.0457,
-        "neighbours": [
-          "piccadilly_long-1",
-          "piccadilly_long-2"
-        ],
-        "shape": {
-          "type": "ribbon",
-          "creative": "16x9"
-        }
-      },
-      {
-        "slot_id": "piccadilly_long-3",
-        "label": "centre screen (McDonald's)",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot3",
-        "area_frac": 0.0288,
-        "neighbours": [
-          "piccadilly_long-6",
-          "piccadilly_long-4",
-          "piccadilly_long-5",
-          "piccadilly_long-1",
-          "piccadilly_long-2"
-        ]
-      },
-      {
-        "slot_id": "piccadilly_long-4",
-        "label": "top-left screen",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot4",
-        "area_frac": 0.0285,
-        "neighbours": [
-          "piccadilly_long-6",
-          "piccadilly_long-3",
-          "piccadilly_long-5"
-        ]
-      },
-      {
-        "slot_id": "piccadilly_long-5",
-        "label": "left screen (Samsung)",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot5",
-        "area_frac": 0.0162,
-        "neighbours": [
-          "piccadilly_long-4",
-          "piccadilly_long-3",
-          "piccadilly_long-2"
-        ]
-      },
-      {
-        "slot_id": "piccadilly_long-2",
-        "label": "bottom-left long screen (Vogue)",
-        "surface": "screen",
-        "emissive": true,
-        "analysis": "cache/piccadilly_long-17f56ce3793f-25d53ed2-slot2",
-        "area_frac": 0.0415,
-        "neighbours": [
-          "piccadilly_long-5",
-          "piccadilly_long-3",
-          "piccadilly_long-0"
-        ]
-      }
-    ],
-    "hidden": true
-  }
+   }
+  ]
+ }
 }
