@@ -13,6 +13,7 @@ LEDGER = Path(__file__).resolve().parents[1] / "logs" / "meta_usage.jsonl"
 BUDGET_USD = 150.0
 MUSE_PER_M = {"input": 1.25, "cached": 0.15, "output": 4.25}  # muse-spark-1.x Standard, USD per 1M tokens
 SAM_VIDEO_PER_FRAME, SAM_MIN_FRAMES = 0.20 / 1000, 50
+IMAGE_PER_IMAGE = 0.01  # muse-image-1.0, per returned image (aggregator listing; confirm on the dashboard)
 
 
 def muse_cost(usage):
@@ -40,6 +41,10 @@ def record_muse(usage, purpose=""):
 
 def record_sam(frames, purpose=""):
     record("sam", sam_cost(frames), purpose=purpose, frames=int(frames))
+
+
+def record_image(n, purpose=""):
+    record("image", n * IMAGE_PER_IMAGE, images=n, purpose=purpose)
 
 
 def summary():

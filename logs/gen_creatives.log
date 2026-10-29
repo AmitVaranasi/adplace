@@ -1,0 +1,49 @@
+brewlark poster try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Coffee that sings back', 'real_trademarks': '', 'is_flat_artwork': True}
+brewlark landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Coffee that sings back', 'real_trademarks': '', 'is_flat_artwork': True}
+brewlark dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Coffee that sings back', 'real_trademarks': '', 'is_flat_artwork': True}
+brewlark vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Coffee that sings back', 'real_trademarks': '', 'is_flat_artwork': True}
+brewlark box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Coffee that sings back', 'real_trademarks': '', 'is_flat_artwork': True}
+brewlark menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Coffee that sings back', 'real_trademarks': '', 'is_flat_artwork': True}
+kestrel poster try 1: ok {'brand_spelled_correctly': True, 'other_text': "'Every street is a track'", 'real_trademarks': '', 'is_flat_artwork': True}
+kestrel landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Every street is a track', 'real_trademarks': '', 'is_flat_artwork': True}
+kestrel dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Every street is a track', 'real_trademarks': '', 'is_flat_artwork': True}
+kestrel vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Every street is a track', 'real_trademarks': '', 'is_flat_artwork': True}
+kestrel box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Every street is a track', 'real_trademarks': '', 'is_flat_artwork': True}
+kestrel menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Every street is a track', 'real_trademarks': '', 'is_flat_artwork': True}
+paperwhale poster try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Books for deep dives', 'real_trademarks': '', 'is_flat_artwork': True}
+paperwhale landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Books for deep dives', 'real_trademarks': '', 'is_flat_artwork': True}
+paperwhale dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Books for deep dives', 'real_trademarks': '', 'is_flat_artwork': True}
+paperwhale vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Books for deep dives', 'real_trademarks': '', 'is_flat_artwork': True}
+paperwhale box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Books for deep dives', 'real_trademarks': '', 'is_flat_artwork': True}
+paperwhale menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Books for deep dives', 'real_trademarks': '', 'is_flat_artwork': True}
+nimbus poster try 1: ok {'brand_spelled_correctly': True, 'other_text': "'Fly further for less'", 'real_trademarks': '', 'is_flat_artwork': True}
+nimbus landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Fly further for less', 'real_trademarks': '', 'is_flat_artwork': True}
+nimbus dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Fly further for less', 'real_trademarks': '', 'is_flat_artwork': True}
+nimbus vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Fly further for less', 'real_trademarks': '', 'is_flat_artwork': True}
+nimbus box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': "'Fly further for less'", 'real_trademarks': '', 'is_flat_artwork': True}
+nimbus menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Fly further for less', 'real_trademarks': '', 'is_flat_artwork': True}
+fernleaf poster try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Groceries grown nearby', 'real_trademarks': '', 'is_flat_artwork': True}
+fernleaf landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Groceries grown nearby', 'real_trademarks': '', 'is_flat_artwork': True}
+fernleaf dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Groceries grown nearby', 'real_trademarks': '', 'is_flat_artwork': True}
+fernleaf vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Groceries grown nearby', 'real_trademarks': '', 'is_flat_artwork': True}
+fernleaf box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Groceries grown nearby', 'real_trademarks': '', 'is_flat_artwork': True}
+fernleaf menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Groceries grown nearby', 'real_trademarks': '', 'is_flat_artwork': True}
+voltway poster try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Ride electric across town', 'real_trademarks': '', 'is_flat_artwork': True}
+voltway landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Ride electric across town', 'real_trademarks': '', 'is_flat_artwork': True}
+voltway dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Ride electric across town', 'real_trademarks': '', 'is_flat_artwork': True}
+voltway vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Ride electric across town', 'real_trademarks': '', 'is_flat_artwork': True}
+voltway box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Ride electric across town', 'real_trademarks': '', 'is_flat_artwork': True}
+voltway menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Ride electric across town', 'real_trademarks': '', 'is_flat_artwork': True}
+fizzwell poster try 1: REJECT {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': 'Coca-Cola', 'is_flat_artwork': True}
+fizzwell poster try 2: REJECT {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': 'Coca-Cola', 'is_flat_artwork': True}
+fizzwell poster try 3: ok {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': '', 'is_flat_artwork': True}
+fizzwell landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': '', 'is_flat_artwork': True}
+fizzwell dark_sign try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': '', 'is_flat_artwork': True}
+fizzwell vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': '', 'is_flat_artwork': True}
+fizzwell box_print try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': '', 'is_flat_artwork': True}
+fizzwell menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Crisp cola, real cane sugar', 'real_trademarks': '', 'is_flat_artwork': True}
+slicedash poster try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Hot pizza at your door in 20', 'real_trademarks': '', 'is_flat_artwork': True}
+slicedash landscape try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Hot pizza at your door in 20', 'real_trademarks': '', 'is_flat_artwork': True}
+slicedash vinyl_tall try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Hot pizza at your door in 20', 'real_trademarks': '', 'is_flat_artwork': True}
+slicedash menu_card try 1: ok {'brand_spelled_correctly': True, 'other_text': 'Hot pizza at your door in 20', 'real_trademarks': '', 'is_flat_artwork': True}
+{'by_kind': {'muse': 2.011, 'sam': 2.517, 'image': 0.51}, 'spent': 5.038, 'left': 144.96, 'entries': 147}

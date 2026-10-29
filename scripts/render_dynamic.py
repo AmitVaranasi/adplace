@@ -489,13 +489,185 @@ def track_by_mask_ring(frames, ref, quad, store, occ, ring=40, min_pts=12):
     return {"quads": quads, "valid": valid, "visible": valid.astype(float)}
 
 
+PHOTO_OPTIONS = ("photo_exposure", "photo_defocus", "photo_noise", "photo_compression")
+
+
+def photo_signature(slot):
+    return json.dumps({k: bool(slot.get(k, True)) for k in PHOTO_OPTIONS}, sort_keys=True)
+
+
+def photo_occluders(clip, slot, frames, occ, quads):
+    glass = [union_store(clip, p, frames) for p in slot.get("glass_prompts", [])]
+
+    def blocked(i):
+        m = np.zeros((frames.h, frames.w), bool) if occ is None else occ.frame(i)
+        if slot.get("dynamic_content"):
+            m = drop_on_screen(m, quad_mask(quads[i], frames.h, frames.w))
+        for store in glass:
+            m |= store[i]
+        return m
+    return blocked
+
+
+def photometric_track(clip, slot, frames, occ, tr):
+    """Upgrade photometry without retracking geometry; no object arrays in npz."""
+    from pipeline import photometric as pm
+    q, valid, ref = tr["quads"], tr["valid"], int(tr["ref"])
+    blocked = photo_occluders(clip, slot, frames, occ, q)
+    ring = bool(slot.get("dynamic_content")) or slot.get("texture") == "ring"
+    if slot.get("photo_exposure", True):
+        gain, veil = pm.channel_exposure(frames, q, valid, ref, blocked, ring=ring)
+    else:
+        gain, veil = exposure_gain(frames, q, valid, ref, occ, screen=ring)
+        gain, veil = np.repeat(gain[:, None], 3, axis=1), np.repeat(veil[:, None], 3, axis=1)
+    if slot.get("photo_defocus", True):
+        centre = np.mean(q, axis=1)
+        good = valid & np.isfinite(centre).all(1)
+        velocity = np.zeros_like(centre)
+        if good.any() and len(q) > 1:
+            filled = np.column_stack([np.interp(np.arange(len(q)),
+                       np.flatnonzero(good), centre[good, c]) for c in range(2)])
+            velocity = np.gradient(filled, axis=0)
+        sigma = pm.defocus_track(frames, q, valid, ref, blocked,
+                                  motion_px=velocity * float(tr["shutter"]))
+    else:
+        from pipeline.composite import estimate_blur_and_grain
+        sigma = np.full(len(valid), min(1.5, estimate_blur_and_grain(frames[ref], q[ref])[0]))
+    surface_sigma = sigma.copy()
+    reference_sigma = float(sigma[ref])
+    sigma = np.sqrt(min(reference_sigma, 1.5)**2 +
+                    np.maximum(sigma*sigma-reference_sigma**2, 0))
+    noise = pm.noise_model(frames, q, valid, blocked) if slot.get("photo_noise", True) else [{}]*len(valid)
+    codec = pm.estimate_compression(frames, q, valid, blocked) if slot.get("photo_compression", True) else [{}]*len(valid)
+
+    def pack(params):
+        return np.asarray([json.dumps(p, sort_keys=True, default=lambda x: np.asarray(x).tolist())
+                           for p in params])
+    tr.update(gain=gain, veil=veil, defocus_sigma=sigma, surface_sigma=surface_sigma,
+              noise_params=pack(noise), compression_params=pack(codec),
+              photo_version=np.int64(2), photo_signature=np.asarray(photo_signature(slot)))
+    return tr
+
+
+def _detail(gray, region):
+    """Edge sharpness relative to contrast: p90 gradient over the p95-p5 spread. Independent of how bright or
+    contrasty the content is, so an ad and the sign it replaces (or the wall around it) can be compared."""
+    v = gray[region]
+    spread = float(np.percentile(v, 95) - np.percentile(v, 5))
+    if spread < 20 or region.sum() < 400:
+        return None
+    grad = cv2.magnitude(cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3))
+    return float(np.percentile(grad[region], 90)) / spread
+
+
+def match_look(frame, art, quad, sigma0, blocked, emissive=False):
+    """Extra blur and a saturation scale so the ad looks like it was filmed with this camera at this distance.
+
+    A blind judge (Muse Spark, scripts/blind_test.py) named the same two tells on our frames and on Mirriad's:
+    artwork crisper and more saturated than anything else in the shot. Reference: the surface itself when it has
+    printed detail (the old sign's lettering), else the band of scene around it, which is at the same depth."""
+    from pipeline import composite
+    h, w = frame.shape[:2]
+    inside = cv2.erode(quad_mask(quad, h, w).astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
+    inside &= ~blocked
+    ring = (cv2.dilate(quad_mask(quad, h, w).astype(np.uint8), np.ones((61, 61), np.uint8)) > 0)
+    ring &= ~quad_mask(quad, h, w) & ~blocked
+    gray0 = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    target = _detail(gray0, inside)
+    ref_region = inside if target is not None else ring
+    # A blank surface has no detail of its own, and the band around it is often out-of-focus foliage at another
+    # depth (on the patio that blurred the poster 3 px and greyed it): no blur match, a gentler saturation cap.
+    blank = target is None
+    extra = 0.0
+    if target is not None:
+        best = None
+        for e in np.arange(0, 1.51, 0.25):
+            sig = float(np.hypot(sigma0, e))
+            out = composite.composite_frame(frame, art, quad, emissive=emissive, match_energy=False,
+                                            blur_sigma=sig, grain_sigma=0)
+            d = _detail(cv2.cvtColor(out, cv2.COLOR_BGR2GRAY).astype(np.float32), inside)
+            if d is None:
+                break
+            if best is None or abs(d - target) < best[0]:
+                best = (abs(d - target), e)
+            if d < target:
+                break
+        extra = best[1] if best else 0.0
+    # Saturation: compare the 90th-percentile chroma (Lab) of the ad with that of the reference region.
+    lab0 = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
+    chroma_ref = np.percentile(np.hypot(lab0[..., 1] - 128, lab0[..., 2] - 128)[ref_region], 90)
+    rgb = art[..., :3]
+    lab = cv2.cvtColor(np.ascontiguousarray(rgb), cv2.COLOR_RGB2LAB).astype(np.float32)
+    chroma_ad = np.percentile(np.hypot(lab[..., 1] - 128, lab[..., 2] - 128), 90)
+    scale = float(np.clip(1.15 * max(chroma_ref, 8.0) / max(chroma_ad, 1e-3), 0.8 if blank else 0.55, 1.0))
+    return extra, scale, target
+
+
+def desaturate(art, scale):
+    if scale >= 0.999:
+        return art
+    lab = cv2.cvtColor(np.ascontiguousarray(art[..., :3]), cv2.COLOR_RGB2LAB).astype(np.float32)
+    lab[..., 1:] = 128 + (lab[..., 1:] - 128) * scale
+    out = art.copy()
+    out[..., :3] = cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2RGB)
+    return out
+
+
+def finish_ad(g, art, q, motion, sigma, tr, i, slot, inherited=None):
+    """Treat only the ad coverage, on the output pixel grid, before occlusion."""
+    import zlib
+    from pipeline import composite, photometric as pm
+    if not slot.get("photo_noise", True) and not slot.get("photo_compression", True):
+        return g
+    if inherited is None:
+        # Reuse exact alpha: bleed, shutter, transparency, supersampling, focus.
+        alpha_art = art.copy()
+        alpha_art[..., :3] = 255
+        alpha = composite.composite_frame(
+            np.zeros_like(g), alpha_art, q, emissive=False, match_energy=False,
+            blur_sigma=sigma, grain_sigma=0, motion_quads=motion)[..., 0].astype(np.float32)/255
+    else:
+        # Multiply ink already inherits source WB, noise and codec artifacts.
+        alpha = np.any(g != inherited, axis=2).astype(np.float32)
+    yy, xx = np.nonzero(alpha > 0)
+    if not len(xx):
+        return g
+    # Extra context for chroma filters and native-grid DCT blocks.
+    x0, y0 = max(0, int(xx.min())-16), max(0, int(yy.min())-16)
+    x1, y1 = min(g.shape[1], int(xx.max())+17), min(g.shape[0], int(yy.max())+17)
+    out = g.copy()
+    roi = out[y0:y1, x0:x1]
+    coverage = alpha[y0:y1, x0:x1]
+    if slot.get("photo_compression", True):
+        p = json.loads(str(tr["compression_params"][i]))
+        p["origin"] = (x0, y0)
+        treated = pm.match_compression(roi, p)
+        roi[:] = np.rint(roi + coverage[..., None] *
+                         (treated.astype(np.float32)-roi)).clip(0, 255).astype(np.uint8)
+    if slot.get("photo_noise", True):
+        p = json.loads(str(tr["noise_params"][i]))
+        if inherited is not None:
+            source = inherited[y0:y1, x0:x1].astype(np.float32)
+            transmission = roi.astype(np.float32)/np.maximum(source, 1)
+            L = cv2.cvtColor(source, cv2.COLOR_BGR2GRAY)
+            p["existing_var"] = transmission**2 * (L[..., None]*p["shot"]+p["read"])
+        seed = np.random.SeedSequence([20261028, zlib.crc32(slot["id"].encode()), int(i)])
+        roi[:] = pm.add_noise(roi, coverage, p, np.random.default_rng(seed))
+    return out
+
+
 def track_slot(clip, slot, frames, occ, force=False):
     """Plane track for one slot, cached: (N,4,2) quads, valid, visible, and the shutter fraction."""
     from pipeline.planar_track import track_plane, track_screen
     out = scene_dir(clip) / f"track_{slot['id']}.npz"
     if out.exists() and not force:
-        z = np.load(out)
-        return {k: z[k] for k in z.files}
+        with np.load(out) as z:
+            tr = {k: z[k] for k in z.files}
+        if (int(tr.get("photo_version", 0)) != 2 or
+                str(tr.get("photo_signature", "")) != photo_signature(slot)):
+            tr = photometric_track(clip, slot, frames, occ, tr)
+            np.savez_compressed(out, **tr)
+        return tr
     s = object_stores(clip, slot["prompt"], frames)[str(slot["object"])]
     ref = slot.get("ref_frame")
     if ref is None:
@@ -560,15 +732,11 @@ def track_slot(clip, slot, frames, occ, force=False):
                 dropped += 1
         if dropped:
             print(f"  {slot['id']}: {dropped} frames dropped where the quad left the surface SAM sees")
-    screen = bool(slot.get("dynamic_content")) or slot.get("texture") == "ring"
-    gain, veil = exposure_gain(frames, quads, valid, ref, occ, screen=screen)
-    print(f"  {slot['id']}: exposure vs reference: gain p5/median/p95 {np.percentile(gain[valid], 5):.2f}/"
-          f"{np.median(gain[valid]):.2f}/{np.percentile(gain[valid], 95):.2f}, veil "
-          f"{np.percentile(veil[valid], 5):.0f}/{np.median(veil[valid]):.0f}/{np.percentile(veil[valid], 95):.0f}")
-    shutter = float(slot.get("shutter", 0.5))  # 180-degree shutter until the blur is measured
-    res = {"quads": quads, "valid": valid, "visible": tr["visible"], "ref": np.int64(ref), "gain": gain, "veil": veil,
+    shutter = float(slot.get("shutter", 0.5))
+    res = {"quads": quads, "valid": valid, "visible": tr["visible"], "ref": np.int64(ref),
            "shutter": np.float64(shutter)}
-    np.savez(out, **res)
+    res = photometric_track(clip, slot, frames, occ, res)
+    np.savez_compressed(out, **res)
     print(f"  {slot['id']}: tracked in {time.time() - t0:.0f} s, valid {tr['valid'].mean():.0%}, ref f{ref}, "
           f"shutter {shutter:.2f}", flush=True)
     return res
@@ -615,11 +783,31 @@ def carry_shading(placed, original, quad, occluders=None, lo=0.45, hi=1.35):
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
+def print_on(frame, transmission, quad, motion_quads, blur, strength=1.0):
+    """Multiply a printed ink layer (per-channel transmission, 1 = bare surface) onto the frame inside the quad,
+    averaged over the shutter's quad positions so it smears with camera motion like the surface."""
+    h, w = frame.shape[:2]
+    th, tw = transmission.shape[:2]
+    src = np.float32([[0, 0], [tw - 1, 0], [tw - 1, th - 1], [0, th - 1]])
+    acc, cov = np.zeros((h, w, 3), np.float32), np.zeros((h, w), np.float32)
+    qs = motion_quads or [quad]
+    for q in qs:
+        M = cv2.getPerspectiveTransform(src, np.asarray(q, np.float32))
+        acc += cv2.warpPerspective(transmission, M, (w, h), flags=cv2.INTER_AREA, borderValue=(1, 1, 1))
+        cov += cv2.warpPerspective(np.ones((th, tw), np.float32), M, (w, h), flags=cv2.INTER_LINEAR)
+    t = acc / len(qs)
+    if blur > 0.3:
+        t = cv2.GaussianBlur(t, (0, 0), blur)
+    t = 1 - strength * (1 - t)
+    return np.clip(frame.astype(np.float32) * t, 0, 255).astype(np.uint8)
+
+
 def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, start=0):
     from pipeline import composite, watermark
     from pipeline.shutter import shutter_quads
     from scripts.render import add_label, campaign, pick_creative, soft_occlude
-    from scripts.render_scene import grade_slot, manifest_id
+    from scripts.render_scene import manifest_id
+    from pipeline.grade import apply_grade, scene_grade
     frames = Frames(ROOT / clip)
     inventory = json.loads((ROOT / "configs" / "inventory.json").read_text())
     slots = {s["id"]: s for s in entry["dynamic_slots"]}
@@ -635,20 +823,50 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
         tone = slot.get("tone") or ("dark" if np.median(surface) < 70 else "light")
         if tone == "dark":  # the brand's dark artwork, same aspect choice (make_creatives.dark)
             c = {**c, "creatives": {k: v.replace(".png", "_dark.png") for k, v in c["creatives"].items()}}
-        art = pick_creative(c, tr["quads"][ref])
-        # How soft the real surface is (focus, compression), measured once where it is still and fully seen;
-        # per-frame estimates would count motion blur, which the shutter integration already adds.
+        fmt = slot.get("creative_format")
+        gen = ROOT / "assets" / "creatives" / "gen" / f"{brand}_{fmt}.png"
+        if fmt and gen.exists():  # photographic / print-real artwork from muse-image (scripts/gen_creatives.py)
+            art = cv2.cvtColor(cv2.imread(str(gen), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGBA)
+            tone = fmt
+        else:
+            art = pick_creative(c, tr["quads"][ref])
+        # The 1.5px cap applies to reference softness only; additional measured
+        # defocus can exceed it. Shutter integration still handles motion.
         blur, grain = composite.estimate_blur_and_grain(frames[ref], tr["quads"][ref])
         blur = min(blur, 1.5)
         print(f"  {sid}: {brand} ({tone} artwork; surface median luma {np.median(surface):.0f})")
-        art = grade_slot(art, frames, store, occ)
+        if slot.get("blend") == "multiply":
+            # Ink on the surface: the artwork's own paper/board colour is "no ink". Dividing by it gives the
+            # fraction of light each ink lets through; multiplied onto the real lid, its cardboard texture,
+            # crease and lighting all stay, which no pasted layer can fake.
+            rgb = art[..., :3].astype(np.float32)
+            border = np.concatenate([rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3),
+                                     rgb[:, :8].reshape(-1, 3), rgb[:, -8:].reshape(-1, 3)])
+            paper = np.median(border, axis=0)
+            art = np.clip(rgb / np.maximum(paper, 1.0), 0, 1.0)[..., ::-1].copy()  # transmission, BGR like frames
+        else:
+            # The grade and exposure track must share a reference frame.
+            frame_ref, mask_ref = frames[ref], store[ref]
+            blocked = photo_occluders(clip, slot, frames, occ, tr["quads"])(ref)
+            clean = mask_ref & ~blocked
+            ring = (cv2.dilate(mask_ref.astype(np.uint8), np.ones((41, 41), np.uint8)) > 0) & ~mask_ref & ~blocked
+            if clean.any() or ring.any():
+                art = apply_grade(art, scene_grade(frame_ref[clean], frame_ref[ring]))
+            if slot.get("look_match", True):
+                extra, sat, target = match_look(frame_ref, art, inset(tr["quads"][ref], float(slot.get("inset_px", 2))),
+                                                float(tr["defocus_sigma"][ref]), blocked,
+                                                emissive=slot.get("dynamic_content", False))
+                art = desaturate(art, sat)
+                tr = {**tr, "defocus_sigma": np.hypot(tr["defocus_sigma"], extra)}
+                print(f"  {sid}: look match: +{extra:.2f} px blur, saturation x{sat:.2f} (detail target {target})")
         print(f"  {sid}: surface softness sigma {blur:.2f} px, grain {grain:.2f}")
         plate = None
-        if slot.get("reflections") or slot.get("glass_prompts"):
+        if slot.get("reflections") or slot.get("glass_prompts") or slot.get("difference_key"):
             from pipeline.clean_plate import CleanPlate
             glass = [union_store(clip, p, frames) for p in slot.get("glass_prompts", [])]
             t1 = time.time()
-            plate = CleanPlate(frames, tr["quads"], tr["valid"], tr["gain"], tr["veil"],
+            # Artwork/exposure are RGB; CleanPlate pixels are BGR.
+            plate = CleanPlate(frames, tr["quads"], tr["valid"], tr["gain"][:, ::-1], tr["veil"][:, ::-1],
                                solid=(lambda i: occ.frame(i)) if occ else None,
                                glass=(lambda i: Union(glass).frame(i)) if glass else None)
             print(f"  {sid}: clean plate {plate.size[0]}x{plate.size[1]} in {time.time() - t1:.0f} s")
@@ -664,6 +882,8 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
                            stdin=subprocess.PIPE)
     t0, batch = time.time(), []
 
+    keyed = {}
+
     def flush(batch, start_frame):
         placed = []
         for k, f in enumerate(batch):
@@ -672,28 +892,52 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
             for slot, tr, art, blur, grain, plate in layers:
                 if not tr["valid"][i]:
                     continue
+                if slot.get("blend") == "multiply":
+                    sigma = float(tr["defocus_sigma"][i])
+                    motion = shutter_quads(tr["quads"], i, shutter=float(tr["shutter"]))
+                    before = g
+                    g = print_on(g, art, tr["quads"][i], motion,
+                                 sigma, float(slot.get("ink_strength", 1.0)))
+                    g = finish_ad(g, art, tr["quads"][i], motion, sigma, tr, i, slot, inherited=before)
+                    if glass_masks is not None:  # ink is on the lid, not on the shaker in front of it
+                        gm = cv2.GaussianBlur(glass_masks.frame(i).astype(np.float32), (0, 0), 1.5)[..., None]
+                        g = np.clip(gm * f + (1 - gm) * g, 0, 255).astype(np.uint8)
+                    continue
                 a = art
-                if "veil" in tr and (abs(tr["gain"][i] - 1) > 0.01 or abs(tr["veil"][i]) > 0.5):
+                if "veil" in tr:
                     a = art.copy()  # follow the camera's exposure and any veil in front of the surface
                     a[..., :3] = np.clip(art[..., :3].astype(np.float32) * tr["gain"][i] + tr["veil"][i],
                                          0, 255).astype(art.dtype)
                 q = inset(tr["quads"][i], float(slot.get("inset_px", 2)))
+                sigma = float(tr["defocus_sigma"][i])
+                motion = [inset(m, float(slot.get("inset_px", 2)))
+                          for m in shutter_quads(tr["quads"], i, shutter=float(tr["shutter"]))]
                 g = composite.composite_frame(
                     g, a, q, emissive=slot.get("dynamic_content", False), match_energy=False,
-                    blur_sigma=blur, grain_sigma=grain,
-                    motion_quads=[inset(m, float(slot.get("inset_px", 2)))
-                                  for m in shutter_quads(tr["quads"], i, shutter=float(tr["shutter"]))])
+                    blur_sigma=sigma, grain_sigma=0, motion_quads=motion)
                 if slot.get("shading"):
                     g = carry_shading(g, f, tr["quads"][i], occ.frame(i) if occ else None)
+                g = finish_ad(g, a, q, motion, sigma, tr, i, slot)
                 if plate is not None:  # reflections, glass and the bare surface behind occluder edges
                     add, now = plate.layers(i)
                     A, cover = plate.to_frame(add, i, g.shape)
                     inside = cover & quad_mask(q, frames.h, frames.w)
                     g = g.astype(np.float32)
-                    g[inside] += A[inside]
+                    if slot.get("reflections"):
+                        g[inside] += A[inside]
                     g = np.clip(g, 0, 255).astype(np.uint8)
                     P, pc = plate.to_frame(now, i, g.shape)
                     plates.append((P, pc & inside))
+                    if slot.get("difference_key"):
+                        # Blank surface: whatever differs clearly from the bare wall here is in front of it
+                        # (a tray held edge-on that SAM cannot name, a leaf, a hand). Keyed occluders join the
+                        # SAM ones below.
+                        known = pc & inside
+                        d = np.abs(f.astype(np.float32) - P).max(-1)
+                        key = (d > float(slot.get("key_threshold", 28))) & known
+                        key = cv2.morphologyEx(key.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+                        key = cv2.dilate(key, np.ones((3, 3), np.uint8)) > 0
+                        keyed[i] = keyed.get(i, np.zeros(key.shape, bool)) | key
                     if glass_masks is not None:  # clear glass shows the ad (softened); cheese and cap stay
                         gm = glass_masks.frame(i) & pc & inside
                         if gm.any():
@@ -709,6 +953,8 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
             done = []
             for k, (f, (p, plates)) in enumerate(zip(batch, placed)):
                 i, m = start_frame + k, occ.frame(start_frame + k)
+                if i in keyed:
+                    m = m | keyed.pop(i)
                 for slot, tr, *_ in layers:
                     if slot.get("dynamic_content") and tr["valid"][i]:
                         m = drop_on_screen(m, quad_mask(tr["quads"][i], frames.h, frames.w))

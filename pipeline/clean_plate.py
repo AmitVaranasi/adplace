@@ -73,7 +73,7 @@ class CleanPlate:
         """Bare surface at frame i in the reference exposure (NaN where no nearby frame saw it), plus i's exposure."""
         lo, hi = max(0, i - self.window), min(len(self.valid), i + self.window + 1)
         js = [j for j in range(lo, hi) if self.valid[j]]
-        stack = np.stack([(self.rect[j].astype(np.float32) - self.veil[j]) / max(self.gain[j], 1e-3) for j in js])
+        stack = np.stack([(self.rect[j].astype(np.float32) - self.veil[j]) / np.maximum(self.gain[j], 1e-3) for j in js])
         stack[~np.stack([self.seen[j] for j in js])] = np.nan
         with np.errstate(all="ignore"):
             import warnings

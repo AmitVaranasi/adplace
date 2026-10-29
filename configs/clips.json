@@ -325,7 +325,8 @@
     "object": 3,
     "surface": "sign",
     "dynamic_content": false,
-    "reflections": true
+    "reflections": true,
+    "creative_format": "dark_sign"
    },
    {
     "id": "counter_tv",
@@ -341,7 +342,9 @@
     "surface": "poster",
     "dynamic_content": false,
     "reflections": true,
-    "inset_px": 3
+    "inset_px": 3,
+    "creative_format": "vinyl_tall",
+    "photo_exposure": false
    }
   ]
  },
@@ -351,7 +354,8 @@
   "occluder_prompts": [
    "person",
    "tree",
-   "pole"
+   "pole",
+   "pizza"
   ],
   "source": "Mixkit 44019 'A table being served pizza by a waiter' (Mixkit free license)",
   "dynamic_slots": [
@@ -381,7 +385,9 @@
      ]
     ],
     "shading": true,
-    "track": "mask_ring"
+    "track": "mask_ring",
+    "creative_format": "poster",
+    "difference_key": true
    },
    {
     "id": "patio_napkin",
@@ -389,7 +395,8 @@
     "object": 0,
     "surface": "menu",
     "dynamic_content": false,
-    "shading": true
+    "shading": true,
+    "creative_format": "menu_card"
    }
   ]
  },
@@ -409,11 +416,12 @@
     "object": 0,
     "surface": "box",
     "dynamic_content": false,
-    "shading": true,
-    "reflections": true,
     "glass_prompts": [
      "salt shaker"
-    ]
+    ],
+    "creative_format": "box_print",
+    "blend": "multiply",
+    "ink_strength": 0.85
    }
   ]
  }

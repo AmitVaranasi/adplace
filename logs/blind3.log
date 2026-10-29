@@ -1,0 +1,81 @@
+1/58 ours     patio_waiter_v9#119          inserted=False conf=0.9 where='' -> -
+2/58 ours     pizzeria_counter_v19#411     inserted=True conf=0.88 where='the black SLICEDASH poster with pizza gr' -> DETECTED
+3/58 ours     patio_waiter_v9#7            inserted=True conf=0.87 where='BREWLARK poster on rear wall behind man' -> DETECTED
+4/58 ours     pizzeria_box_v9#219          inserted=False conf=0.85 where='' -> -
+5/58 mirriad  mirriad#12s                  inserted=True conf=0.82 where='Swisse advertisement billboard in backgr' -> DETECTED
+6/58 original pizzeria_counter#484         inserted=False conf=0.85 where='' -> -
+7/58 ours     pizzeria_box_v9#59           inserted=False conf=0.9 where='' -> -
+8/58 original patio_waiter#11              inserted=False conf=0.9 where='' -> -
+9/58 ours     pizzeria_counter_v19#484     inserted=True conf=0.87 where='the dark SLICEDAS sign with pizza-slice ' -> DETECTED
+10/58 ours     patio_waiter_v9#120          inserted=False conf=0.9 where='' -> -
+11/58 original pizzeria_box#88              inserted=False conf=0.95 where='' -> -
+12/58 ours     pizzeria_box_v9#374          inserted=False conf=0.92 where='' -> -
+13/58 ours     pizzeria_box_v9#88           inserted=False conf=0.9 where='' -> -
+14/58 original patio_waiter#119             inserted=False conf=0.85 where='' -> -
+15/58 mirriad  mirriad#7s                   inserted=True conf=0.85 where='Swisse lightbox advertisement on the rig' -> DETECTED
+16/58 original patio_waiter#136             inserted=False conf=0.9 where='' -> -
+17/58 ours     patio_waiter_v9#11           inserted=True conf=0.87 where='BREWLARK coffee poster on the back wall ' -> DETECTED
+18/58 original pizzeria_box#38              inserted=False conf=0.97 where='' -> -
+19/58 original patio_waiter#138             inserted=False conf=0.9 where='' -> -
+20/58 ours     pizzeria_counter_v19#154     inserted=True conf=0.85 where='the dark SLICEDASH sign on the glass par' -> -
+21/58 original pizzeria_counter#107         inserted=False conf=0.9 where='' -> -
+22/58 ours     pizzeria_box_v9#444          inserted=True conf=0.85 where="black text 'Hot pizza at your door in 20" -> DETECTED
+23/58 original pizzeria_box#59              inserted=False conf=0.95 where='' -> -
+24/58 original pizzeria_counter#176         inserted=False conf=0.85 where='' -> -
+25/58 original pizzeria_box#444             inserted=False conf=0.95 where='' -> -
+26/58 mirriad  mirriad#16s                  inserted=False conf=0.9 where='' -> -
+27/58 original pizzeria_counter#411         inserted=False conf=0.9 where='' -> -
+28/58 original patio_waiter#120             inserted=False conf=0.9 where='' -> -
+29/58 ours     patio_waiter_v9#138          inserted=False conf=0.9 where='' -> -
+30/58 ours     pizzeria_box_v9#519          inserted=False conf=0.9 where='' -> -
+31/58 original pizzeria_box#374             inserted=False conf=0.95 where='' -> -
+32/58 mirriad  mirriad#61s                  inserted=False conf=0.85 where='' -> -
+33/58 original pizzeria_box#519             inserted=False conf=0.9 where='' -> -
+34/58 ours     pizzeria_counter_v19#107     inserted=True conf=0.88 where='SLICEDASH sign on left glass partition' -> -
+35/58 ours     pizzeria_counter_v19#225     inserted=True conf=0.85 where='the dark SLICEDASH sign with pizza graph' -> -
+36/58 original pizzeria_counter#154         inserted=False conf=0.85 where='' -> -
+37/58 original patio_waiter#7               inserted=False conf=0.9 where='' -> -
+38/58 original pizzeria_box#654             inserted=False conf=0.95 where='' -> -
+39/58 mirriad  mirriad#25s                  inserted=False conf=0.85 where='' -> -
+40/58 mirriad  mirriad#79s                  inserted=True conf=0.92 where='Diet Coke ad graphic on the TV screen' -> DETECTED
+41/58 ours     patio_waiter_v9#8            inserted=True conf=0.9 where='BREWLARK poster on the back wall' -> DETECTED
+42/58 original pizzeria_counter#129         inserted=True conf=0.72 where='the Haagen-Dazs/Drumstick branded wrap o' -> DETECTED
+43/58 ours     pizzeria_box_v9#38           inserted=False conf=0.92 where='' -> -
+44/58 ours     pizzeria_box_v9#654          inserted=True conf=0.9 where='the SLICEDASH text and orange pizza-slic' -> DETECTED
+45/58 ours     pizzeria_counter_v19#129     inserted=True conf=0.85 where='SLICEDASH logo/sign on the glass sneeze-' -> -
+46/58 original patio_waiter#8               inserted=False conf=0.9 where='' -> -
+47/58 ours     pizzeria_counter_v19#234     inserted=True conf=0.85 where='the dark SLICEDASH sign with pizza slice' -> DETECTED
+48/58 mirriad  mirriad#75s                  inserted=True conf=0.85 where='the square white FUN Light Wild Berries ' -> DETECTED
+49/58 mirriad  mirriad#39s                  inserted=False conf=0.9 where='' -> -
+50/58 original pizzeria_box#219             inserted=False conf=0.95 where='' -> -
+51/58 mirriad  mirriad#57s                  inserted=True conf=0.92 where='the DENTASTIX dog poster on the freestan' -> -
+52/58 ours     patio_waiter_v9#30           inserted=False conf=0.9 where='' -> -
+53/58 original pizzeria_counter#234         inserted=True conf=0.85 where='news image on wall-mounted TV screen upp' -> DETECTED
+54/58 original patio_waiter#30              inserted=False conf=0.92 where='' -> -
+55/58 mirriad  mirriad#66s                  inserted=False conf=0.9 where='' -> -
+56/58 ours     patio_waiter_v9#136          inserted=False conf=0.95 where='' -> -
+57/58 ours     pizzeria_counter_v19#176     inserted=False conf=0.9 where='' -> -
+58/58 original pizzeria_counter#225         inserted=False conf=0.85 where='' -> -
+{
+  "ours": {
+    "frames": 24,
+    "flagged": 8,
+    "rate": 0.333
+  },
+  "original": {
+    "frames": 24,
+    "flagged": 2,
+    "rate": 0.083
+  },
+  "mirriad": {
+    "frames": 10,
+    "flagged": 4,
+    "rate": 0.4
+  },
+  "ours_by_clip": {
+    "patio_waiter_v9": "3/8",
+    "pizzeria_counter_v19": "3/8",
+    "pizzeria_box_v9": "2/8"
+  }
+} 
+-> /Users/amitmaheshwarvaranasi/Claude Cowork/adplace/eval/blind_20261028_2008.json

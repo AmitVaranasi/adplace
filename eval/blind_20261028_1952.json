@@ -1,0 +1,722 @@
+{
+  "summary": {
+    "ours": {
+      "frames": 24,
+      "flagged": 8,
+      "rate": 0.333
+    },
+    "original": {
+      "frames": 24,
+      "flagged": 1,
+      "rate": 0.042
+    },
+    "mirriad": {
+      "frames": 10,
+      "flagged": 5,
+      "rate": 0.5
+    },
+    "ours_by_clip": {
+      "patio_waiter_v7": "3/8",
+      "pizzeria_counter_v19": "4/8",
+      "pizzeria_box_v9": "1/8"
+    }
+  },
+  "rows": [
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#123",
+      "truth": "menu card on table",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#411",
+      "truth": "black wall sign",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.82,
+        "where": "SLICEDASH poster on back wall behind counter",
+        "tell": "text and pizza graphic are too bright, sharp and saturated for dim shadowed wall, perfectly fronto-parallel with no perspective keystone, no frame edge, shadow, glare or light falloff, and black background noise does not match surrounding wall"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#7",
+      "truth": "poster on the grey wall",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "BREWLARK coffee poster on the rear wall behind the man",
+        "tell": "poster is unnaturally flat with no light falloff, contact shadow or surface interaction with the wall, its blur/noise and resolution do not match the wall/lamp at same depth, and it appears fronto-parallel with soft edges despite the wall being viewed at an oblique angle"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#219",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#12s",
+      "truth": "Swisse poster",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "Swisse advertisement billboard in background on right",
+        "tell": "appears perfectly fronto-parallel to camera with no perspective foreshortening expected for an off-axis billboard, unnaturally sharp flat and high-contrast versus other background at same depth, lighting and noise mismatch with surroundings"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#484",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.85,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#59",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.95,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#11",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.95,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#484",
+      "truth": "black wall sign",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.9,
+        "where": "the dark 'SLICEDAS' sign with pizza slice graphic near the center-right window",
+        "tell": "flat 2D overlay with no thickness, perspective, mounting, shadow or reflections, text and pizza graphic are low-res/blurry with lighting, focus and noise mismatched to the rest of the frame and edges do not sit naturally in the scene"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#124",
+      "truth": "menu card on table",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#88",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.95,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#374",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#88",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.85,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#123",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#7s",
+      "truth": "Swisse poster",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "Swisse advertisement panel on right side of frame",
+        "tell": "edges are perfectly vertical/horizontal, razor-sharp and axis-aligned with no perspective keystoning, focus fall-off, motion softness or grain matching the rest of the footage; surface is flat gray with even illumination, no reflections, shading or noise like surrounding mall, looks like clean 2D graphic overlay"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#140",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#11",
+      "truth": "poster on the grey wall",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "the BREWLARK poster/sign on the back wall behind the man",
+        "tell": "far blurrier and smoother than wall, railing and plants at same depth, with no noise/grain, flat lighting and soft floating edges that do not sit in wall perspective"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#38",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.95,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#142",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#154",
+      "truth": "black wall sign",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "the dark 'SLICEDASH' sign behind the counter glass upper-left center",
+        "tell": "fronto-parallel razor-sharp edges with no perspective keystoning, flat even lighting with no glass glare/reflection over it unlike surrounding pane, focus/noise sharper than background video, floats with no mount and hard-occludes the man behind with no depth interaction"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#107",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#444",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#59",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.97,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#176",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.85,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#444",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.95,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#16s",
+      "truth": "cola cans on table",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "the two red Coca-Cola cans on the table in the lower foreground",
+        "tell": "flat uniform saturated red with no cylindrical shading or specular highlight from window light, edges cleaner/sharper than same-plane defocused drinking glasses, no contact shadows on tablecloth, both logos perfectly camera-facing with less film grain than surrounding scene"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#411",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#124",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#142",
+      "truth": "menu card on table",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#519",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#374",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.92,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#61s",
+      "truth": "bus-stop poster",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.85,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#519",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.88,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#107",
+      "truth": "freezer side panel",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "SLICEDASH sign on left glass partition",
+        "tell": "heavy grain/pixel noise and low-res text/graphic mismatched to rest of frame, flat lighting with no glass reflection, focus or perspective integration"
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#225",
+      "truth": "freezer side panel",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.85,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#154",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#7",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#654",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#25s",
+      "truth": "FUN inflatable",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.82,
+        "where": "FUN LIGHT advertisement on side of inflatable",
+        "tell": "FUN text and bottles are unnaturally crisp and clean vs blurry interlaced video, no grain/noise, perfectly flat with no vinyl wrinkle, air-pressure bulge or curvature distortion and no contact shadow from the inflated yellow rim"
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#79s",
+      "truth": "soft-drink can on TV screen/shelf",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.9,
+        "where": "the Diet Coke ad on the TV screen",
+        "tell": "screen content is unnaturally sharp, clean and noise-free pure white versus soft grainy scene, with perfectly crisp edges, no reflections, flicker, scanlines or bloom, and casts no light onto cabinet, wall or nearby person"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#8",
+      "truth": "poster on the grey wall",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.85,
+        "where": "BREWLARK coffee poster on the rear wall behind the man",
+        "tell": "flat lighting with no shadow interaction, soft glowing edges and halo, blur and noise mismatch versus surrounding wall and pole, semi-transparent pasted-on look and incorrect perspective integration"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#129",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#38",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_box_v9#654",
+      "truth": "pizza box lid print",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.9,
+        "where": "SLICEDASH text and orange pizza-slice graphic on inside of pizza box lid",
+        "tell": "branding is vector-sharp flat black/orange with uniform opacity, no cardboard grain, ink bleed or lighting falloff, does not warp with lid curvature or show noise/softness matching the pizza and background video, lighting on print ignores diffuse shading of the box"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#129",
+      "truth": "black wall sign",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.88,
+        "where": "the dark 'SLICEDASH' sign on the glass partition over the counter left-center",
+        "tell": "opaque flat rectangle shows no glass transparency, reflection or glare unlike surrounding glass, edges unnaturally crisp vs motion-blurred scene, lighting and perspective do not match the angled glass it supposedly sits on"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#8",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#234",
+      "truth": "black wall sign",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.82,
+        "where": "SLICEDASH sign with pizza slice on the left by the metal pole",
+        "tell": "flat fronto-parallel dark patch with sharp glowing text, no mount bracket shadow or contact, inconsistent with strong window backlight, lacks matching focus grain and perspective and appears to float beside pole"
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#75s",
+      "truth": "FUN display",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.88,
+        "where": "the small white rectangular FUN Light Wild Berries poster on the left",
+        "tell": "perfectly fronto-parallel to camera with razor-sharp edges and flat uniform white brightness, no perspective distortion, no shadow, mount, lighting falloff, video noise or motion blur matching the rest of the frame, unnaturally occludes the background display pole behind it like a 2D track"
+      },
+      "flagged": true
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#39s",
+      "truth": "magazines/products on table",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.85,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_box#219",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.95,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#57s",
+      "truth": "cereal box on counter",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.92,
+        "where": "the yellow DENTASTIX dog poster on the sidewalk ad totem at left",
+        "tell": "poster is unnaturally bright, saturated and tack-sharp vs soft overcast video with grain, with flat uniform illumination, no glass reflection or ambient shading, perfectly front-parallel with no perspective, and base has no contact shadow with blended/feathered edges into pavement"
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#30",
+      "truth": "poster on the grey wall",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#234",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "patio_waiter#30",
+      "truth": "",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "mirriad",
+      "src": "mirriad#66s",
+      "truth": "phone ad poster",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "patio_waiter_v7#140",
+      "truth": "menu card on table",
+      "verdict": {
+        "inserted": false,
+        "confidence": 0.9,
+        "where": "",
+        "tell": ""
+      },
+      "flagged": false
+    },
+    {
+      "pool": "ours",
+      "src": "pizzeria_counter_v19#176",
+      "truth": "black wall sign",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.82,
+        "where": "SLICEDASH sign on the glass partition on the left side",
+        "tell": "opaque flat rectangle on reflective backlit glass with no reflection, glare or transparency over it, remains fronto-parallel with no perspective foreshortening for the angled glass, matte uniform darkness and clean edges inconsistent with surrounding soft focus, video noise and bright daylight illumination"
+      },
+      "flagged": false
+    },
+    {
+      "pool": "original",
+      "src": "pizzeria_counter#225",
+      "truth": "",
+      "verdict": {
+        "inserted": true,
+        "confidence": 0.78,
+        "where": "the Haagen-Dazs / Drumstick / Toll House labels/graphics on the ice-cream freezer under the TV",
+        "tell": "graphics are unnaturally sharp, high-contrast and noise-free versus soft noisy background at same depth, pure-white levels brighter than real whites like pizza boxes, flat even lighting with no glare, reflection or shadow from boxes/lid, and deep blacks inconsistent with photographing a real print in bright daylight"
+      },
+      "flagged": true
+    }
+  ]
+}
