@@ -322,10 +322,11 @@ void main() {
 </script>
 
 <script id="present-shader" type="x-shader/x-fragment">
-uniform highp sampler2D uVideo, uResult, uLabel;
+uniform highp sampler2D uVideo, uResult, uLabel, uObjMask, uObjColour;
 uniform int uHeight;
-uniform bool uShowLabel;
-uniform ivec2 uLabelOrigin, uLabelSize;
+uniform bool uShowLabel, uObj;
+uniform ivec2 uLabelOrigin, uLabelSize, uObjCell;
+uniform ivec4 uObjBox;
 
 void main() {
   // Offscreen textures use top-down logical rows; flip only for presentation.
@@ -333,6 +334,13 @@ void main() {
   vec3 f=texelFetch(uVideo,p,0).rgb;
   float a=texelFetch(uVideo,p+ivec2(0,uHeight),0).r;
   vec3 rgb=mix(texelFetch(uResult,p,0).rgb,f,clamp(a,0.0,1.0));
+  // 3D product (export_player.export_object): r = coverage, g = table shadow, b = people in front of it
+  ivec2 o=p-uObjBox.xy;
+  if (uObj && all(greaterThanEqual(o,ivec2(0))) && all(lessThan(o,uObjBox.zw))) {
+    vec3 m=texelFetch(uObjMask,uObjCell+o,0).rgb;
+    vec3 c=texelFetch(uObjColour,uObjCell+o,0).rgb;
+    rgb=mix(mix(rgb*m.g,c,m.r),f,m.b);
+  }
   ivec2 q=p-uLabelOrigin;
   if (uShowLabel && all(greaterThanEqual(q,ivec2(0))) && all(lessThan(q,uLabelSize))) {
     vec4 label=texelFetch(uLabel,q,0);
@@ -394,10 +402,18 @@ void main() {
       }
       const [profiles, assets] = await Promise.all([
         json(new URL("assignments.json", entry.base)),
-        Promise.all(t.slots.flatMap(s => Object.entries(s.brands).map(async ([brand, spec]) => ({
-          key: assetKey(s.id, brand), spec,
-          image: await image(new URL(spec.art, entry.base).href)
-        }))))
+        Promise.all([
+          ...t.slots.flatMap(s => Object.entries(s.brands).map(async ([brand, spec]) => ({
+            key: assetKey(s.id, brand), spec,
+            image: await image(new URL(spec.art, entry.base).href)
+          }))),
+          // 3D products: per-frame sprite atlases (colour per brand, plus coverage / shadow / person matte)
+          ...(t.objects || []).flatMap(o => [["mask", {art: o.mask}], ...Object.entries(o.brands)]
+            .map(async ([brand, spec]) => ({
+              key: assetKey(o.id, brand), spec,
+              image: await image(new URL(spec.art, entry.base).href)
+            })))
+        ])
       ]);
       if (!Object.keys(profiles).length) throw new Error("No viewers in assignments.json");
       return {...entry, profiles, assets};
@@ -731,6 +747,16 @@ void main() {
       this.bind(0,this.videoTex);
       this.bind(1,this.full[current].tex);
       this.bind(2,this.labelTex);
+      const obj=(t.objects || [])[0], box=obj && obj.boxes[i], objBrand=obj && profile.assignment[obj.id];
+      const objArt=objBrand && this.art.get(assetKey(obj.id,objBrand));
+      const showObj=!!(ads && box && objArt);
+      gl.uniform1i(p.u("uObj"),showObj ? 1 : 0);
+      if (showObj) {
+        this.bind(3,this.art.get(assetKey(obj.id,"mask")).tex); this.bind(4,objArt.tex);
+        gl.uniform1i(p.u("uObjMask"),3); gl.uniform1i(p.u("uObjColour"),4);
+        gl.uniform4i(p.u("uObjBox"),box[0],box[1],box[2],box[3]);
+        gl.uniform2i(p.u("uObjCell"),box[4],box[5]);
+      }
       gl.uniform1i(p.u("uVideo"),0);
       gl.uniform1i(p.u("uResult"),1);
       gl.uniform1i(p.u("uLabel"),2);
@@ -853,7 +879,7 @@ void main() {
 
     const list=$("placements");
     list.replaceChildren();
-    for (const slot of data.track.slots) {
+    for (const slot of [...data.track.slots,...(data.track.objects || [])]) {
       const item=document.createElement("div");
       const name=document.createElement("span"),brand=document.createElement("strong");
       name.textContent=title(slot.id)+(slot.surface ? " · "+slot.surface : "");

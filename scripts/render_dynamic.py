@@ -136,6 +136,45 @@ def full_extent(store, tr, frames, occ, ref, quad, keep=0.5, step=2):
     return big, out
 
 
+def keep_attached(key, occluders, reach=7):
+    """Keyed blobs that touch a SAM occluder: a tray held edge-on is attached to the hand holding it. A blob floating
+    on its own is the bare-surface reconstruction being off there, and keying it punched a wall-coloured hole in
+    the poster before the waiter reached it."""
+    if occluders is None or not occluders.any() or not key.any():
+        return np.zeros_like(key, bool)
+    n, labels = cv2.connectedComponents(key.astype(np.uint8), connectivity=8)
+    near = cv2.dilate(occluders.astype(np.uint8), np.ones((2 * reach + 1, 2 * reach + 1), np.uint8)) > 0
+    touching = np.unique(labels[near & (labels > 0)])
+    return np.isin(labels, touching)
+
+
+def tighten_to_plate(f, alpha, mask, P, known, band=6):
+    """Pull a soft occluder alpha in to the person's true edge where the bare surface behind is known.
+
+    Each edge pixel is unmixed between the person's colour just inside the mask (F) and the bare surface (P):
+    alpha_c = (f - P).(F - P) / |F - P|^2. SAM's mask runs 2-3 px wide, and the footage is sharpened, so the edge
+    pixels are bare wall or brighter-than-wall overshoot (alpha_c <= 0); kept, they drew a light ring around the
+    waiter's head on the dark poster. Only a band around the mask's edge is touched, and only where the
+    person and the wall differ enough in colour to unmix (a shirt the colour of the wall keeps SAM's edge)."""
+    m8 = mask.astype(np.uint8)
+    k = np.ones((2 * band + 1,) * 2, np.uint8)  # refine_occluder spreads soft alpha a few px past SAM's edge too
+    edge = (cv2.dilate(m8, k) > 0) & ~(cv2.erode(m8, k) > 0)
+    zone = edge & known
+    if not zone.any():
+        return alpha
+    core = (cv2.erode(m8, np.ones((2 * band + 3,) * 2, np.uint8)) > 0).astype(np.float32)
+    ff = f.astype(np.float32)
+    w = cv2.GaussianBlur(core, (0, 0), 5)
+    F = cv2.GaussianBlur(ff * core[..., None], (0, 0), 5) / np.maximum(w, 1e-4)[..., None]  # person colour nearby
+    fp, Fp = ff - P, F - P
+    den = (Fp * Fp).sum(-1)
+    ac = np.clip((fp * Fp).sum(-1) / np.maximum(den, 1e-3), 0, 1)
+    ok = zone & (w > 0.02) & (den > 30.0 ** 2)
+    out = alpha.copy()
+    out[ok] = np.minimum(alpha[ok], ac[ok])
+    return out
+
+
 def drop_on_screen(occluders, screen, inside=0.95, grow=6):
     """Remove occluder blobs that lie inside a screen: SAM's "person" also finds the presenter shown ON the TV, and
     cutting him out of the ad punches holes in it. Someone really standing in front of a screen spills past its
@@ -879,7 +918,14 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
     slots = {s["id"]: s for s in entry["dynamic_slots"]}
     occ = occluders(clip, entry, frames)
     layers, glass_masks = [], None
+    objects = []  # 3D products standing in the scene (scripts/place3d.py), applied after the flat ads
+    for obj in entry.get("objects3d", []):
+        if obj["id"] in assignment:
+            from scripts.place3d import CanPlacement
+            objects.append((CanPlacement(clip, obj["at"], obj["frames"]), assignment[obj["id"]]))
     for sid, brand in assignment.items():
+        if sid not in slots:
+            continue
         slot = slots[sid]
         layers.append(prepare_layer(clip, slot, brand, frames, occ, retrack=retrack))
         if slot.get("glass_prompts"):
@@ -948,6 +994,7 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
                         key = (d > float(slot.get("key_threshold", 28))) & known
                         key = cv2.morphologyEx(key.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
                         key = cv2.dilate(key, np.ones((3, 3), np.uint8)) > 0
+                        key = keep_attached(key, occ.frame(i) if occ else None)
                         keyed[i] = keyed.get(i, np.zeros(key.shape, bool)) | key
                     if glass_masks is not None:  # clear glass shows the ad (softened); cheese and cap stay
                         gm = glass_masks.frame(i) & pc & inside
@@ -972,7 +1019,10 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
                 if not m.any():
                     done.append(p)
                     continue
-                al = refine_occluder(f, m, radius=4, gain=2.0)[..., None]
+                al = refine_occluder(f, m, radius=4, gain=2.0)
+                for P, known in plates:
+                    al = tighten_to_plate(f, al, m, P, known)
+                al = al[..., None]
                 o = al * f + (1 - al) * p
                 # Along the soft edge the original mixes person and OLD surface; where the bare surface is known,
                 # swap exactly that old part for the ad instead of letting its colour fringe the hand.
@@ -987,6 +1037,8 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
             placed = done
         else:
             placed = [p for p, _ in placed]
+        for can, brand in objects:
+            placed = [can.apply(f, p, start_frame + k, brand) for k, (f, p) in enumerate(zip(batch, placed))]
         if label:
             placed = [add_label(p) for p in placed]
         for k, p in enumerate(watermark.embed(placed, mid)):

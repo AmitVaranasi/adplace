@@ -56,6 +56,16 @@ FORMATS = {
                                        "cardboard colour shows through as the background"),
     "menu_card": (16 / 10, "1365x853", "a printed paper table menu card / placemat header, cream paper, small food "
                                        "photographs, brand name and tagline, restaurant print style"),
+    "can_wrap": (2 / 1, "1365x853", "the printed label of a 330 ml aluminium drinks can, unrolled flat into a "
+                                    "rectangle: solid brand-colour background, the brand name large and exactly in "
+                                    "the centre (that side faces the viewer), a small product illustration and the "
+                                    "tagline beside it, bold packaging design; no picture of a can, no barcode"),
+}
+# What the product is when it comes in a can (only the drinks brands are eligible for can surfaces).
+CAN_PRODUCT = {
+    "fizzwell": "cola soft drink",
+    "brewlark": "canned cold brew coffee",
+    "fernleaf": "sparkling water with real fruit",
 }
 
 RULES = ("Flat full-bleed artwork seen straight on, filling the whole image edge to edge. NOT a mockup: no wall, "
@@ -78,6 +88,9 @@ def prompt(bid, fmt):
         colours = f"black background, lettering in RGB{b['bg'] if sum(b['bg']) > 180 else b['fg']}"
     if fmt == "box_print":
         colours = f"ink colours: RGB{b['bg']} and near-black"
+    if fmt == "can_wrap":
+        return (f"Packaging for a fictional brand called {b['name']} ({CAN_PRODUCT[bid]}). Tagline: "
+                f"'{b['tagline']}'. Design: {art}. {colours}. {RULES}")
     return (f"Advertisement for a fictional brand called {b['name']} ({CATEGORY[bid]}). Tagline: "
             f"'{b['tagline']}'. Design: {art}. {colours}. {RULES}")
 

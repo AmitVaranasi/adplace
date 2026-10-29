@@ -29,8 +29,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from scripts.render_dynamic import (Frames, Union, drop_on_screen, inset, occluders, prepare_layer,  # noqa: E402
-                                    quad_mask, union_store)
+from scripts.render_dynamic import (Frames, Union, drop_on_screen, inset, keep_attached, occluders,  # noqa: E402
+                                    prepare_layer, quad_mask, tighten_to_plate, union_store)
 
 OUT = ROOT / "app" / "static" / "player"
 
@@ -64,26 +64,33 @@ def matte_frame(f, i, occ, layers, glass, frames):
     from pipeline.matte import refine_occluder
     h, w = f.shape[:2]
     m = occ.frame(i) if occ else np.zeros((h, w), bool)
+    sam = m.copy()
     alpha = np.zeros((h, w), np.float32)
+    plates = []
     for slot, tr, art, blur, grain, plate in layers:
         if not tr["valid"][i]:
             continue
         if slot.get("dynamic_content"):
             m = drop_on_screen(m, quad_mask(tr["quads"][i], h, w))
-        if plate is not None and slot.get("difference_key"):
+        if plate is not None:
             add, now = plate.layers(i)
             P, pc = plate.to_frame(now, i, f.shape)
             q = inset(tr["quads"][i], float(slot.get("inset_px", 2)))
             known = pc & quad_mask(q, h, w)
-            d = np.abs(f.astype(np.float32) - P).max(-1)
-            key = (d > float(slot.get("key_threshold", 28))) & known
-            key = cv2.morphologyEx(key.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-            m |= cv2.dilate(key, np.ones((3, 3), np.uint8)) > 0
+            plates.append((P, known))
+            if slot.get("difference_key"):
+                d = np.abs(f.astype(np.float32) - P).max(-1)
+                key = (d > float(slot.get("key_threshold", 28))) & known
+                key = cv2.morphologyEx(key.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+                m |= keep_attached(cv2.dilate(key, np.ones((3, 3), np.uint8)) > 0, sam)
         if glass is not None and slot.get("glass_prompts"):  # ink is on the lid, not on the shaker in front
             gm = cv2.GaussianBlur(glass.frame(i).astype(np.float32), (0, 0), 1.5)
             alpha = np.maximum(alpha, gm)
     if m.any():
-        alpha = np.maximum(alpha, refine_occluder(f, m, radius=4, gain=2.0))
+        al = refine_occluder(f, m, radius=4, gain=2.0)
+        for P, known in plates:
+            al = tighten_to_plate(f, al, m, P, known)
+        alpha = np.maximum(alpha, al)
     return np.clip(alpha, 0, 1)
 
 
@@ -104,6 +111,50 @@ def shade_track(frames, tr, occ, start):
         median.append(round(max(float(np.median(gray[m])), 1.0), 3) if m.sum() >= 200 else None)
         quads.append(np.asarray(tr["quads"][i], float).round(2).tolist())
     return {"lo": 0.45, "hi": 1.35, "median": median, "quads": quads}
+
+
+def export_object(clip, obj, frames, start, inventory, d):
+    """A 3D product (scripts/place3d.py) as per-frame sprites: the can is ray-traced here, the player only blends.
+
+    art/<id>_mask.png: R = coverage, G = table shadow multiplier, B = person matte (only people go in front of the can;
+    the clip's full matte also holds the pizza behind it). art/<id>_<brand>.png: unpremultiplied colour. Both are
+    atlases of fixed-size cells, one per frame, at `boxes[i]` in the frame."""
+    from pipeline.matte import refine_occluder
+    from scripts.place3d import CanPlacement
+    can = CanPlacement(clip, obj["at"], obj["frames"])
+    brands = eligible_brands({"surface": obj.get("surface", "can"), "creative_format": "can_wrap"}, inventory)
+    layers = {}
+    for i, f in enumerate(frames):
+        if i >= start and i in can.poses:
+            ls = {b: can.layer(i, f, b) for b in brands}
+            if all(L is not None for L in ls.values()):  # None: the can is outside the picture this frame
+                layers[i] = (f, ls)
+    sizes = np.array([[L[0][2] - L[0][0], L[0][3] - L[0][1]] for _, ls in layers.values() for L in ls.values()])
+    cw, ch = sizes.max(0)
+    cols = max(1, 2048 // cw)
+    rows = -(-len(layers) // cols)
+    mask = np.zeros((rows * ch, cols * cw, 3), np.uint8)
+    colour = {b: np.zeros((rows * ch, cols * cw, 3), np.uint8) for b in brands}
+    boxes = [None] * (frames.n - start)
+    for k, (i, (f, ls)) in enumerate(sorted(layers.items())):
+        cx, cy = (k % cols) * cw, (k // cols) * ch
+        (x0, y0, x1, y1), _, cov, shadow = ls[brands[0]]
+        h, w = y1 - y0, x1 - x0
+        person = np.zeros((h, w), np.float32)
+        front = can.front(i)
+        if front is not None:
+            person = refine_occluder(f, front, radius=4, gain=2.0)[y0:y1, x0:x1]
+        mask[cy:cy + h, cx:cx + w] = np.rint(np.dstack([person, shadow, cov]) * 255)  # BGR order on disk
+        for b in brands:
+            colour[b][cy:cy + h, cx:cx + w] = np.rint(ls[b][1])
+        boxes[i - start] = [int(x0), int(y0), int(w), int(h), int(cx), int(cy)]
+    cv2.imwrite(str(d / "art" / f"{obj['id']}_mask.png"), mask)
+    for b in brands:
+        cv2.imwrite(str(d / "art" / f"{obj['id']}_{b}.png"), colour[b])
+    print(f"  {obj['id']}: {len(brands)} brands, {len(layers)} frames, atlas {mask.shape[1]}x{mask.shape[0]}",
+          flush=True)
+    return {"id": obj["id"], "surface": obj.get("surface", "can"), "boxes": boxes, "grain": can.grain,
+            "mask": f"art/{obj['id']}_mask.png", "brands": {b: {"art": f"art/{obj['id']}_{b}.png"} for b in brands}}
 
 
 def assignments(clip, entry, slots, inventory, brands):
@@ -178,6 +229,11 @@ def main(clip, skip_video=False):
             track["slots"][-1]["shade"] = shade_track(frames, tr, occ, start)
         print(f"  {slot['id']}: {len(per_brand)} brands, valid {sum(q is not None for q in quads)}/{len(quads)}",
               flush=True)
+    track["objects"] = []
+    for obj in entry.get("objects3d", []):
+        o = export_object(clip, obj, frames, start, inventory, d)
+        track["objects"].append(o)
+        brands[obj["id"]] = list(o["brands"])
     (d / "track.json").write_text(json.dumps(track))
 
     if not skip_video:
@@ -198,7 +254,9 @@ def main(clip, skip_video=False):
         if enc.wait():
             raise SystemExit("ffmpeg failed")
 
-    (d / "assignments.json").write_text(json.dumps(assignments(clip, entry, slots, inventory, brands), indent=1))
+    choice_slots = slots + entry.get("objects3d", [])  # the chooser sees a can as one more surface
+    (d / "assignments.json").write_text(json.dumps(assignments(clip, entry, choice_slots, inventory, brands),
+                                                   indent=1))
     print(f"exported {d} in {time.time() - t0:.0f} s")
 
 

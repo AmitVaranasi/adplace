@@ -364,6 +364,10 @@
  "assets/clips/patio_waiter.mp4": {
   "hidden": true,
   "dynamic": true,
+  "objects3d": [
+   {"id": "patio_can", "surface": "can", "kind": "can", "at": [705, 525], "frames": [0, 157],
+    "area_frac": 0.01, "neighbours": ["pizza", "plates", "drinks"]}
+  ],
   "occluder_prompts": [
    "person",
    "tree",

@@ -7,10 +7,11 @@
   ],
   "assignment": {
    "patio_wall": "brewlark",
-   "patio_napkin": "slicedash"
+   "patio_napkin": "slicedash",
+   "patio_can": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "brewlark matches viewer coffee-morning interests and slicedash matches food context with eligible surfaces."
+  "rationale": "Matches viewer coffee interest and food context with all eligible surfaces."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -20,10 +21,11 @@
   ],
   "assignment": {
    "patio_wall": "kestrel",
-   "patio_napkin": "fizzwell"
+   "patio_napkin": "slicedash",
+   "patio_can": "fernleaf"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Kestrel matches viewer running fitness interests and fizzwell matches food context on eligible surfaces."
+  "rationale": "Matches fitness interests and food context with all eligible surfaces and distinct categories."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -33,10 +35,11 @@
   ],
   "assignment": {
    "patio_wall": "paperwhale",
-   "patio_napkin": "fizzwell"
+   "patio_napkin": "slicedash",
+   "patio_can": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "paperwhale matches viewer reading interests on poster and fizzwell fits food context on menu."
+  "rationale": "Matches viewer reading interest on wall and food context on menu and can with eligible distinct brands."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -47,10 +50,11 @@
   ],
   "assignment": {
    "patio_wall": "nimbus",
-   "patio_napkin": "slicedash"
+   "patio_napkin": "slicedash",
+   "patio_can": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Nimbus matches viewer interests on poster and slicedash fits food context on menu."
+  "rationale": "Matches travel interests on poster and food context on menu and can with eligible distinct categories."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -61,10 +65,11 @@
   ],
   "assignment": {
    "patio_wall": "fernleaf",
-   "patio_napkin": "slicedash"
+   "patio_napkin": "slicedash",
+   "patio_can": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fernleaf matches all viewer interests and both slots use eligible surfaces."
+  "rationale": "All placements are eligible with distinct brands and categories while matching food interests."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -75,9 +80,10 @@
   ],
   "assignment": {
    "patio_wall": "voltway",
-   "patio_napkin": "slicedash"
+   "patio_napkin": "slicedash",
+   "patio_can": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "voltway matches all viewer interests on poster and slicedash matches tech plus food context on menu."
+  "rationale": "Voltway and slicedash match viewer tech interests while fizzwell fits food context with all surfaces eligible."
  }
 }

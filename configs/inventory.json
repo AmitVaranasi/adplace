@@ -17,7 +17,8 @@
     "screen",
     "sign",
     "mug",
-    "cup"
+    "cup",
+    "can"
    ],
    "contextual_exclusions": [
     "children",
@@ -129,7 +130,8 @@
     "billboard",
     "poster",
     "screen",
-    "sign"
+    "sign",
+    "can"
    ],
    "contextual_exclusions": [
     "children",
@@ -187,7 +189,8 @@
     "screen",
     "sign",
     "box",
-    "menu"
+    "menu",
+    "can"
    ],
    "contextual_exclusions": [
     "children",
