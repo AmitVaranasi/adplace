@@ -113,48 +113,67 @@ def shade_track(frames, tr, occ, start):
     return {"lo": 0.45, "hi": 1.35, "median": median, "quads": quads}
 
 
-def export_object(clip, obj, frames, start, inventory, d):
-    """A 3D product (scripts/place3d.py) as per-frame sprites: the can is ray-traced here, the player only blends.
+FORMAT = {"can": "can_wrap", "bottle": "bottle_label", "tent": "table_tent", "glass_print": "glass_print",
+          "shirt_print": "shirt_print", "aframe": "poster"}
 
-    art/<id>_mask.png: R = coverage, G = table shadow multiplier, B = person matte (only people go in front of the can;
-    the clip's full matte also holds the pizza behind it). art/<id>_<brand>.png: unpremultiplied colour. Both are
-    atlases of fixed-size cells, one per frame, at `boxes[i]` in the frame."""
+
+def export_object(clip, spec, frames, start, inventory, d):
+    """A 3D product or a print on a real thing (scripts/place3d.py) as per-frame sprites: everything is ray-traced
+    here, the player only blends.
+
+    art/<id>_<brand>.png: RGBA, unpremultiplied colour and final coverage (people in front of the object already
+    cut out). art/<id>_shadow.png: grey, the table shadow multiplier (1 where people stand in front of it). Atlases of
+    fixed-size cells, one per frame, at `boxes[i]` in the frame. The player does
+    rgb = mix(prev * shadow, colour, alpha), which equals the server's apply() for the same frame."""
     from pipeline.matte import refine_occluder
-    from scripts.place3d import CanPlacement
-    can = CanPlacement(clip, obj["at"], obj["frames"])
-    brands = eligible_brands({"surface": obj.get("surface", "can"), "creative_format": "can_wrap"}, inventory)
+    from scripts.place3d import make
+    obj = make(clip, spec)
+    kind = spec.get("kind", "can")
+    brands = eligible_brands({"surface": spec.get("surface", "can"), "creative_format": FORMAT[kind]}, inventory)
     layers = {}
     for i, f in enumerate(frames):
-        if i >= start and i in can.poses:
-            ls = {b: can.layer(i, f, b) for b in brands}
-            if all(L is not None for L in ls.values()):  # None: the can is outside the picture this frame
+        if i >= start and i in obj.poses:
+            ls = {b: obj.layer(i, f, b) for b in brands}
+            if all(L is not None for L in ls.values()):  # None: outside the picture this frame
                 layers[i] = (f, ls)
+    if not layers:
+        return None
     sizes = np.array([[L[0][2] - L[0][0], L[0][3] - L[0][1]] for _, ls in layers.values() for L in ls.values()])
-    cw, ch = sizes.max(0)
-    cols = max(1, 2048 // cw)
+    # big objects (the A-frame fills much of the frame) are stored smaller: eight brands at full size would be
+    # hundreds of MB of GPU memory in the browser; the player upsamples them (the server render stays full size)
+    scale = min(1.0, 360.0 / sizes.max())
+    small = lambda x: x if scale == 1.0 else cv2.resize(x, (max(1, round(x.shape[1] * scale)), max(1, round(x.shape[0] * scale))),
+                                                         interpolation=cv2.INTER_AREA)
+    cw, ch = (np.ceil(sizes.max(0) * scale).astype(int) + 2)   # 2 px gap: no bleeding between cells
+    cols = max(1, 4096 // cw)
     rows = -(-len(layers) // cols)
-    mask = np.zeros((rows * ch, cols * cw, 3), np.uint8)
-    colour = {b: np.zeros((rows * ch, cols * cw, 3), np.uint8) for b in brands}
+    shadow_atlas = np.full((rows * ch, cols * cw), 255, np.uint8)
+    colour = {b: np.zeros((rows * ch, cols * cw, 4), np.uint8) for b in brands}
     boxes = [None] * (frames.n - start)
     for k, (i, (f, ls)) in enumerate(sorted(layers.items())):
         cx, cy = (k % cols) * cw, (k // cols) * ch
-        (x0, y0, x1, y1), _, cov, shadow = ls[brands[0]]
+        (x0, y0, x1, y1) = ls[brands[0]][0]
         h, w = y1 - y0, x1 - x0
-        person = np.zeros((h, w), np.float32)
-        front = can.front(i)
-        if front is not None:
-            person = refine_occluder(f, front, radius=4, gain=2.0)[y0:y1, x0:x1]
-        mask[cy:cy + h, cx:cx + w] = np.rint(np.dstack([person, shadow, cov]) * 255)  # BGR order on disk
+        front = obj.front(i)
+        kf = refine_occluder(f, front, radius=4, gain=2.0)[y0:y1, x0:x1] if front is not None else np.zeros((h, w))
         for b in brands:
-            colour[b][cy:cy + h, cx:cx + w] = np.rint(ls[b][1])
+            _, col, cov, shadow = ls[b]
+            a = cov * (1 - kf)
+            if b == brands[0]:
+                # server: k*f + (1-k)*(prev*sh*(1-cov) + c*cov), with prev = f under people -> prev*sh'*(1-a) + c*a
+                sh = small((kf + (1 - kf) * shadow * (1 - cov)) / np.maximum(1 - a, 1e-4))
+                shadow_atlas[cy:cy + sh.shape[0], cx:cx + sh.shape[1]] = np.rint(np.clip(sh, 0, 1) * 255)
+            rgba = small(np.dstack([col, a * 255]).astype(np.float32))
+            colour[b][cy:cy + rgba.shape[0], cx:cx + rgba.shape[1]] = np.rint(rgba).clip(0, 255)
         boxes[i - start] = [int(x0), int(y0), int(w), int(h), int(cx), int(cy)]
-    cv2.imwrite(str(d / "art" / f"{obj['id']}_mask.png"), mask)
+    cv2.imwrite(str(d / "art" / f"{spec['id']}_shadow.png"), shadow_atlas)
     for b in brands:
-        cv2.imwrite(str(d / "art" / f"{obj['id']}_{b}.png"), colour[b])
-    print(f"  {obj['id']}: {len(brands)} brands, {len(layers)} frames, atlas {mask.shape[1]}x{mask.shape[0]}",
+        cv2.imwrite(str(d / "art" / f"{spec['id']}_{b}.png"), colour[b])
+    print(f"  {spec['id']}: {len(brands)} brands, {len(layers)} frames, atlas {shadow_atlas.shape[1]}x{shadow_atlas.shape[0]}",
           flush=True)
-    return {"id": obj["id"], "surface": obj.get("surface", "can"), "boxes": boxes, "grain": can.grain,
-            "mask": f"art/{obj['id']}_mask.png", "brands": {b: {"art": f"art/{obj['id']}_{b}.png"} for b in brands}}
+    return {"id": spec["id"], "surface": spec.get("surface", "can"), "boxes": boxes, "scale": scale,
+            "shadow": f"art/{spec['id']}_shadow.png",
+            "brands": {b: {"art": f"art/{spec['id']}_{b}.png"} for b in brands}}
 
 
 def assignments(clip, entry, slots, inventory, brands):
@@ -230,10 +249,15 @@ def main(clip, skip_video=False):
         print(f"  {slot['id']}: {len(per_brand)} brands, valid {sum(q is not None for q in quads)}/{len(quads)}",
               flush=True)
     track["objects"] = []
-    for obj in entry.get("objects3d", []):
-        o = export_object(clip, obj, frames, start, inventory, d)
-        track["objects"].append(o)
-        brands[obj["id"]] = list(o["brands"])
+    from scripts.place3d import objects_for
+    order = [o.id for o in objects_for(clip, entry)]  # far to near: nearer objects draw on top
+    for spec in sorted(entry.get("objects3d", []), key=lambda s: order.index(s["id"])):
+        o = export_object(clip, spec, frames, start, inventory, d)
+        if o:
+            track["objects"].append(o)
+            brands[spec["id"]] = list(o["brands"])
+    for old in (d / "art").glob("*_mask.png"):  # superseded atlas format
+        old.unlink()
     (d / "track.json").write_text(json.dumps(track))
 
     if not skip_video:

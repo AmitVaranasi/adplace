@@ -60,6 +60,19 @@ FORMATS = {
                                     "rectangle: solid brand-colour background, the brand name large and exactly in "
                                     "the centre (that side faces the viewer), a small product illustration and the "
                                     "tagline beside it, bold packaging design; no picture of a can, no barcode"),
+    "table_tent": (2 / 3, "1024x1536", "one face of a folded paper table-tent card that stands on a restaurant "
+                                       "table: brand name at the top, one appetising product photo, the tagline, "
+                                       "soft printed-paper look with a thin margin"),
+    "bottle_label": (2 / 1, "1365x853", "the paper label of a glass drinks bottle, unrolled flat: brand name large "
+                                        "and exactly in the centre, a small illustration and the tagline beside it, "
+                                        "craft packaging style on a cream or brand-colour paper; no picture of a "
+                                        "bottle, no barcode"),
+    "glass_print": (2 / 1, "1365x853", "a single-colour WHITE logo printed on a drinking glass: the brand name in "
+                                       "bold white lettering with a small simple white emblem, on a PURE BLACK "
+                                       "background (the black becomes transparent glass), nothing else"),
+    "shirt_print": (1 / 1, "1024x1024", "a small single-colour WHITE screen-printed chest logo for a staff "
+                                        "T-shirt: a simple bold white emblem with the brand name under it, on a "
+                                        "PURE BLACK background (the black is the shirt fabric), nothing else"),
 }
 # What the product is when it comes in a can (only the drinks brands are eligible for can surfaces).
 CAN_PRODUCT = {
@@ -88,6 +101,13 @@ def prompt(bid, fmt):
         colours = f"black background, lettering in RGB{b['bg'] if sum(b['bg']) > 180 else b['fg']}"
     if fmt == "box_print":
         colours = f"ink colours: RGB{b['bg']} and near-black"
+    if fmt in ("glass_print", "shirt_print"):
+        return (f"Logo artwork for a fictional brand called {b['name']} ({CATEGORY[bid]}). Design: {art}. Spell the "
+                f"brand name exactly as given, in capital letters. No other text, no real company logos or "
+                f"trademarks, no mockup, no shirt, no glass.")
+    if fmt == "bottle_label":
+        return (f"Packaging for a fictional brand called {b['name']} ({CAN_PRODUCT[bid]}, in a glass bottle). "
+                f"Tagline: '{b['tagline']}'. Design: {art}. {colours}. {RULES}")
     if fmt == "can_wrap":
         return (f"Packaging for a fictional brand called {b['name']} ({CAN_PRODUCT[bid]}). Tagline: "
                 f"'{b['tagline']}'. Design: {art}. {colours}. {RULES}")

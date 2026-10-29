@@ -7,10 +7,11 @@
   ],
   "assignment": {
    "counter_sign": "brewlark",
-   "counter_freezer": "slicedash"
+   "counter_freezer": "fernleaf",
+   "counter_tv": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Matches coffee interest with brewlark and restaurant context with slicedash in different categories."
+  "rationale": "Matched coffee interest and food context with eligible surfaces and distinct neighbouring categories."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -19,11 +20,12 @@
    "fitness"
   ],
   "assignment": {
-   "counter_sign": "kestrel",
-   "counter_freezer": "fernleaf"
+   "counter_tv": "kestrel",
+   "counter_sign": "fernleaf",
+   "counter_freezer": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Kestrel matches running fitness interests and Fernleaf fits food context with different categories."
+  "rationale": "Matches running/fitness viewer and restaurant/food context with distinct neighbouring categories."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -32,11 +34,12 @@
    "learning"
   ],
   "assignment": {
-   "counter_freezer": "paperwhale",
-   "counter_sign": "fizzwell"
+   "counter_tv": "paperwhale",
+   "counter_sign": "brewlark",
+   "counter_freezer": "fernleaf"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Matched reading interest and food context with distinct categories."
+  "rationale": "paperwhale matches viewer reading interests while food brands fit restaurant context with different neighbour categories."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -46,11 +49,12 @@
    "deals"
   ],
   "assignment": {
-   "counter_sign": "nimbus",
+   "counter_sign": "slicedash",
+   "counter_tv": "nimbus",
    "counter_freezer": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "nimbus matches viewer travel interests and fizzwell matches restaurant food context with different categories."
+  "rationale": "Matches viewer travel interest and food context while respecting eligibility and neighbour categories."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -60,11 +64,12 @@
    "health"
   ],
   "assignment": {
-   "counter_sign": "fernleaf",
+   "counter_sign": "brewlark",
+   "counter_tv": "fernleaf",
    "counter_freezer": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fernleaf matches all viewer interests and fizzwell adds restaurant relevance with a different category."
+  "rationale": "Matches food cooking health interests with eligible surfaces and distinct neighbour categories."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -74,10 +79,11 @@
    "cycling"
   ],
   "assignment": {
-   "counter_sign": "voltway",
-   "counter_freezer": "slicedash"
+   "counter_tv": "voltway",
+   "counter_sign": "slicedash",
+   "counter_freezer": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Voltway matches viewer interests and slicedash matches food context with different categories."
+  "rationale": "Matches viewer tech interests and restaurant food context with distinct neighbouring categories."
  }
 }

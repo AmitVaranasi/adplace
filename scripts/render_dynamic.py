@@ -918,11 +918,10 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
     slots = {s["id"]: s for s in entry["dynamic_slots"]}
     occ = occluders(clip, entry, frames)
     layers, glass_masks = [], None
-    objects = []  # 3D products standing in the scene (scripts/place3d.py), applied after the flat ads
-    for obj in entry.get("objects3d", []):
-        if obj["id"] in assignment:
-            from scripts.place3d import CanPlacement
-            objects.append((CanPlacement(clip, obj["at"], obj["frames"]), assignment[obj["id"]]))
+    objects = []  # 3D products and prints on real things (scripts/place3d.py), applied after the flat ads
+    if entry.get("objects3d"):
+        from scripts.place3d import objects_for
+        objects = [(o, assignment[o.id]) for o in objects_for(clip, entry, assignment)]
     for sid, brand in assignment.items():
         if sid not in slots:
             continue
@@ -1037,8 +1036,8 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
             placed = done
         else:
             placed = [p for p, _ in placed]
-        for can, brand in objects:
-            placed = [can.apply(f, p, start_frame + k, brand) for k, (f, p) in enumerate(zip(batch, placed))]
+        for obj, brand in objects:  # far to near
+            placed = [obj.apply(f, p, start_frame + k, brand) for k, (f, p) in enumerate(zip(batch, placed))]
         if label:
             placed = [add_label(p) for p in placed]
         for k, p in enumerate(watermark.embed(placed, mid)):

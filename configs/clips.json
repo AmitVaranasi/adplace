@@ -336,8 +336,7 @@
     "prompt": "television",
     "object": 0,
     "surface": "screen",
-    "dynamic_content": true,
-    "player": false
+    "dynamic_content": true
    },
    {
     "id": "counter_freezer",
@@ -366,7 +365,17 @@
   "dynamic": true,
   "objects3d": [
    {"id": "patio_can", "surface": "can", "kind": "can", "at": [705, 525], "frames": [0, 157],
-    "area_frac": 0.01, "neighbours": ["pizza", "plates", "drinks"]}
+    "area_frac": 0.01, "neighbours": ["pizza", "plates", "drinks"]},
+   {"id": "patio_bottle", "surface": "bottle", "kind": "bottle", "at": [840, 395], "frames": [0, 157],
+    "area_frac": 0.01, "neighbours": ["pizza", "drinks"]},
+   {"id": "patio_tent", "surface": "table_card", "kind": "tent", "at": [1062, 412], "frames": [0, 157],
+    "area_frac": 0.01, "neighbours": ["plates", "drinks"]},
+   {"id": "patio_glass", "surface": "glass", "kind": "glass_print", "glass": "obj_glass_1", "frames": [0, 157],
+    "area_frac": 0.005, "neighbours": ["drinks"]},
+   {"id": "patio_shirt", "surface": "shirt", "kind": "shirt_print", "prompt": "t-shirt logo",
+    "area_frac": 0.002, "neighbours": ["waiter", "pizza"]},
+   {"id": "patio_aframe", "surface": "sidewalk_sign", "kind": "aframe", "plane": "floor", "at": [1000, 607],
+    "frames": [0, 90], "area_frac": 0.02, "neighbours": ["patio_wall", "plants"]}
   ],
   "occluder_prompts": [
    "person",
