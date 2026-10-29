@@ -6,6 +6,7 @@ cached. Rendering a (clip, brand) pair runs for real the first time and is reuse
 """
 import functools
 import json
+import subprocess
 import sys
 import tempfile
 import time
@@ -94,6 +95,48 @@ def scene_jpeg(clip_id):
     scale = min(1.0, 1024 / max(frame.shape[:2]))
     frame = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
     return cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])[1].tobytes()
+
+
+@app.get("/player")
+def player():
+    return FileResponse(Path(__file__).parent / "static" / "player.html")
+
+
+class ViewerRenderRequest(BaseModel):
+    clip: str          # stem, e.g. "patio_waiter"
+    profile_id: str
+
+
+@app.post("/api/viewer_render")
+def viewer_render(req: ViewerRenderRequest):
+    """The downloadable file for one viewer: the same assignment the live player shows, rendered on the server with
+    the disclosure label and a Video Seal watermark naming the campaigns (the browser cannot embed the watermark).
+    Cached per (clip, assignment). Rendered in a child process: in this process (torch + the app's imports) MKL
+    segfaults inside the render, which would take the whole demo server down."""
+    d = Path(__file__).parent / "static" / "player" / req.clip
+    if not (d / "assignments.json").exists():
+        raise HTTPException(404, f"no player export for {req.clip}")
+    viewers = json.loads((d / "assignments.json").read_text())
+    if req.profile_id not in viewers:
+        raise HTTPException(404, f"unknown profile {req.profile_id}")
+    track = json.loads((d / "track.json").read_text())
+    clip = track["clip"]
+    assignment = viewers[req.profile_id]["assignment"]
+    tag = "_".join(f"{k}-{v}" for k, v in sorted(assignment.items()))
+    out = ROOT / "outputs" / "viewers" / f"{req.clip}__{tag}.mp4"
+    t0 = time.time()
+    cached = out.with_suffix(".json").exists()
+    if not cached:
+        clip_entry(clip)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        run = subprocess.run([sys.executable, str(ROOT / "scripts" / "render_dynamic.py"), "render", clip,
+                              "--assign", *(f"{k}={v}" for k, v in assignment.items()), "--out", str(out),
+                              "--start", str(track["start"])], cwd=ROOT, capture_output=True, text=True)
+        if run.returncode != 0 or not out.with_suffix(".json").exists():
+            raise HTTPException(500, f"render failed (exit {run.returncode}): {run.stderr[-500:]}")
+    report = json.loads(out.with_suffix(".json").read_text())
+    return {"video_url": "/outputs/viewers/" + out.name, "assignment": assignment, "verified": report["verified"],
+            "manifest_id": report["manifest_id"], "cached": cached, "seconds": round(time.time() - t0, 1)}
 
 
 @app.get("/")

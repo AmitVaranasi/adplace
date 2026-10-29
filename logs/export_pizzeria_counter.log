@@ -1,0 +1,62 @@
+  counter_sign: brewlark (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x1.00 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: clean plate 320x211 in 1 s
+  counter_sign: kestrel (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x1.00 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: nimbus (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x1.00 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: fernleaf (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x1.00 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: voltway (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x1.00 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: fizzwell (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x1.00 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: slicedash (dark_sign artwork; surface median luma 18)
+  counter_sign: look match: +0.00 px blur, saturation x0.80 (detail target 2.263070000542535)
+  counter_sign: surface softness sigma 0.62 px, grain 0.00
+  counter_sign: 7 brands, valid 521/521
+  counter_freezer: brewlark (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.25 px blur, saturation x0.65 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: clean plate 320x480 in 1 s
+  counter_freezer: kestrel (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +1.00 px blur, saturation x0.66 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: paperwhale (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.25 px blur, saturation x0.89 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: nimbus (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.50 px blur, saturation x0.66 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: fernleaf (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.75 px blur, saturation x0.70 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: voltway (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.75 px blur, saturation x1.00 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: fizzwell (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.25 px blur, saturation x0.63 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: slicedash (vinyl_tall artwork; surface median luma 219)
+  counter_freezer: look match: +0.25 px blur, saturation x0.61 (detail target 1.8056704285324257)
+  counter_freezer: surface softness sigma 1.18 px, grain 0.74
+  counter_freezer: 8 brands, valid 213/521
+  stack 100/601 20 s
+  stack 200/601 24 s
+  stack 300/601 32 s
+  stack 400/601 40 s
+  stack 500/601 51 s
+  stack 600/601 58 s
+  viewer-a (Morning commuter): {'counter_sign': 'brewlark', 'counter_freezer': 'slicedash'}  [muse (muse-spark-1.3)] Matches coffee interest with brewlark and restaurant context with slicedash in different categories.
+  viewer-b (Weekend runner): {'counter_sign': 'kestrel', 'counter_freezer': 'fernleaf'}  [muse (muse-spark-1.3)] Kestrel matches running fitness interests and Fernleaf fits food context with different categories.
+  viewer-c (Book lover): {'counter_freezer': 'paperwhale', 'counter_sign': 'fizzwell'}  [muse (muse-spark-1.3)] Matched reading interest and food context with distinct categories.
+  viewer-d (Weekend traveller): {'counter_sign': 'nimbus', 'counter_freezer': 'fizzwell'}  [muse (muse-spark-1.3)] nimbus matches viewer travel interests and fizzwell matches restaurant food context with different c
+  viewer-e (Home cook): {'counter_sign': 'fernleaf', 'counter_freezer': 'fizzwell'}  [muse (muse-spark-1.3)] Fernleaf matches all viewer interests and fizzwell adds restaurant relevance with a different catego
+  viewer-f (Tech commuter): {'counter_sign': 'voltway', 'counter_freezer': 'slicedash'}  [muse (muse-spark-1.3)] Voltway matches viewer interests and slicedash matches food context with different categories.
+exported /Users/amitmaheshwarvaranasi/Claude Cowork/adplace/app/static/player/pizzeria_counter in 73 s

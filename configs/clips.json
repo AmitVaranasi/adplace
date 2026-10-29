@@ -326,14 +326,18 @@
     "surface": "sign",
     "dynamic_content": false,
     "reflections": true,
-    "creative_format": "dark_sign"
+    "creative_format": "dark_sign",
+    "neighbours": [
+     "counter_freezer"
+    ]
    },
    {
     "id": "counter_tv",
     "prompt": "television",
     "object": 0,
     "surface": "screen",
-    "dynamic_content": true
+    "dynamic_content": true,
+    "player": false
    },
    {
     "id": "counter_freezer",
@@ -344,9 +348,18 @@
     "reflections": true,
     "inset_px": 3,
     "creative_format": "vinyl_tall",
-    "photo_exposure": false
+    "photo_exposure": false,
+    "neighbours": [
+     "counter_sign"
+    ]
    }
-  ]
+  ],
+  "context_tags": [
+   "restaurant",
+   "food",
+   "indoor"
+  ],
+  "player_start": 80
  },
  "assets/clips/patio_waiter.mp4": {
   "hidden": true,
@@ -398,6 +411,11 @@
     "shading": true,
     "creative_format": "menu_card"
    }
+  ],
+  "context_tags": [
+   "restaurant",
+   "food",
+   "outdoor"
   ]
  },
  "assets/clips/pizzeria_box.mp4": {
@@ -423,6 +441,12 @@
     "blend": "multiply",
     "ink_strength": 0.85
    }
+  ],
+  "context_tags": [
+   "restaurant",
+   "food",
+   "indoor",
+   "close_up"
   ]
  }
 }

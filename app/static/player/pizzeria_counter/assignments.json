@@ -1,0 +1,83 @@
+{
+ "viewer-a": {
+  "label": "Morning commuter",
+  "preferences": [
+   "coffee",
+   "morning"
+  ],
+  "assignment": {
+   "counter_sign": "brewlark",
+   "counter_freezer": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Matches coffee interest with brewlark and restaurant context with slicedash in different categories."
+ },
+ "viewer-b": {
+  "label": "Weekend runner",
+  "preferences": [
+   "running",
+   "fitness"
+  ],
+  "assignment": {
+   "counter_sign": "kestrel",
+   "counter_freezer": "fernleaf"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Kestrel matches running fitness interests and Fernleaf fits food context with different categories."
+ },
+ "viewer-c": {
+  "label": "Book lover",
+  "preferences": [
+   "reading",
+   "learning"
+  ],
+  "assignment": {
+   "counter_freezer": "paperwhale",
+   "counter_sign": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Matched reading interest and food context with distinct categories."
+ },
+ "viewer-d": {
+  "label": "Weekend traveller",
+  "preferences": [
+   "travel",
+   "holidays",
+   "deals"
+  ],
+  "assignment": {
+   "counter_sign": "nimbus",
+   "counter_freezer": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "nimbus matches viewer travel interests and fizzwell matches restaurant food context with different categories."
+ },
+ "viewer-e": {
+  "label": "Home cook",
+  "preferences": [
+   "cooking",
+   "food",
+   "health"
+  ],
+  "assignment": {
+   "counter_sign": "fernleaf",
+   "counter_freezer": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Fernleaf matches all viewer interests and fizzwell adds restaurant relevance with a different category."
+ },
+ "viewer-f": {
+  "label": "Tech commuter",
+  "preferences": [
+   "tech",
+   "commuting",
+   "cycling"
+  ],
+  "assignment": {
+   "counter_sign": "voltway",
+   "counter_freezer": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Voltway matches viewer interests and slicedash matches food context with different categories."
+ }
+}

@@ -1,0 +1,77 @@
+{
+ "viewer-a": {
+  "label": "Morning commuter",
+  "preferences": [
+   "coffee",
+   "morning"
+  ],
+  "assignment": {
+   "box_lid": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Box is eligible and food tag matches restaurant context."
+ },
+ "viewer-b": {
+  "label": "Weekend runner",
+  "preferences": [
+   "running",
+   "fitness"
+  ],
+  "assignment": {
+   "box_lid": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Matches food context on eligible box surface."
+ },
+ "viewer-c": {
+  "label": "Book lover",
+  "preferences": [
+   "reading",
+   "learning"
+  ],
+  "assignment": {
+   "box_lid": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Box surface fits delivery brand and matches food context."
+ },
+ "viewer-d": {
+  "label": "Weekend traveller",
+  "preferences": [
+   "travel",
+   "holidays",
+   "deals"
+  ],
+  "assignment": {
+   "box_lid": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Box surface is eligible and food tag matches restaurant context."
+ },
+ "viewer-e": {
+  "label": "Home cook",
+  "preferences": [
+   "cooking",
+   "food",
+   "health"
+  ],
+  "assignment": {
+   "box_lid": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Box lid fits slicedash and matches food interest and restaurant context."
+ },
+ "viewer-f": {
+  "label": "Tech commuter",
+  "preferences": [
+   "tech",
+   "commuting",
+   "cycling"
+  ],
+  "assignment": {
+   "box_lid": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "slicedash matches viewer tech interest and food context on eligible box surface."
+ }
+}

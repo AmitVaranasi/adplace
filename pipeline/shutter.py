@@ -3,9 +3,34 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-from scipy.linalg import expm, logm
+from scipy.linalg import expm
 
 _UNIT = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], np.float32)
+
+
+def _logm(r):
+    """Real principal log of a 3x3 matrix by inverse scaling and squaring.
+
+    scipy.linalg.logm segfaults in this env once torch is imported (Video Seal), so the server render can't use it.
+    """
+    w = np.linalg.eigvals(r)
+    if np.any((np.abs(w.imag) < 1e-12) & (w.real <= 0)):
+        raise ValueError("exposure motion has no stable real projective logarithm")
+    a, k, eye = r.astype(float), 0, np.eye(3)
+    while np.linalg.norm(a - eye, 2) > 0.1:   # Denman-Beavers square roots towards I
+        if k == 40:
+            raise ValueError("exposure motion has no stable real projective logarithm")
+        y, z = a, eye
+        for _ in range(60):
+            y, z = (y + np.linalg.inv(z))/2, (z + np.linalg.inv(y))/2
+            if np.linalg.norm(y @ y - a, 2) < 1e-14*max(1., np.linalg.norm(a, 2)):
+                break
+        a, k = y, k + 1
+    x, term, v = a - eye, eye, np.zeros((3, 3))
+    for n in range(1, 30):                     # log(I+X) series, ||X|| <= 0.1
+        term = term @ x
+        v += (-1)**(n + 1)*term/n
+    return v*2**k
 
 
 def _good(q):
@@ -32,10 +57,7 @@ def _segment(a, b):
     if det <= 0:
         raise ValueError("neighbouring quads have incompatible projective charts")
     r /= np.cbrt(det)
-    v = logm(r)
-    if np.max(np.abs(v.imag)) > 1e-7:
-        raise ValueError("exposure motion has no stable real projective logarithm")
-    v = v.real
+    v = _logm(r)
 
     def at(t):
         h = expm(t*v) @ h0

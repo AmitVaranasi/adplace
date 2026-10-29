@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live product placement</title>
+<style>
+  :root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    background: #101216;
+    color: #eef0f4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { max-width: 1440px; margin: auto; padding: 24px; }
+  header, .toolbar, .controls, .modes {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header { justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+  h1 { font-size: 21px; margin: 0 0 5px; font-weight: 650; }
+  p { line-height: 1.55; }
+  .muted, small { color: #a2a9b8; }
+  header p { margin: 0; font-size: 13px; }
+  button, select {
+    border: 1px solid #353a46;
+    background: #20242d;
+    color: inherit;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 13px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: #2a303b; }
+  button.selected {
+    background: #233e38;
+    border-color: #6bd6b2;
+    color: #c9ffec;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 2px solid #6bd6b2;
+    outline-offset: 3px;
+  }
+  .layout { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 20px; }
+  .stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #08090c;
+    border: 1px solid #2c3039;
+  }
+  canvas#screen { display: block; width: 100%; height: auto; }
+  #placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #08090ce8;
+    color: #a2a9b8;
+  }
+  [hidden] { display: none !important; }
+  .controls { margin-top: 12px; }
+  #play { min-width: 70px; }
+  #scrub { min-width: 40px; flex: 1; accent-color: #6bd6b2; }
+  #frame {
+    min-width: 130px;
+    text-align: right;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .toolbar { justify-content: space-between; margin-top: 12px; flex-wrap: wrap; }
+  .modes { gap: 5px; }
+  #fps { color: #a2a9b8; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .help { font-size: 12px; margin: 12px 0 0; }
+  aside {
+    border: 1px solid #2c3039;
+    border-radius: 12px;
+    background: #171a20;
+    padding: 18px;
+    align-self: start;
+  }
+  h2 { font-size: 14px; margin: 0 0 12px; }
+  #viewers { display: grid; gap: 8px; }
+  #viewers button { text-align: left; }
+  #viewers strong, #viewers small { display: block; }
+  #viewers strong { font-size: 13px; }
+  #viewers small { font-size: 11px; margin-top: 4px; }
+  .assignment { margin-top: 24px; border-top: 1px solid #303540; padding-top: 18px; }
+  #placements > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 16px;
+  }
+  #placements span { font-size: 11px; color: #a2a9b8; }
+  #placements strong { font-size: 14px; }
+  #rationale, #placements p { font-size: 12px; color: #c0c6d2; }
+  #chooser { display: block; font-size: 11px; color: #8d96a8; overflow-wrap: anywhere; }
+  #download { width: 100%; }
+  #download-status { display: block; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+  #download-status a { color: #6bd6b2; }
+  #error {
+    border: 1px solid #9c5555;
+    border-radius: 8px;
+    background: #382025;
+    padding: 12px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    overflow-wrap: anywhere;
+  }
+  /* Keep decoders participating in video presentation without showing them. */
+  video.decoder {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 1px;
+    height: 1px;
+    opacity: .001;
+    pointer-events: none;
+  }
+  @media (max-width: 900px) {
+    main { padding: 14px; }
+    .layout { grid-template-columns: 1fr; }
+    #viewers { grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); }
+    #frame { min-width: 108px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Live product placement</h1>
+      <p class="muted">Choose a viewer to change the brands in the scene.</p>
+    </div>
+    <label class="muted">Clip
+      <select id="clip" aria-label="Clip"></select>
+    </label>
+  </header>
+
+  <div id="error" role="alert" hidden></div>
+
+  <div class="layout">
+    <section aria-label="Video player">
+      <div class="stage">
+        <canvas id="screen" width="1280" height="720" aria-label="Composited video"></canvas>
+        <div id="placeholder" role="status">Loading clip…</div>
+      </div>
+      <div class="controls">
+        <button id="play" type="button" disabled>Play</button>
+        <input id="scrub" type="range" min="0" max="0" step="1" value="0"
+               aria-label="Video frame" disabled>
+        <output id="frame">Frame —</output>
+      </div>
+      <div class="toolbar">
+        <div class="modes" aria-label="Placement visibility">
+          <button type="button" data-mode="original" aria-pressed="false">Original</button>
+          <button type="button" data-mode="ads" class="selected" aria-pressed="true">With ads</button>
+        </div>
+        <output id="fps">0.0 compositor fps</output>
+      </div>
+      <p class="help muted">Space: play / pause · Left / right: step one frame</p>
+    </section>
+
+    <aside>
+      <h2>Viewer</h2>
+      <div id="viewers"></div>
+      <div class="assignment">
+        <h2>Muse’s assignment</h2>
+        <div id="placements"></div>
+        <p id="rationale"></p>
+        <small id="chooser"></small>
+      </div>
+      <div class="assignment">
+        <button id="download" type="button" disabled>Download my version</button>
+        <small id="download-status" class="muted" role="status"></small>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+void main() {
+  vec2 p=vec2(float((gl_VertexID << 1) & 2),float(gl_VertexID & 2));
+  gl_Position=vec4(p*2.0-1.0,0.0,1.0);
+}
+</script>
+
+<script id="source-shader" type="x-shader/x-fragment">
+uniform highp sampler2D uVideo;
+void main() {
+  outColor=vec4(texelFetch(uVideo,ivec2(gl_FragCoord.xy),0).rgb,1.0);
+}
+</script>
+
+<script id="warp-shader" type="x-shader/x-fragment">
+uniform highp sampler2D uArt;
+uniform mat3 uH[5];
+uniform vec3 uEdges[20];
+uniform vec2 uOrigin, uArtSize;
+uniform vec3 uGain, uVeil;
+uniform int uCount;
+uniform bool uMultiply;
+
+void main() {
+  vec2 pixel=uOrigin+gl_FragCoord.xy-vec2(0.5);
+  vec4 sum=vec4(0.0);
+  for (int k=0;k<5;k++) {
+    if (k>=uCount) break;
+    mat3 toArt=inverse(uH[k]);
+    for (int n=0;n<4;n++) {
+      vec2 sub=vec2(float(n & 1),float((n >> 1) & 1))*0.5-0.25;
+      vec2 p=pixel+sub;
+      float coverage=1.0;
+      for (int edge=0;edge<4;edge++) {
+        float d=dot(uEdges[4*k+edge],vec3(p,1.0));
+        coverage*=clamp(2.0*d+0.5,0.0,1.0);
+      }
+      if (coverage<=0.0) continue;
+      vec3 h=toArt*vec3(p,1.0);
+      vec2 artPixel=h.xy/h.z;
+      vec3 rgb=texture(uArt,(artPixel+0.5)/uArtSize).rgb;
+      // Encoded RGB / 255: no sRGB decoding or linearisation.
+      vec3 c=uMultiply ? vec3(1.0)-rgb : clamp(rgb*uGain+uVeil,0.0,1.0);
+      sum+=vec4(c*coverage,coverage);
+    }
+  }
+  // Over: premultiplied colour + alpha. Multiply: absorption + coverage.
+  outColor=sum/(4.0*float(uCount));
+}
+</script>
+
+<script id="blur-shader" type="x-shader/x-fragment">
+uniform highp sampler2D uImage;
+uniform vec2 uSize, uStep;
+uniform int uPairs;
+uniform float uWeights[17], uOffsets[16];
+
+vec4 zeroBorder(vec2 uv) {
+  vec2 q=uv*uSize;
+  vec2 weight=clamp(min(q+0.5,uSize+0.5-q),0.0,1.0);
+  return texture(uImage,uv)*weight.x*weight.y;
+}
+void main() {
+  vec2 uv=gl_FragCoord.xy/uSize;
+  vec4 value=zeroBorder(uv)*uWeights[0];
+  for (int k=0;k<16;k++) {
+    if (k>=uPairs) break;
+    vec2 offset=uStep*uOffsets[k];
+    value+=(zeroBorder(uv-offset)+zeroBorder(uv+offset))*uWeights[k+1];
+  }
+  outColor=value;
+}
+</script>
+
+<script id="merge-shader" type="x-shader/x-fragment">
+uniform highp sampler2D uPrevious, uLayer, uVideo;
+uniform ivec2 uOrigin, uSize;
+uniform bool uMultiply, uShade;
+uniform float uStrength, uGrain, uMedian, uShadeLo, uShadeHi;
+uniform vec3 uShadeEdges[4];
+uniform uint uSeed;
+
+// carry_shading: ink on a blank surface keeps its light. cv2 BGR2GRAY (rounded) + GaussianBlur sigma 1 (9 taps).
+float shadeGray(ivec2 p) {
+  const float w[5]=float[5](0.39894347,0.24197145,0.05399113,0.00443186,0.00013383);
+  ivec2 hi=textureSize(uVideo,0)-ivec2(1);
+  hi.y=hi.y/2;  // top half only: the bottom half is the matte
+  float sum=0.0;
+  for (int dy=-4;dy<=4;dy++) for (int dx=-4;dx<=4;dx++) {
+    ivec2 q=clamp(p+ivec2(dx,dy),ivec2(0),hi);
+    vec3 c=texelFetch(uVideo,q,0).rgb*255.0;
+    sum+=w[abs(dx)]*w[abs(dy)]*floor(dot(c,vec3(0.299,0.587,0.114))+0.5);
+  }
+  return sum;
+}
+
+uint hash(uint x) {
+  x^=x>>16u; x*=0x7feb352du;
+  x^=x>>15u; x*=0x846ca68bu;
+  return x^(x>>16u);
+}
+float normal(uint seed) {
+  float a=max((float(hash(seed))+0.5)/4294967296.0,1e-7);
+  float b=(float(hash(seed^0x68bc21ebu))+0.5)/4294967296.0;
+  return sqrt(-2.0*log(a))*cos(6.28318530718*b);
+}
+void main() {
+  ivec2 p=ivec2(gl_FragCoord.xy),q=p-uOrigin;
+  vec3 f=texelFetch(uPrevious,p,0).rgb;
+  vec4 layer=vec4(0.0);
+  if (all(greaterThanEqual(q,ivec2(0))) && all(lessThan(q,uSize)))
+    layer=texelFetch(uLayer,q,0);
+
+  vec3 rgb;
+  if (uMultiply) {
+    rgb=f*(vec3(1.0)-uStrength*layer.rgb);
+  } else {
+    float alpha=clamp(layer.a,0.0,1.0);
+    rgb=layer.rgb+f*(1.0-alpha);
+    if (uShade) {
+      bool inside=true;
+      for (int e=0;e<4;e++) inside=inside && dot(uShadeEdges[e],vec3(vec2(p),1.0))>=0.0;
+      if (inside) rgb*=clamp(shadeGray(p)/uMedian,uShadeLo,uShadeHi);
+    }
+    if (uGrain>0.0 && alpha>0.0) {
+      uint seed=uSeed^(uint(p.x)*0x9e3779b9u)^(uint(p.y)*0x85ebca6bu);
+      vec3 noise=vec3(normal(seed),normal(seed+0x12345u),normal(seed+0x6789au));
+      rgb+=noise*(uGrain*alpha);
+    }
+  }
+  rgb=clamp(rgb,0.0,1.0);
+  // print_on truncates; composite_frame rounds over blends.
+  rgb=uMultiply ? floor(rgb*255.0+0.0001)/255.0 : floor(rgb*255.0+0.5)/255.0;
+  outColor=vec4(rgb,1.0);
+}
+</script>
+
+<script id="present-shader" type="x-shader/x-fragment">
+uniform highp sampler2D uVideo, uResult, uLabel;
+uniform int uHeight;
+uniform bool uShowLabel;
+uniform ivec2 uLabelOrigin, uLabelSize;
+
+void main() {
+  // Offscreen textures use top-down logical rows; flip only for presentation.
+  ivec2 p=ivec2(int(gl_FragCoord.x),uHeight-1-int(gl_FragCoord.y));
+  vec3 f=texelFetch(uVideo,p,0).rgb;
+  float a=texelFetch(uVideo,p+ivec2(0,uHeight),0).r;
+  vec3 rgb=mix(texelFetch(uResult,p,0).rgb,f,clamp(a,0.0,1.0));
+  ivec2 q=p-uLabelOrigin;
+  if (uShowLabel && all(greaterThanEqual(q,ivec2(0))) && all(lessThan(q,uLabelSize))) {
+    vec4 label=texelFetch(uLabel,q,0);
+    rgb=mix(rgb,label.rgb,label.a);
+  }
+  outColor=vec4(rgb,1.0);
+}
+</script>
+
+<script>
+"use strict";
+(() => {
+  const CLIPS = ["patio_waiter", "pizzeria_counter", "pizzeria_box"];
+  const $ = id => document.getElementById(id);
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  const assetKey = (slot, brand) => slot + "/" + brand;
+  const title = s => s.replaceAll("_", " ");
+  const FS_HEADER = "#version 300 es\nprecision highp float;\nprecision highp int;\nout vec4 outColor;\n";
+  const imageCache = new Map(), clipCache = new Map();
+
+  async function json(url) {
+    const r = await fetch(url, {cache: "no-cache"});  // exports are rewritten in place
+    if (!r.ok) throw new Error(r.status + " fetching " + url);
+    return r.json();
+  }
+
+  function image(url) {
+    if (!imageCache.has(url)) imageCache.set(url, new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Cannot load artwork: " + url));
+      img.src = url;
+    }));
+    return imageCache.get(url);
+  }
+
+  const catalogPromise = Promise.all(CLIPS.map(async name => {
+    const base = new URL("/static/player/" + name + "/", location.href);
+    try {
+      const r = await fetch(new URL("track.json", base), {cache: "no-cache"});
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(r.status + " loading " + name);
+      return {name, base, track: await r.json()};
+    } catch (error) {
+      return {name, base, error};
+    }
+  })).then(entries => entries.filter(Boolean));
+
+  function loadClip(name) {
+    if (!clipCache.has(name)) clipCache.set(name, (async () => {
+      const entry = (await catalogPromise).find(e => e.name === name);
+      if (!entry) throw new Error("Clip has not been exported: " + name);
+      if (entry.error) throw entry.error;
+      const t = entry.track;
+      if (!(t.fps > 0 && Number.isInteger(t.frames) && t.frames > 0 &&
+            Number.isInteger(t.width) && t.width > 0 &&
+            Number.isInteger(t.height) && t.height > 0 && Array.isArray(t.slots))) {
+        throw new Error("Invalid track.json for " + name);
+      }
+      const [profiles, assets] = await Promise.all([
+        json(new URL("assignments.json", entry.base)),
+        Promise.all(t.slots.flatMap(s => Object.entries(s.brands).map(async ([brand, spec]) => ({
+          key: assetKey(s.id, brand), spec,
+          image: await image(new URL(spec.art, entry.base).href)
+        }))))
+      ]);
+      if (!Object.keys(profiles).length) throw new Error("No viewers in assignments.json");
+      return {...entry, profiles, assets};
+    })());
+    return clipCache.get(name);
+  }
+
+  function homography(q, width, height) {
+    const [a,b,c,d] = q;
+    const dx1=b[0]-c[0], dx2=d[0]-c[0], dx3=a[0]-b[0]+c[0]-d[0];
+    const dy1=b[1]-c[1], dy2=d[1]-c[1], dy3=a[1]-b[1]+c[1]-d[1];
+    const det=dx1*dy2-dx2*dy1;
+    if (Math.abs(det) < 1e-9) throw new Error("Degenerate tracked quad");
+    const g=(dx3*dy2-dx2*dy3)/det, h=(dx1*dy3-dx3*dy1)/det;
+    const sx=Math.max(1,width-1), sy=Math.max(1,height-1);
+    // Column-major: artwork pixel centres [0..w-1] x [0..h-1] -> quad.
+    return new Float32Array([
+      (b[0]-a[0]+g*b[0])/sx, (b[1]-a[1]+g*b[1])/sx, g/sx,
+      (d[0]-a[0]+h*d[0])/sy, (d[1]-a[1]+h*d[1])/sy, h/sy,
+      a[0], a[1], 1
+    ]);
+  }
+
+  function expand(q, bleed) {
+    if (!bleed) return q;
+    const c=q.reduce((v,p)=>[v[0]+p[0]/4,v[1]+p[1]/4],[0,0]);
+    const distance=Math.min(...q.map((p,k)=>{
+      const r=q[(k+1)%4], dx=r[0]-p[0], dy=r[1]-p[1];
+      return Math.abs(dx*(c[1]-p[1])-dy*(c[0]-p[0]))/Math.hypot(dx,dy);
+    }));
+    if (!(distance > 1e-6)) throw new Error("Degenerate tracked quad");
+    // Same radial expansion as composite._expanded_quad.
+    return q.map(p=>p.map((v,k)=>c[k]+(v-c[k])*(1+bleed/distance)));
+  }
+
+  function motion(slot, i) {
+    const q=slot.quads[i], prev=slot.quads[i-1], next=slot.quads[i+1];
+    const shutter=clamp(Number(slot.shutter) || 0,0,1);
+    if (!shutter || (!prev && !next)) return [q];
+    return Array.from({length:5},(_,k)=>{
+      const t=((k+0.5)/5-0.5)*shutter;
+      let n, amount;
+      if (t < 0) { n=prev || next; amount=prev ? -t : t; }
+      else { n=next || prev; amount=next ? t : -t; }
+      return q.map((p,j)=>p.map((v,c)=>v+amount*(n[j][c]-v)));
+    });
+  }
+
+  function edgeLines(q) {
+    const c=q.reduce((v,p)=>[v[0]+p[0]/4,v[1]+p[1]/4],[0,0]);
+    return q.flatMap((p,k)=>{
+      const b=q[(k+1)%4], dx=b[0]-p[0], dy=b[1]-p[1], length=Math.hypot(dx,dy);
+      let nx=-dy/length, ny=dx/length;
+      if (nx*(c[0]-p[0])+ny*(c[1]-p[1])<0) { nx=-nx; ny=-ny; }
+      return [nx,ny,-nx*p[0]-ny*p[1]];
+    });
+  }
+
+  function hashString(s) {
+    let h=2166136261;
+    for (let i=0;i<s.length;i++) h=Math.imul(h^s.charCodeAt(i),16777619);
+    return h>>>0;
+  }
+
+  function gaussian(sigma) {
+    // Pair adjacent taps: bilinear filtering evaluates their exact weighted sum.
+    const radius=Math.ceil(3*sigma), raw=[];
+    for (let k=0;k<=radius;k++) raw.push(Math.exp(-k*k/(2*sigma*sigma)));
+    const total=raw[0]+2*raw.slice(1).reduce((a,b)=>a+b,0);
+    const weights=new Float32Array(17), offsets=new Float32Array(16);
+    weights[0]=raw[0]/total;
+    let pairs=0;
+    for (let k=1;k<=radius;k+=2) {
+      const a=raw[k]/total, b=(raw[k+1] || 0)/total, w=a+b;
+      offsets[pairs]=w ? (k*a+(k+1)*b)/w : k;
+      weights[++pairs]=w;
+    }
+    return {weights,offsets,pairs};
+  }
+
+  function labelBitmap(height) {
+    const scale=height/900, font=Math.max(11,Math.round(20*scale));
+    const canvas=document.createElement("canvas"), c=canvas.getContext("2d");
+    c.font=font+"px system-ui, sans-serif";
+    canvas.width=Math.ceil(c.measureText("AI product placement").width)+20;
+    canvas.height=font+20;
+    const w=canvas.width,h=canvas.height,r=6;
+    c.fillStyle="rgba(0,0,0,.55)";
+    c.beginPath(); c.moveTo(r,0);
+    c.arcTo(w,0,w,h,r); c.arcTo(w,h,0,h,r);
+    c.arcTo(0,h,0,0,r); c.arcTo(0,0,w,0,r);
+    c.closePath(); c.fill();
+    c.font=font+"px system-ui, sans-serif";
+    c.textBaseline="top"; c.fillStyle="white";
+    c.fillText("AI product placement",10,9);
+    return {canvas,x:Math.max(2,Math.round(24*scale)-10),
+      y:Math.max(2,height-Math.round(36*scale)-font-10)};
+  }
+
+  class Renderer {
+    constructor(canvas) {
+      this.canvas=canvas;
+      const gl=this.gl=canvas.getContext("webgl2", {
+        alpha:false, antialias:false, depth:false, stencil:false,
+        preserveDrawingBuffer:false, powerPreference:"high-performance"
+      });
+      if (!gl) throw new Error("WebGL2 is required.");
+      this.float=!!gl.getExtension("EXT_color_buffer_float");
+      this.maxSize=gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      gl.disable(gl.DITHER); gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.NONE);
+      if ("drawingBufferColorSpace" in gl) gl.drawingBufferColorSpace="srgb";
+      this.vao=gl.createVertexArray();
+
+      const vertex=this.shader(gl.VERTEX_SHADER,$("vertex-shader").textContent.trim());
+      this.programs={};
+      for (const name of ["source","warp","blur","merge","present"]) {
+        const fragment=this.shader(gl.FRAGMENT_SHADER,FS_HEADER+$(name+"-shader").textContent);
+        const id=gl.createProgram();
+        gl.attachShader(id,vertex); gl.attachShader(id,fragment); gl.linkProgram(id);
+        gl.deleteShader(fragment);
+        if (!gl.getProgramParameter(id,gl.LINK_STATUS))
+          throw new Error(gl.getProgramInfoLog(id));
+        const locations=new Map();
+        this.programs[name]={id,u:n=>{
+          if (!locations.has(n)) locations.set(n,gl.getUniformLocation(id,n));
+          return locations.get(n);
+        }};
+      }
+      gl.deleteShader(vertex);
+      this.art=new Map(); this.buffers=new Map(); this.kernels=new Map();
+
+      canvas.addEventListener("webglcontextlost",e=>{
+        e.preventDefault(); this.lost=true;
+        if (this.onError)
+          this.onError(new Error("WebGL context lost. Reload to restore playback."));
+      });
+    }
+
+    shader(type,source) {
+      const gl=this.gl,s=gl.createShader(type);
+      gl.shaderSource(s,source); gl.compileShader(s);
+      if (!gl.getShaderParameter(s,gl.COMPILE_STATUS))
+        throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    }
+
+    texture(w,h,floating=false,source=null) {
+      const gl=this.gl;
+      if (w>this.maxSize || h>this.maxSize) throw new Error("Texture exceeds GPU size limit.");
+      const tex=gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D,tex);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      if (source)
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,source);
+      else
+        gl.texImage2D(gl.TEXTURE_2D,0,floating?gl.RGBA16F:gl.RGBA8,w,h,0,
+          gl.RGBA,floating?gl.HALF_FLOAT:gl.UNSIGNED_BYTE,null);
+      return tex;
+    }
+
+    target(w,h,floating=false) {
+      const gl=this.gl,tex=this.texture(w,h,floating),fbo=gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)
+        throw new Error("Cannot allocate compositor framebuffer.");
+      return {tex,fbo,w,h};
+    }
+
+    free(t) {
+      if (!t) return;
+      this.gl.deleteFramebuffer(t.fbo); this.gl.deleteTexture(t.tex);
+    }
+
+    setData(data) {
+      const gl=this.gl;
+      if (this.full) this.full.forEach(t=>this.free(t));
+      for (const b of this.buffers.values()) { this.free(b.a); this.free(b.b); }
+      for (const a of this.art.values()) gl.deleteTexture(a.tex);
+      if (this.videoTex) gl.deleteTexture(this.videoTex);
+      if (this.labelTex) gl.deleteTexture(this.labelTex);
+      this.buffers.clear(); this.art.clear(); this.kernels.clear();
+
+      this.data=data;
+      const t=data.track;
+      this.canvas.width=t.width; this.canvas.height=t.height;
+      this.full=[this.target(t.width,t.height),this.target(t.width,t.height)];
+      this.videoTex=this.texture(t.width,2*t.height);
+      this.uploaded=false;
+      for (const a of data.assets) this.art.set(a.key,{
+        tex:this.texture(a.image.naturalWidth,a.image.naturalHeight,false,a.image),
+        w:a.image.naturalWidth,h:a.image.naturalHeight,spec:a.spec
+      });
+      this.label=labelBitmap(t.height);
+      this.labelTex=this.texture(
+        this.label.canvas.width,this.label.canvas.height,false,this.label.canvas);
+    }
+
+    begin(name,target,w,h) {
+      const gl=this.gl,p=this.programs[name];
+      gl.bindFramebuffer(gl.FRAMEBUFFER,target ? target.fbo : null);
+      gl.viewport(0,0,w,h); gl.useProgram(p.id); gl.bindVertexArray(this.vao);
+      return p;
+    }
+
+    bind(unit,tex) {
+      const gl=this.gl;
+      gl.activeTexture(gl.TEXTURE0+unit); gl.bindTexture(gl.TEXTURE_2D,tex);
+    }
+
+    draw() { this.gl.drawArrays(this.gl.TRIANGLES,0,3); }
+
+    slotBuffer(id,w,h) {
+      let b=this.buffers.get(id);
+      if (!b || b.a.w<w || b.a.h<h) {
+        const nw=Math.min(this.maxSize,Math.ceil(Math.max(w,b ? b.a.w : 0)/32)*32);
+        const nh=Math.min(this.maxSize,Math.ceil(Math.max(h,b ? b.a.h : 0)/32)*32);
+        if (nw<w || nh<h) throw new Error("Slot exceeds GPU size limit.");
+        if (b) { this.free(b.a); this.free(b.b); }
+        b={a:this.target(nw,nh,this.float),b:this.target(nw,nh,this.float)};
+        this.buffers.set(id,b);
+      }
+      return b;
+    }
+
+    blur(buffer,sigma) {
+      if (sigma<=0.001) return;
+      const gl=this.gl;
+      // Existing exports need one pair of passes. Split exceptionally large sigmas
+      // into smaller Gaussian variances to keep a bounded shader loop.
+      const passes=Math.max(1,Math.ceil((sigma/10)**2));
+      const stepSigma=sigma/Math.sqrt(passes),key=stepSigma.toFixed(6);
+      if (!this.kernels.has(key)) this.kernels.set(key,gaussian(stepSigma));
+      const k=this.kernels.get(key),w=buffer.a.w,h=buffer.a.h;
+
+      for (let pass=0;pass<passes;pass++) for (let axis=0;axis<2;axis++) {
+        const input=axis ? buffer.b : buffer.a, output=axis ? buffer.a : buffer.b;
+        const p=this.begin("blur",output,w,h);
+        this.bind(0,input.tex); gl.uniform1i(p.u("uImage"),0);
+        gl.uniform2f(p.u("uSize"),w,h);
+        gl.uniform2f(p.u("uStep"),axis ? 0 : 1/w,axis ? 1/h : 0);
+        gl.uniform1i(p.u("uPairs"),k.pairs);
+        gl.uniform1fv(p.u("uWeights[0]"),k.weights);
+        gl.uniform1fv(p.u("uOffsets[0]"),k.offsets);
+        this.draw();
+      }
+    }
+
+    render(video,index,profileId,{ads=true,grain=true,label=true,upload=true}={}) {
+      if (this.lost) throw new Error("WebGL context is lost.");
+      const gl=this.gl,t=this.data.track,W=t.width,H=t.height;
+      const profile=this.data.profiles[profileId];
+      if (!profile) throw new Error("Unknown viewer: "+profileId);
+      const i=clamp(Math.round(index),0,t.frames-1);
+
+      if (upload || !this.uploaded) {
+        if (video.readyState<2) throw new Error("Video frame is not decoded.");
+        this.bind(0,this.videoTex);
+        gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,video);
+        this.uploaded=true;
+      }
+
+      let p=this.begin("source",this.full[0],W,H),current=0;
+      this.bind(0,this.videoTex); gl.uniform1i(p.u("uVideo"),0); this.draw();
+
+      if (ads) for (const slot of t.slots) {
+        const brand=profile.assignment[slot.id];
+        if (!brand || !slot.quads[i]) continue;
+        const art=this.art.get(assetKey(slot.id,brand));
+        if (!art) throw new Error("Missing artwork for "+slot.id+" / "+brand);
+
+        const multiply=slot.blend==="multiply";
+        const sigma=Math.hypot(
+          Number(slot.sigma[i]) || 0,Number(art.spec.extra_blur) || 0);
+        const qs=motion(slot,i).map(q=>expand(q,multiply ? 0 : 2));
+        const points=qs.flat(),pad=Math.ceil(3*sigma)+2;
+        const x0=Math.max(-pad,Math.floor(Math.min(...points.map(q=>q[0])))-pad);
+        const y0=Math.max(-pad,Math.floor(Math.min(...points.map(q=>q[1])))-pad);
+        const x1=Math.min(W+pad,Math.ceil(Math.max(...points.map(q=>q[0])))+pad+1);
+        const y1=Math.min(H+pad,Math.ceil(Math.max(...points.map(q=>q[1])))+pad+1);
+        if (x1<=x0 || y1<=y0) continue;
+
+        const b=this.slotBuffer(slot.id,x1-x0,y1-y0);
+        const matrices=new Float32Array(45),edges=new Float32Array(60);
+        qs.forEach((q,k)=>{
+          matrices.set(homography(q,art.w,art.h),9*k);
+          edges.set(edgeLines(q),12*k);
+        });
+
+        p=this.begin("warp",b.a,b.a.w,b.a.h);
+        this.bind(0,art.tex); gl.uniform1i(p.u("uArt"),0);
+        gl.uniform1i(p.u("uCount"),qs.length);
+        gl.uniform1i(p.u("uMultiply"),multiply ? 1 : 0);
+        gl.uniform2f(p.u("uOrigin"),x0,y0);
+        gl.uniform2f(p.u("uArtSize"),art.w,art.h);
+        gl.uniformMatrix3fv(p.u("uH[0]"),false,matrices);
+        gl.uniform3fv(p.u("uEdges[0]"),edges);
+        gl.uniform3fv(p.u("uGain"),slot.gain[i] || [1,1,1]);
+        gl.uniform3fv(p.u("uVeil"),(slot.veil[i] || [0,0,0]).map(v=>v/255));
+        this.draw();
+        this.blur(b,sigma);
+
+        p=this.begin("merge",this.full[1-current],W,H);
+        this.bind(0,this.full[current].tex); this.bind(1,b.a.tex); this.bind(2,this.videoTex);
+        gl.uniform1i(p.u("uPrevious"),0); gl.uniform1i(p.u("uLayer"),1); gl.uniform1i(p.u("uVideo"),2);
+        const shade=slot.shade, median=shade && shade.median[i];
+        gl.uniform1i(p.u("uShade"),median && !multiply ? 1 : 0);
+        if (median && !multiply) {
+          gl.uniform1f(p.u("uMedian"),median);
+          gl.uniform1f(p.u("uShadeLo"),shade.lo); gl.uniform1f(p.u("uShadeHi"),shade.hi);
+          gl.uniform3fv(p.u("uShadeEdges[0]"),new Float32Array(edgeLines(shade.quads[i])));
+        }
+        gl.uniform2i(p.u("uOrigin"),x0,y0);
+        gl.uniform2i(p.u("uSize"),b.a.w,b.a.h);
+        gl.uniform1i(p.u("uMultiply"),multiply ? 1 : 0);
+        gl.uniform1f(p.u("uStrength"),Number(slot.ink_strength ?? 1));
+        gl.uniform1f(p.u("uGrain"),
+          grain && !multiply ? (Number(slot.grain) || 0)/255 : 0);
+        gl.uniform1ui(p.u("uSeed"),
+          (hashString(slot.id)^Math.imul(i+1,0x9e3779b9))>>>0);
+        this.draw(); current=1-current;
+      }
+
+      p=this.begin("present",null,W,H);
+      this.bind(0,this.videoTex);
+      this.bind(1,this.full[current].tex);
+      this.bind(2,this.labelTex);
+      gl.uniform1i(p.u("uVideo"),0);
+      gl.uniform1i(p.u("uResult"),1);
+      gl.uniform1i(p.u("uLabel"),2);
+      gl.uniform1i(p.u("uHeight"),H);
+      gl.uniform1i(p.u("uShowLabel"),label ? 1 : 0);
+      gl.uniform2i(p.u("uLabelOrigin"),this.label.x,this.label.y);
+      gl.uniform2i(p.u("uLabelSize"),this.label.canvas.width,this.label.canvas.height);
+      this.draw();
+    }
+  }
+
+  async function openVideo(data) {
+    const video=document.createElement("video");
+    if (!video.requestVideoFrameCallback)
+      throw new Error("requestVideoFrameCallback is required.");
+    video.muted=true; video.playsInline=true; video.preload="auto";
+    video.className="decoder"; video.setAttribute("aria-hidden","true");
+    document.body.append(video);
+    const s={
+      data,video,decoded:0,index:0,callback:0,wanted:null,
+      seekBusy:false,closed:false,seekingTo:null
+    };
+    try {
+      await new Promise((resolve,reject)=>{
+        const timeout=setTimeout(()=>finish(new Error("Video load timed out.")),20000);
+        const loaded=()=>finish();
+        const failed=()=>finish(new Error("Cannot decode "+data.name+"/stack.mp4"));
+        function finish(error) {
+          clearTimeout(timeout);
+          video.removeEventListener("loadeddata",loaded);
+          video.removeEventListener("error",failed);
+          error ? reject(error) : resolve();
+        }
+        video.addEventListener("loadeddata",loaded);
+        video.addEventListener("error",failed);
+        video.src=new URL("stack.mp4",data.base).href;
+        video.load();
+      });
+      if (video.videoWidth!==data.track.width || video.videoHeight!==2*data.track.height)
+        throw new Error("stack.mp4 dimensions do not match track.json");
+      return s;
+    } catch (error) { closeVideo(s); throw error; }
+  }
+
+  function closeVideo(s) {
+    if (!s) return;
+    s.closed=true;
+    if (s.abortSeek) s.abortSeek();
+    if (s.callback) s.video.cancelVideoFrameCallback(s.callback);
+    s.video.pause(); s.video.removeAttribute("src"); s.video.load(); s.video.remove();
+  }
+
+  function seekDecoded(s,index) {
+    const v=s.video,t=s.data.track;
+    if (s.closed) return Promise.reject(new Error("Decoder was closed."));
+    if (!v.seeking && s.decoded===index && v.readyState>=2) return Promise.resolve();
+
+    return new Promise((resolve,reject)=>{
+      let callback=0,matched=false,finished=false;
+      const timeout=setTimeout(
+        ()=>finish(new Error("Exact-frame decode timed out at frame "+index)),15000);
+
+      function finish(error) {
+        if (finished) return;
+        finished=true; clearTimeout(timeout);
+        if (callback) v.cancelVideoFrameCallback(callback);
+        v.removeEventListener("seeked",onSeeked);
+        v.removeEventListener("error",onError);
+        s.abortSeek=null;
+        if (error) reject(error);
+        else { s.decoded=index; resolve(); }
+      }
+      function onSeeked() { if (matched) finish(); }
+      function onError() { finish(new Error("Video seek failed.")); }
+      function onFrame(now,meta) {
+        callback=0;
+        if (Math.round(meta.mediaTime*t.fps)===index) {
+          matched=true;
+          if (!v.seeking) finish();
+        } else callback=v.requestVideoFrameCallback(onFrame);
+      }
+
+      s.abortSeek=()=>finish(new Error("Decoder was closed."));
+      v.addEventListener("seeked",onSeeked);
+      v.addEventListener("error",onError);
+      callback=v.requestVideoFrameCallback(onFrame);
+      // Arrays and stack.mp4 are already sliced at track.start.
+      // Seek inside the sample, avoiding ambiguity at its timestamp boundary.
+      let target=(index+0.25)/t.fps;
+      if (Math.abs(v.currentTime-target)<1e-8) target=(index+0.35)/t.fps;
+      if (Number.isFinite(v.duration))
+        target=Math.min(target,Math.max(0,v.duration-1e-6));
+      try { v.currentTime=target; } catch (error) { finish(error); }
+    });
+  }
+
+  let live=null,renderer=null,profileId=null,withAds=true,generation=0,drawCount=0;
+
+  function showError(error) {
+    $("error").hidden=false;
+    $("error").textContent=error.message || String(error);
+    if (live) live.video.pause();
+  }
+
+  function paint(upload=true) {
+    if (!live || !renderer) return;
+    renderer.render(live.video,live.index,profileId,{ads:withAds,upload});
+    $("scrub").value=live.index;
+    $("frame").textContent="Frame "+(live.index+1)+" / "+live.data.track.frames;
+    drawCount++;
+  }
+
+  function profileUI() {
+    const data=live.data,p=data.profiles[profileId];
+    for (const button of $("viewers").children) {
+      const selected=button.dataset.profile===profileId;
+      button.classList.toggle("selected",selected);
+      button.setAttribute("aria-pressed",String(selected));
+    }
+
+    const list=$("placements");
+    list.replaceChildren();
+    for (const slot of data.track.slots) {
+      const item=document.createElement("div");
+      const name=document.createElement("span"),brand=document.createElement("strong");
+      name.textContent=title(slot.id)+(slot.surface ? " · "+slot.surface : "");
+      brand.textContent=p.assignment[slot.id] || "No placement";
+      item.append(name,brand); list.append(item);
+      if (p.rationale && typeof p.rationale==="object" && p.rationale[slot.id]) {
+        const reason=document.createElement("p");
+        reason.textContent=String(p.rationale[slot.id]);
+        list.append(reason);
+      }
+    }
+    $("rationale").textContent=typeof p.rationale==="string" ? p.rationale : "";
+    $("chooser").textContent=p.chooser || "Muse";
+  }
+
+  async function activateClip(name) {
+    const token=++generation;
+    closeVideo(live); live=null;
+    $("play").disabled=true;
+    $("scrub").disabled=true;
+    $("download").disabled=true;
+    $("viewers").replaceChildren();
+    $("placeholder").hidden=false;
+    $("placeholder").textContent="Loading clip…";
+    $("error").hidden=true;
+    let opened=null;
+
+    try {
+      const data=await loadClip(name);
+      if (token!==generation) return;
+      opened=await openVideo(data);
+      if (token!==generation) { closeVideo(opened); return; }
+
+      renderer.setData(data);
+      live=opened;
+      profileId=Object.hasOwn(data.profiles,profileId)
+        ? profileId : Object.keys(data.profiles)[0];
+
+      for (const [id,p] of Object.entries(data.profiles)) {
+        const button=document.createElement("button");
+        const label=document.createElement("strong"),prefs=document.createElement("small");
+        button.type="button"; button.dataset.profile=id;
+        label.textContent=p.label || id;
+        prefs.textContent=(p.preferences || []).join(" · ");
+        button.append(label,prefs);
+        button.onclick=()=>{
+          if (!live) return;
+          profileId=id; profileUI();
+          downloadToken++; $("download-status").textContent=""; $("download").disabled=false;
+          try { paint(false); } catch (error) { showError(error); }
+        };
+        $("viewers").append(button);
+      }
+
+      $("scrub").max=data.track.frames-1;
+      $("scrub").disabled=false; $("play").disabled=false; $("download").disabled=false;
+      downloadToken++; $("download-status").textContent="";
+      $("play").textContent="Play";
+      profileUI(); paint();
+      $("placeholder").hidden=true;
+
+      opened.video.addEventListener("play",()=>{
+        if (live===opened) $("play").textContent="Pause";
+      });
+      opened.video.addEventListener("pause",()=>{
+        if (live===opened) $("play").textContent="Play";
+      });
+
+      const onFrame=(now,meta)=>{
+        if (live!==opened || opened.closed) return;
+        opened.index=clamp(Math.round(meta.mediaTime*data.track.fps),0,data.track.frames-1);
+        opened.decoded=opened.index;
+        try { paint(); } catch (error) { showError(error); return; }
+        opened.callback=opened.video.requestVideoFrameCallback(onFrame);
+      };
+      opened.callback=opened.video.requestVideoFrameCallback(onFrame);
+
+      const url=new URL(location.href);
+      url.searchParams.set("clip",name);
+      history.replaceState(null,"",url);
+    } catch (error) {
+      if (opened) closeVideo(opened);
+      if (token===generation) {
+        live=null; showError(error);
+        $("placeholder").textContent="Could not load clip.";
+      }
+    }
+  }
+
+  function togglePlay() {
+    if (!live) return;
+    const s=live;
+    if (!s.video.paused) s.video.pause();
+    else s.video.play().catch(error=>{ if (s===live) showError(error); });
+  }
+
+  async function requestSeek(index) {
+    const s=live;
+    if (!s) return;
+    s.video.pause();
+    s.wanted=clamp(Math.round(index),0,s.data.track.frames-1);
+    if (s.seekBusy) return;
+    s.seekBusy=true;
+    try {
+      while (s.wanted!==null && s===live) {
+        const desired=s.wanted;
+        s.wanted=null; s.seekingTo=desired;
+        await seekDecoded(s,desired);
+        if (s!==live) return;
+        s.index=desired; s.seekingTo=null;
+        paint();
+      }
+    } catch (error) {
+      if (s===live) showError(error);
+    } finally {
+      s.seekBusy=false; s.seekingTo=null;
+    }
+  }
+
+  // The browser can't embed Video Seal, so the file to keep is rendered (and watermarked) on the server.
+  let downloadToken=0;
+  $("download").onclick=async()=>{
+    if (!live) return;
+    const token=++downloadToken,clip=live.data.name,viewer=profileId;
+    $("download").disabled=true;
+    $("download-status").textContent=
+      "Rendering with a Video Seal watermark… a new version takes 1–10 minutes.";
+    try {
+      const r=await fetch("/api/viewer_render",{method:"POST",
+        headers:{"content-type":"application/json"},body:JSON.stringify({clip,profile_id:viewer})});
+      const body=await r.json();
+      if (!r.ok) throw new Error(body.detail || r.status);
+      if (token!==downloadToken) return;
+      const link=document.createElement("a");
+      link.href=body.video_url; link.download=""; link.textContent="Save video";
+      $("download-status").replaceChildren(link,
+        " · watermark "+(body.verified ? "verified" : "NOT verified")+" · "+body.manifest_id);
+    } catch (error) {
+      if (token===downloadToken) $("download-status").textContent="Render failed: "+(error.message || error);
+    } finally {
+      if (token===downloadToken) $("download").disabled=!live;
+    }
+  };
+
+  $("clip").onchange=e=>activateClip(e.target.value);
+  $("play").onclick=togglePlay;
+  $("scrub").oninput=e=>requestSeek(Number(e.target.value));
+
+  for (const button of document.querySelectorAll("[data-mode]")) button.onclick=()=>{
+    withAds=button.dataset.mode==="ads";
+    for (const b of document.querySelectorAll("[data-mode]")) {
+      const selected=(b.dataset.mode==="ads")===withAds;
+      b.classList.toggle("selected",selected);
+      b.setAttribute("aria-pressed",String(selected));
+    }
+    try { paint(false); } catch (error) { showError(error); }
+  };
+
+  document.addEventListener("keydown",e=>{
+    if (e.altKey || e.ctrlKey || e.metaKey ||
+        e.target.closest("input, select, textarea, [contenteditable=true]")) return;
+    if (e.code==="Space") {
+      e.preventDefault();
+      if (!e.repeat) togglePlay();
+    } else if (e.code==="ArrowLeft" || e.code==="ArrowRight") {
+      if (!live) return;
+      e.preventDefault();
+      requestSeek((live.wanted ?? live.seekingTo ?? live.index)+
+        (e.code==="ArrowRight" ? 1 : -1));
+    }
+  });
+
+  let statsTime=performance.now();
+  setInterval(()=>{
+    const now=performance.now();
+    $("fps").textContent=(drawCount*1000/(now-statsTime)).toFixed(1)+" compositor fps";
+    statsTime=now; drawCount=0;
+  },1000);
+
+  // One independent decoder/context, reused between serialized verification calls.
+  let testRenderer=null,testSession=null,testQueue=Promise.resolve();
+  window.renderFrameForTest=(clip,viewer,frameIndex)=>{
+    const job=testQueue.then(async()=>{
+      const data=await loadClip(clip),t=data.track;
+      if (!Object.hasOwn(data.profiles,viewer))
+        throw new Error("Unknown viewer: "+viewer);
+      if (!Number.isInteger(frameIndex) || frameIndex<0 || frameIndex>=t.frames)
+        throw new RangeError(
+          "frameIndex must be an exported frame in [0,"+(t.frames-1)+"]");
+
+      if (!testRenderer)
+        testRenderer=new Renderer(document.createElement("canvas"));
+      if (!testSession || testSession.data!==data) {
+        closeVideo(testSession); testSession=null;
+        testRenderer.setData(data);
+        testSession=await openVideo(data);
+      }
+      await seekDecoded(testSession,frameIndex);
+      testSession.index=frameIndex;
+      testRenderer.render(testSession.video,frameIndex,viewer,{
+        ads:true,grain:false,label:false
+      });
+      // Capture synchronously before the browser discards the drawing buffer.
+      return testRenderer.canvas.toDataURL("image/png");
+    });
+    testQueue=job.then(()=>undefined,()=>undefined);
+    return job;
+  };
+
+  (async()=>{
+    const catalog=await catalogPromise,available=catalog.filter(e=>!e.error);
+    if (!available.length) throw new Error("No readable clip exports were found.");
+    $("clip").replaceChildren();
+    for (const entry of catalog) {
+      const option=document.createElement("option");
+      option.value=entry.name;
+      option.textContent=title(entry.name)+(entry.error ? " (unavailable)" : "");
+      option.disabled=!!entry.error;
+      $("clip").append(option);
+    }
+
+    renderer=new Renderer($("screen"));
+    renderer.onError=showError;
+    const requested=new URLSearchParams(location.search).get("clip");
+    const initial=available.some(e=>e.name===requested) ? requested : available[0].name;
+    $("clip").value=initial;
+    await activateClip(initial);
+  })().catch(showError);
+})();
+</script>
+</body>
+</html>

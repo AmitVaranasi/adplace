@@ -1,0 +1,20 @@
+  box_lid: fizzwell (box_print artwork; surface median luma 159)
+  box_lid: surface softness sigma 0.89 px, grain 0.25
+  box_lid: clean plate 320x146 in 2 s
+  box_lid: slicedash (box_print artwork; surface median luma 159)
+  box_lid: surface softness sigma 0.89 px, grain 0.25
+  box_lid: 2 brands, valid 603/661
+  stack 0/661 5 s
+  stack 100/661 8 s
+  stack 200/661 15 s
+  stack 300/661 24 s
+  stack 400/661 31 s
+  stack 500/661 38 s
+  stack 600/661 46 s
+  viewer-a (Morning commuter): {'box_lid': 'fizzwell'}  [muse (muse-spark-1.3)] Box is eligible and food tag matches restaurant context.
+  viewer-b (Weekend runner): {'box_lid': 'slicedash'}  [muse (muse-spark-1.3)] Matches food context on eligible box surface.
+  viewer-c (Book lover): {'box_lid': 'slicedash'}  [muse (muse-spark-1.3)] Box surface fits delivery brand and matches food context.
+  viewer-d (Weekend traveller): {'box_lid': 'fizzwell'}  [muse (muse-spark-1.3)] Box surface is eligible and food tag matches restaurant context.
+  viewer-e (Home cook): {'box_lid': 'slicedash'}  [muse (muse-spark-1.3)] Box lid fits slicedash and matches food interest and restaurant context.
+  viewer-f (Tech commuter): {'box_lid': 'slicedash'}  [muse (muse-spark-1.3)] slicedash matches viewer tech interest and food context on eligible box surface.
+exported /Users/amitmaheshwarvaranasi/Claude Cowork/adplace/app/static/player/pizzeria_box in 64 s

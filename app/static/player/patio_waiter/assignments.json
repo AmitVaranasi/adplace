@@ -1,0 +1,83 @@
+{
+ "viewer-a": {
+  "label": "Morning commuter",
+  "preferences": [
+   "coffee",
+   "morning"
+  ],
+  "assignment": {
+   "patio_wall": "brewlark",
+   "patio_napkin": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "brewlark matches viewer coffee-morning interests and slicedash matches food context with eligible surfaces."
+ },
+ "viewer-b": {
+  "label": "Weekend runner",
+  "preferences": [
+   "running",
+   "fitness"
+  ],
+  "assignment": {
+   "patio_wall": "kestrel",
+   "patio_napkin": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Kestrel matches viewer running fitness interests and fizzwell matches food context on eligible surfaces."
+ },
+ "viewer-c": {
+  "label": "Book lover",
+  "preferences": [
+   "reading",
+   "learning"
+  ],
+  "assignment": {
+   "patio_wall": "paperwhale",
+   "patio_napkin": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "paperwhale matches viewer reading interests on poster and fizzwell fits food context on menu."
+ },
+ "viewer-d": {
+  "label": "Weekend traveller",
+  "preferences": [
+   "travel",
+   "holidays",
+   "deals"
+  ],
+  "assignment": {
+   "patio_wall": "nimbus",
+   "patio_napkin": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Nimbus matches viewer interests on poster and slicedash fits food context on menu."
+ },
+ "viewer-e": {
+  "label": "Home cook",
+  "preferences": [
+   "cooking",
+   "food",
+   "health"
+  ],
+  "assignment": {
+   "patio_wall": "fernleaf",
+   "patio_napkin": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "fernleaf matches all viewer interests and both slots use eligible surfaces."
+ },
+ "viewer-f": {
+  "label": "Tech commuter",
+  "preferences": [
+   "tech",
+   "commuting",
+   "cycling"
+  ],
+  "assignment": {
+   "patio_wall": "voltway",
+   "patio_napkin": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "voltway matches all viewer interests on poster and slicedash matches tech plus food context on menu."
+ }
+}

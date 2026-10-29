@@ -802,6 +802,72 @@ def print_on(frame, transmission, quad, motion_quads, blur, strength=1.0):
     return np.clip(frame.astype(np.float32) * t, 0, 255).astype(np.uint8)
 
 
+def prepare_layer(clip, slot, brand, frames, occ, retrack=False, with_plate=True):
+    """Everything one (slot, brand) needs to be composited: track (with per-frame photometrics), the artwork graded
+    and look-matched to this surface, static softness/grain, and the clean plate when the slot uses one. Shared by
+    render() and scripts/export_player.py (which calls it once per eligible brand)."""
+    from pipeline import composite
+    from scripts.render import campaign, pick_creative
+    from pipeline.grade import apply_grade, scene_grade
+    sid = slot["id"]
+    tr = track_slot(clip, slot, frames, occ, force=retrack)
+    c, _ = campaign(brand)
+    store = object_stores(clip, slot["prompt"], frames)[str(slot["object"])]
+    ref = int(tr["ref"])
+    surface = cv2.cvtColor(frames[ref], cv2.COLOR_BGR2GRAY)[store[ref] & ~(occ.frame(ref) if occ else np.zeros_like(store[ref]))]
+    tone = slot.get("tone") or ("dark" if np.median(surface) < 70 else "light")
+    if tone == "dark":  # the brand's dark artwork, same aspect choice (make_creatives.dark)
+        c = {**c, "creatives": {k: v.replace(".png", "_dark.png") for k, v in c["creatives"].items()}}
+    fmt = slot.get("creative_format")
+    gen = ROOT / "assets" / "creatives" / "gen" / f"{brand}_{fmt}.png"
+    if fmt and gen.exists():  # photographic / print-real artwork from muse-image (scripts/gen_creatives.py)
+        art = cv2.cvtColor(cv2.imread(str(gen), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGBA)
+        tone = fmt
+    else:
+        art = pick_creative(c, tr["quads"][ref])
+    # The 1.5px cap applies to reference softness only; additional measured
+    # defocus can exceed it. Shutter integration still handles motion.
+    blur, grain = composite.estimate_blur_and_grain(frames[ref], tr["quads"][ref])
+    blur = min(blur, 1.5)
+    print(f"  {sid}: {brand} ({tone} artwork; surface median luma {np.median(surface):.0f})")
+    if slot.get("blend") == "multiply":
+        # Ink on the surface: the artwork's own paper/board colour is "no ink". Dividing by it gives the
+        # fraction of light each ink lets through; multiplied onto the real lid, its cardboard texture,
+        # crease and lighting all stay, which no pasted layer can fake.
+        rgb = art[..., :3].astype(np.float32)
+        border = np.concatenate([rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3),
+                                 rgb[:, :8].reshape(-1, 3), rgb[:, -8:].reshape(-1, 3)])
+        paper = np.median(border, axis=0)
+        art = np.clip(rgb / np.maximum(paper, 1.0), 0, 1.0)[..., ::-1].copy()  # transmission, BGR like frames
+    else:
+        # The grade and exposure track must share a reference frame.
+        frame_ref, mask_ref = frames[ref], store[ref]
+        blocked = photo_occluders(clip, slot, frames, occ, tr["quads"])(ref)
+        clean = mask_ref & ~blocked
+        ring = (cv2.dilate(mask_ref.astype(np.uint8), np.ones((41, 41), np.uint8)) > 0) & ~mask_ref & ~blocked
+        if clean.any() or ring.any():
+            art = apply_grade(art, scene_grade(frame_ref[clean], frame_ref[ring]))
+        if slot.get("look_match", True):
+            extra, sat, target = match_look(frame_ref, art, inset(tr["quads"][ref], float(slot.get("inset_px", 2))),
+                                            float(tr["defocus_sigma"][ref]), blocked,
+                                            emissive=slot.get("dynamic_content", False))
+            art = desaturate(art, sat)
+            tr = {**tr, "defocus_sigma": np.hypot(tr["defocus_sigma"], extra)}
+            print(f"  {sid}: look match: +{extra:.2f} px blur, saturation x{sat:.2f} (detail target {target})")
+    print(f"  {sid}: surface softness sigma {blur:.2f} px, grain {grain:.2f}")
+    plate = None
+    if with_plate and (slot.get("reflections") or slot.get("glass_prompts") or slot.get("difference_key")):
+        from pipeline.clean_plate import CleanPlate
+        glass = [union_store(clip, p, frames) for p in slot.get("glass_prompts", [])]
+        t1 = time.time()
+        # Artwork/exposure are RGB; CleanPlate pixels are BGR.
+        plate = CleanPlate(frames, tr["quads"], tr["valid"], tr["gain"][:, ::-1], tr["veil"][:, ::-1],
+                           solid=(lambda i: occ.frame(i)) if occ else None,
+                           glass=(lambda i: Union(glass).frame(i)) if glass else None)
+        print(f"  {sid}: clean plate {plate.size[0]}x{plate.size[1]} in {time.time() - t1:.0f} s")
+    return slot, tr, art, blur, grain, plate
+
+
 def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, start=0):
     from pipeline import composite, watermark
     from pipeline.shutter import shutter_quads
@@ -815,62 +881,7 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
     layers, glass_masks = [], None
     for sid, brand in assignment.items():
         slot = slots[sid]
-        tr = track_slot(clip, slot, frames, occ, force=retrack)
-        c, _ = campaign(brand)
-        store = object_stores(clip, slot["prompt"], frames)[str(slot["object"])]
-        ref = int(tr["ref"])
-        surface = cv2.cvtColor(frames[ref], cv2.COLOR_BGR2GRAY)[store[ref] & ~(occ.frame(ref) if occ else np.zeros_like(store[ref]))]
-        tone = slot.get("tone") or ("dark" if np.median(surface) < 70 else "light")
-        if tone == "dark":  # the brand's dark artwork, same aspect choice (make_creatives.dark)
-            c = {**c, "creatives": {k: v.replace(".png", "_dark.png") for k, v in c["creatives"].items()}}
-        fmt = slot.get("creative_format")
-        gen = ROOT / "assets" / "creatives" / "gen" / f"{brand}_{fmt}.png"
-        if fmt and gen.exists():  # photographic / print-real artwork from muse-image (scripts/gen_creatives.py)
-            art = cv2.cvtColor(cv2.imread(str(gen), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGBA)
-            tone = fmt
-        else:
-            art = pick_creative(c, tr["quads"][ref])
-        # The 1.5px cap applies to reference softness only; additional measured
-        # defocus can exceed it. Shutter integration still handles motion.
-        blur, grain = composite.estimate_blur_and_grain(frames[ref], tr["quads"][ref])
-        blur = min(blur, 1.5)
-        print(f"  {sid}: {brand} ({tone} artwork; surface median luma {np.median(surface):.0f})")
-        if slot.get("blend") == "multiply":
-            # Ink on the surface: the artwork's own paper/board colour is "no ink". Dividing by it gives the
-            # fraction of light each ink lets through; multiplied onto the real lid, its cardboard texture,
-            # crease and lighting all stay, which no pasted layer can fake.
-            rgb = art[..., :3].astype(np.float32)
-            border = np.concatenate([rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3),
-                                     rgb[:, :8].reshape(-1, 3), rgb[:, -8:].reshape(-1, 3)])
-            paper = np.median(border, axis=0)
-            art = np.clip(rgb / np.maximum(paper, 1.0), 0, 1.0)[..., ::-1].copy()  # transmission, BGR like frames
-        else:
-            # The grade and exposure track must share a reference frame.
-            frame_ref, mask_ref = frames[ref], store[ref]
-            blocked = photo_occluders(clip, slot, frames, occ, tr["quads"])(ref)
-            clean = mask_ref & ~blocked
-            ring = (cv2.dilate(mask_ref.astype(np.uint8), np.ones((41, 41), np.uint8)) > 0) & ~mask_ref & ~blocked
-            if clean.any() or ring.any():
-                art = apply_grade(art, scene_grade(frame_ref[clean], frame_ref[ring]))
-            if slot.get("look_match", True):
-                extra, sat, target = match_look(frame_ref, art, inset(tr["quads"][ref], float(slot.get("inset_px", 2))),
-                                                float(tr["defocus_sigma"][ref]), blocked,
-                                                emissive=slot.get("dynamic_content", False))
-                art = desaturate(art, sat)
-                tr = {**tr, "defocus_sigma": np.hypot(tr["defocus_sigma"], extra)}
-                print(f"  {sid}: look match: +{extra:.2f} px blur, saturation x{sat:.2f} (detail target {target})")
-        print(f"  {sid}: surface softness sigma {blur:.2f} px, grain {grain:.2f}")
-        plate = None
-        if slot.get("reflections") or slot.get("glass_prompts") or slot.get("difference_key"):
-            from pipeline.clean_plate import CleanPlate
-            glass = [union_store(clip, p, frames) for p in slot.get("glass_prompts", [])]
-            t1 = time.time()
-            # Artwork/exposure are RGB; CleanPlate pixels are BGR.
-            plate = CleanPlate(frames, tr["quads"], tr["valid"], tr["gain"][:, ::-1], tr["veil"][:, ::-1],
-                               solid=(lambda i: occ.frame(i)) if occ else None,
-                               glass=(lambda i: Union(glass).frame(i)) if glass else None)
-            print(f"  {sid}: clean plate {plate.size[0]}x{plate.size[1]} in {time.time() - t1:.0f} s")
-        layers.append((slot, tr, art, blur, grain, plate))
+        layers.append(prepare_layer(clip, slot, brand, frames, occ, retrack=retrack))
         if slot.get("glass_prompts"):
             glass_masks = Union([union_store(clip, p, frames) for p in slot["glass_prompts"]])
     mid, body = manifest_id(clip, assignment, inventory)
