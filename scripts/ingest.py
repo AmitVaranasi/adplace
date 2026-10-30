@@ -118,8 +118,15 @@ def read_scene(frames):
          'tags (e.g. food, street, office). Reply JSON: {"surfaces": [...], "scene_safe": bool, '
          '"safety_reason": str, "context_tags": [...]}')
     content = [{"type": "text", "text": q}] + [{"type": "image_url", "image_url": {"url": jpeg_url(k)}} for k in keys]
-    v = muse_json("You review video scenes for an ad-placement system. Be literal and conservative.", content)
-    v["surfaces"] = [s for s in v.get("surfaces", []) if s in SURFACES]
+    # Two independent reads: one read of the same clip said "menu board", another "none". Surfaces either read
+    # sees are kept (the gates judge them on measurements later); the scene is safe only if both reads agree.
+    reads = [muse_json("You review video scenes for an ad-placement system. Be literal and conservative.", content)
+             for _ in range(2)]
+    v = dict(reads[0])
+    v["surfaces"] = sorted({s for r in reads for s in r.get("surfaces", []) if s in SURFACES})
+    v["scene_safe"] = all(r.get("scene_safe") is True for r in reads)
+    v["safety_reason"] = "; ".join(str(r.get("safety_reason", "")) for r in reads if r.get("safety_reason"))
+    v["context_tags"] = sorted({t for r in reads for t in r.get("context_tags", [])})[:8]
     return v
 
 
@@ -260,6 +267,88 @@ def fallback_decide(cands):
     return out
 
 
+def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
+    """eval/qa.py on a server render of one viewer's version (no disclosure label, so the judge isn't told):
+    stability of each ad against the real wall around it, and Muse's blind judge on sampled frames."""
+    from eval.qa import judge, qa_placement, stability
+    from scripts.render_dynamic import quad_mask, render, scene_dir
+    run.progress("qa", 0, "rendering a check copy")
+    viewers = json.loads((ROOT / "app" / "static" / "player" / stem / "assignments.json").read_text())
+    assignment = next(iter(viewers.values()))["assignment"]
+    out = run.dir / "qa_render.mp4"
+    render(clip, entry, assignment, out, label=False)
+    cap, rendered = cv2.VideoCapture(str(out)), []
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        rendered.append(f)
+    results = []
+    for k, c in enumerate(accepted):
+        run.progress("qa", 20 + 70 * k / len(accepted), f"checking {c['id']} ({c['surface']})")
+        with np.load(scene_dir(clip) / f"track_{c['id']}.npz") as z:
+            quads, valid = z["quads"], z["valid"]
+        # the longest run of frames with the ad on screen
+        best, cur = (0, 0), None
+        for i in range(len(valid) + 1):
+            if i < len(valid) and valid[i]:
+                cur = i if cur is None else cur
+            elif cur is not None:
+                best, cur = max(best, (cur, i), key=lambda r: r[1] - r[0]), None
+        idx = list(range(*best))[:len(rendered)]
+        checks = {}
+        if len(idx) >= 3:
+            ref = quads[idx[len(idx) // 2]].astype(np.float32)
+            H = [cv2.getPerspectiveTransform(quads[i].astype(np.float32), ref) for i in idx]
+            pm = quad_mask(ref, frames.h, frames.w)
+            ring = (cv2.dilate(pm.astype(np.uint8), np.ones((41, 41), np.uint8)) > 0) & \
+                   ~(cv2.dilate(pm.astype(np.uint8), np.ones((9, 9), np.uint8)) > 0)
+            checks["stability"] = stability([rendered[i] for i in idx], H, pm, ring)
+            pick = [idx[int(j)] for j in np.linspace(0, len(idx) - 1, samples)]
+            ours = judge([rendered[i] for i in pick], f"the advertisement on the {c['surface']}")
+            base = judge([frames[i] for i in pick], f"the {c['prompt']} on the wall")
+            if ours["value"] is not None and base["value"] is not None:
+                excess = float(ours["value"]) - float(base["value"])
+                checks["judge_vs_original"] = {"value": excess, "limit": 0.25, "pass": excess <= 0.25}
+        results.append(qa_placement(c["id"], checks, required=("stability", "judge_vs_original")))
+    return results
+
+
+PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the report should read
+    ("on screen", "It isn't on screen long enough to register."),
+    ("longest run", "It's never visible long enough in one go."),
+    ("track residual", "We couldn't follow its outline precisely enough; an ad would drift on it."),
+    ("corner jitter", "Its outline wobbles from frame to frame; an ad would shake."),
+    ("minimum side", "It's too small to carry readable artwork."),
+    ("mean area fraction", "It's too small in the picture."),
+    ("edge-clipped", "It's mostly cut off by the edge of the frame."),
+    ("maximum occlusion", "People or things cover too much of it at some point."),
+    ("mean occlusion", "People or things cover too much of it most of the time."),
+    ("motion blur", "The camera moves too fast across it."),
+    ("luma standard deviation", "Its lighting changes too much over the shot."),
+    ("visible but not covered", "An ad would vanish while the surface is still in view."),
+    ("muse_plausible", "Muse Spark judged it not a natural place for an ad."),
+    ("scene_safe", "The scene isn't suitable for advertising, so nothing is placed."),
+    ("overlap with", "It overlaps a better placement on the same surface."),
+    ("already has", "The shot already has as many ads as we allow."),
+    ("could not track", "We couldn't track it through the shot."),
+    ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
+    ("failed final check: judge", "A blind reviewer spotted it as inserted much more often than the original."),
+    ("failed final check", "It failed the final checks on the rendered video."),
+    ("flat placement required", "3D objects need a calibrated table, which this clip doesn't give us."),
+]
+
+
+def plain(reasons):
+    """Plain sentences for the report, each once, in order; anything unrecognised is passed through."""
+    out = []
+    for r in reasons:
+        text = next((p for key, p in PLAIN if key in r), r)
+        if text not in out:
+            out.append(text)
+    return out
+
+
 # --- the run -----------------------------------------------------------------------------------------------------
 
 def ingest(src, run_id=None):
@@ -311,7 +400,8 @@ def ingest(src, run_id=None):
                 continue
             k += 1
             slot = {"id": f"c{k:02d}", "prompt": p, "object": int(oid), "surface": SURFACES[p],
-                    "dynamic_content": SURFACES[p] == "screen"}
+                    "dynamic_content": SURFACES[p] == "screen", "wall_light": SURFACES[p] != "screen"}
+
             run.progress("track", 100 * j / max(len(objs), 1), f"tracking {p} #{oid}")
             c = {"id": slot["id"], "shot": 0, "prompt": p, "object": int(oid), "kind": "flat",
                  "surface": SURFACES[p], "fps": fps, "frame_size": [frames.w, frames.h], "slot": slot}
@@ -360,9 +450,24 @@ def ingest(src, run_id=None):
             if r.returncode:
                 raise RuntimeError("export failed: " + r.stderr[-600:])
             run.progress("export", 100, "live player ready")
-        qa = []   # eval/qa.py checks land here (GPT Sol); until then every accepted placement is reported unchecked
+        qa = check_placements(run, clip, entry, stem, frames, fps, accepted) if accepted else []
         run.write("qa.json", qa)
-        run.progress("qa", 100, "checks recorded")
+        failed_qa = {q["id"] for q in qa if not q["pass"]}
+        if failed_qa:   # a placement that fails its checks is taken out, and the player rebuilt without it
+            entry["dynamic_slots"] = [sl for sl in entry["dynamic_slots"] if sl["id"] not in failed_qa]
+            save_upload(clip, entry)
+            accepted = [c for c in accepted if c["id"] not in failed_qa]
+            for d in decisions:
+                if d["id"] in failed_qa:
+                    d["decision"] = "decline"
+                    d["reasons"] = d["reasons"] + [f"failed final check: {r}"
+                                                   for q in qa if q["id"] == d["id"] for r in q["reasons"]]
+            run.write("decisions.json", decisions)
+            if accepted:
+                run.progress("qa", 90, "rebuilding the live player without the placements that failed")
+                subprocess.run([sys.executable, str(ROOT / "scripts" / "export_player.py"), clip], cwd=ROOT,
+                               capture_output=True, text=True, check=True)
+        run.progress("qa", 100, f"{len(qa) - len(failed_qa)} of {len(qa)} placements passed the final checks")
 
         viewers = []
         ap = ROOT / "app" / "static" / "player" / stem / "assignments.json"
@@ -376,7 +481,8 @@ def ingest(src, run_id=None):
                       {"id": c["id"], "surface": c["surface"],
                        "decision": "placed" if d["decision"] == "accept" else "declined",
                        "thumb": f"/runs/{run.id}/{c['thumb']}" if c.get("thumb") else None,
-                       "on_screen_s": round(c["metrics"].get("on_screen_s", 0.0), 2), "reasons": d["reasons"],
+                       "on_screen_s": round(c["metrics"].get("on_screen_s", 0.0), 2),
+                       "reasons": plain(d["reasons"]), "details": d["reasons"],
                        "qa": next((q for q in qa if q["id"] == c["id"]), None)}
                       for c, d in zip(cands, decisions)], key=lambda p: p["decision"] != "placed"),
                   "player_url": f"/player?clip={stem}" if accepted else None, "viewers": viewers}

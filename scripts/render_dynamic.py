@@ -888,6 +888,39 @@ def print_on(frame, transmission, quad, motion_quads, blur, strength=1.0):
     return np.clip(frame.astype(np.float32) * t, 0, 255).astype(np.uint8)
 
 
+def wall_light(frame, quad, blocked, art, band=0.12, strength=0.85):
+    """Give a flat ad the light the wall around it has: lamps make a wall brighter at one end, and an evenly lit
+    poster in place of a framed painting was spotted by the blind judge 7 times in 8 (the painting itself 3 in 8).
+    Fits a smooth field (quadratic in the surface's own u, v) to the luminance of a band of wall just outside the
+    surface, then multiplies the artwork by it, mean one."""
+    q = np.asarray(quad, np.float32)
+    h, w = frame.shape[:2]
+    side = float(np.mean([np.linalg.norm(q[k] - q[(k + 1) % 4]) for k in range(4)]))
+    m = quad_mask(q, h, w).astype(np.uint8)
+    outer = cv2.dilate(m, np.ones((2 * int(band * side) + 1,) * 2, np.uint8)) > 0
+    inner = cv2.dilate(m, np.ones((9, 9), np.uint8)) > 0
+    ring = outer & ~inner & ~(blocked if blocked is not None else np.zeros_like(outer))
+    ys, xs = np.nonzero(ring)
+    if len(xs) < 200:
+        return art
+    Hu = cv2.getPerspectiveTransform(q, np.float32([[0, 0], [1, 0], [1, 1], [0, 1]]))
+    uv = cv2.perspectiveTransform(np.c_[xs, ys].astype(np.float32)[:, None], Hu)[:, 0]
+    lum = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)[ys, xs]
+    basis = lambda u, v: np.stack([np.ones_like(u), u, v, u * u, v * v, u * v], 1)
+    keep = np.ones(len(lum), bool)
+    for _ in range(3):   # drop outliers (a lamp, a dark doorway) and refit
+        coef = np.linalg.lstsq(basis(uv[keep, 0], uv[keep, 1]), lum[keep], rcond=None)[0]
+        res = lum - basis(uv[:, 0], uv[:, 1]) @ coef
+        keep = np.abs(res) < 2.5 * max(np.std(res[keep]), 1.0)
+    ah, aw = art.shape[:2]
+    gu, gv = np.meshgrid((np.arange(aw) + 0.5) / aw, (np.arange(ah) + 0.5) / ah)
+    field = (basis(gu.ravel(), gv.ravel()) @ coef).reshape(ah, aw)
+    shade = np.clip(1 + strength * (field / max(float(field.mean()), 1.0) - 1), 0.6, 1.4)
+    out = art.copy().astype(np.float32)
+    out[..., :3] = np.clip(out[..., :3] * shade[..., None], 0, 255)
+    return out.astype(art.dtype)
+
+
 def prepare_layer(clip, slot, brand, frames, occ, retrack=False, with_plate=True):
     """Everything one (slot, brand) needs to be composited: track (with per-frame photometrics), the artwork graded
     and look-matched to this surface, static softness/grain, and the clean plate when the slot uses one. Shared by
@@ -939,6 +972,8 @@ def prepare_layer(clip, slot, brand, frames, occ, retrack=False, with_plate=True
                                             emissive=slot.get("dynamic_content", False))
             art = desaturate(art, sat)
             tr = {**tr, "defocus_sigma": np.hypot(tr["defocus_sigma"], extra)}
+        if slot.get("wall_light") and not slot.get("dynamic_content"):
+            art = wall_light(frame_ref, tr["quads"][ref], blocked, art)
             print(f"  {sid}: look match: +{extra:.2f} px blur, saturation x{sat:.2f} (detail target {target})")
     print(f"  {sid}: surface softness sigma {blur:.2f} px, grain {grain:.2f}")
     plate = None

@@ -15,7 +15,9 @@ from numbers import Real
 import cv2
 import numpy as np
 
-LIMITS = {"stability": 1.5, "player_match": 30.0, "judge": 0.4}
+LIMITS = {"stability": 1.5, "player_match": 30.0, "judge": 0.4,
+          # spotted rate minus the rate on the same frames untouched: a noisy judge flags real paintings too
+          "judge_vs_original": 0.25}
 MIN_PIXELS = 201  # can_flicker.py requires more than 200 supported pixels.
 MIN_COVERAGE = 0.9  # Do not score a small surviving fragment of either region.
 QUESTION = (
@@ -251,7 +253,7 @@ def judge(frames, truth, *, chat=None):
         return _result("judge")
 
 
-def qa_placement(id, checks):
+def qa_placement(id, checks, required=None):
     """Require all three checks with valid limits, finite values and bool flags.
 
     Recheck comparisons so malformed or edited passing records cannot
@@ -264,7 +266,12 @@ def qa_placement(id, checks):
     supplied = checks if valid_mapping else {}
     out, reasons = {}, []
 
-    for name in sorted(set(LIMITS) | set(supplied)):
+    # required: the checks this run must pass (default all). Uploads run stability and the judge; the
+    # player-vs-server match needs a browser and is verified per release on the reference clips.
+    needed = {"stability", "player_match", "judge"} if required is None else set(required)
+    if not needed <= set(LIMITS):
+        raise ValueError("unknown required QA check")
+    for name in sorted(needed | set(supplied)):
         check = supplied.get(name)
         if name not in LIMITS:
             out[name] = {"value": None, "limit": None, "pass": False}
