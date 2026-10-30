@@ -387,7 +387,8 @@ def ingest(src, run_id=None):
         run.progress("segment", 100, "SAM 3.1 done" + (f" (failed: {', '.join(failed)})" if failed else ""))
 
         entry = {"hidden": True, "dynamic": True, "upload": True, "source": Path(src).name,
-                 "occluder_prompts": [p for p in OCCLUDERS if p not in failed],
+                 # only occluders SAM actually ran for (none when the scene has no surfaces to place on)
+                 "occluder_prompts": [p for p, rc, _ in results if rc == 0 and p in OCCLUDERS],
                  "context_tags": scene.get("context_tags", []), "dynamic_slots": []}
         occ = occluders(clip, entry, frames)
         cands, k = [], 0
