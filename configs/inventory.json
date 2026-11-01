@@ -34,7 +34,8 @@
     "coffee",
     "food",
     "morning"
-   ]
+   ],
+   "bid_cpm": 6.0
   },
   {
    "brand_id": "kestrel",
@@ -66,7 +67,8 @@
     "running",
     "fitness",
     "outdoors"
-   ]
+   ],
+   "bid_cpm": 8.0
   },
   {
    "brand_id": "paperwhale",
@@ -95,7 +97,8 @@
     "reading",
     "learning",
     "quiet"
-   ]
+   ],
+   "bid_cpm": 4.0
   },
   {
    "brand_id": "nimbus",
@@ -125,7 +128,8 @@
     "travel",
     "holidays",
     "deals"
-   ]
+   ],
+   "bid_cpm": 9.0
   },
   {
    "brand_id": "fernleaf",
@@ -158,7 +162,8 @@
     "food",
     "cooking",
     "health"
-   ]
+   ],
+   "bid_cpm": 5.0
   },
   {
    "brand_id": "voltway",
@@ -188,7 +193,8 @@
     "tech",
     "commuting",
     "cycling"
-   ]
+   ],
+   "bid_cpm": 7.0
   },
   {
    "brand_id": "fizzwell",
@@ -224,7 +230,8 @@
     "food",
     "dining",
     "snacks"
-   ]
+   ],
+   "bid_cpm": 6.5
   },
   {
    "brand_id": "slicedash",
@@ -257,7 +264,8 @@
     "dining",
     "convenience",
     "tech"
-   ]
+   ],
+   "bid_cpm": 7.5
   }
  ]
 }

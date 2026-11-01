@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from pipeline import discover, rank, watermark  # noqa: E402
+from pipeline import auction, discover, rank, watermark  # noqa: E402
 from pipeline.sam_track import read_frames  # noqa: E402
 from scripts.render import render_campaign  # noqa: E402
 
@@ -110,6 +110,33 @@ def player():
 class ViewerRenderRequest(BaseModel):
     clip: str          # stem, e.g. "patio_waiter"
     profile_id: str
+    assignment: dict[str, str] | None = None   # what this viewer's auction chose; default: the export's choice
+
+
+class AuctionRequest(BaseModel):
+    clip: str          # stem of a player export
+    profile_id: str
+    jitter: float = 0.15
+
+
+def player_export(stem):
+    d = Path(__file__).parent / "static" / "player" / stem
+    if not stem.replace("_", "").replace("-", "").isalnum() or not (d / "track.json").exists():
+        raise HTTPException(404, f"no player export for {stem}")
+    return d, json.loads((d / "track.json").read_text()), json.loads((d / "assignments.json").read_text())
+
+
+@app.post("/api/auction")
+def run_auction(req: AuctionRequest):
+    """The bid when a viewer presses play (pipeline/auction.py): every placement was prepared at upload for any
+    brand, so this only picks names and prices, in well under a millisecond."""
+    _, track, viewers = player_export(req.clip)
+    if req.profile_id not in viewers:
+        raise HTTPException(404, f"unknown profile {req.profile_id}")
+    entry = load("clips.json").get(track["clip"], {})
+    r = auction.run(auction.placements_of(track), load("inventory.json"), viewers[req.profile_id].get("preferences", []),
+                    entry.get("context_tags", []), jitter=min(max(req.jitter, 0.0), 0.5))
+    return {**r, "context_tags": entry.get("context_tags", [])}
 
 
 @app.post("/api/viewer_render")
@@ -127,6 +154,11 @@ def viewer_render(req: ViewerRenderRequest):
     track = json.loads((d / "track.json").read_text())
     clip = track["clip"]
     assignment = viewers[req.profile_id]["assignment"]
+    if req.assignment is not None:   # from /api/auction: only brands this export has artwork for
+        brands = {s["id"]: set(s["brands"]) for s in track["slots"] + track.get("objects", [])}
+        if any(k not in brands or v not in brands[k] for k, v in req.assignment.items()):
+            raise HTTPException(400, "assignment names a placement or brand this export doesn't have")
+        assignment = req.assignment
     tag = "_".join(f"{k}-{v}" for k, v in sorted(assignment.items()))
     out = ROOT / "outputs" / "viewers" / f"{req.clip}__{tag}.mp4"
     t0 = time.time()

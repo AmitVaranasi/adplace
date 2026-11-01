@@ -100,6 +100,8 @@
   #placements strong { font-size: 14px; }
   #rationale, #placements p { font-size: 12px; color: #c0c6d2; }
   #chooser { display: block; font-size: 11px; color: #8d96a8; overflow-wrap: anywhere; }
+  #auction { display: block; font-size: 11px; line-height: 1.5; margin: 8px 0 10px; }
+  #rebid { width: 100%; }
   #download { width: 100%; }
   #download-status { display: block; font-size: 11px; margin-top: 8px; line-height: 1.5; }
   #download-status a { color: #6bd6b2; }
@@ -170,10 +172,12 @@
       <h2>Viewer</h2>
       <div id="viewers"></div>
       <div class="assignment">
-        <h2>Muse’s assignment</h2>
+        <h2>This viewer’s ads</h2>
         <div id="placements"></div>
         <p id="rationale"></p>
         <small id="chooser"></small>
+        <small id="auction" class="muted"></small>
+        <button id="rebid" type="button">Run the bid again</button>
       </div>
       <div class="assignment">
         <button id="download" type="button" disabled>Download my version</button>
@@ -804,11 +808,12 @@ void main() {
       return 1-current;
     }
 
-    render(video,index,profileId,{ads=true,grain=true,label=true,upload=true}={}) {
+    render(video,index,profileId,{ads=true,grain=true,label=true,upload=true,assignment=null}={}) {
       if (this.lost) throw new Error("WebGL context is lost.");
       const gl=this.gl,t=this.data.track,W=t.width,H=t.height;
       const profile=this.data.profiles[profileId];
       if (!profile) throw new Error("Unknown viewer: "+profileId);
+      const chosen=assignment || profile.assignment;   // this session's auction, else the export's choice
       const i=clamp(Math.round(index),0,t.frames-1);
 
       if (upload || !this.uploaded) {
@@ -822,7 +827,7 @@ void main() {
       this.bind(0,this.videoTex); gl.uniform1i(p.u("uVideo"),0); this.draw();
 
       if (ads) for (const slot of t.slots) {
-        const brand=profile.assignment[slot.id];
+        const brand=chosen[slot.id];
         if (!brand || !slot.quads[i]) continue;
         const art=this.art.get(assetKey(slot.id,brand));
         if (!art) throw new Error("Missing artwork for "+slot.id+" / "+brand);
@@ -886,7 +891,7 @@ void main() {
 
       // 3D products and prints, far to near (the export's order)
       if (ads) for (const obj of t.objects || []) {
-        const box=obj.boxes[i], brand=profile.assignment[obj.id];
+        const box=obj.boxes[i], brand=chosen[obj.id];
         const art=brand && this.art.get(assetKey(obj.id,brand));
         if (!box || !art) continue;
         if (obj.kind==="glass") { current=this.glass(obj,i,art,current,grain); continue; }
@@ -1008,14 +1013,42 @@ void main() {
 
   function paint(upload=true) {
     if (!live || !renderer) return;
-    renderer.render(live.video,live.index,profileId,{ads:withAds,upload});
+    renderer.render(live.video,live.index,profileId,{ads:withAds,upload,assignment:won()});
     $("scrub").value=live.index;
     $("frame").textContent="Frame "+(live.index+1)+" / "+live.data.track.frames;
     drawCount++;
   }
 
+  // the auction's result for the current viewer in this session, if it has come back
+  function won() {
+    const r=live && live.auction[profileId];
+    return r ? r.assignment : null;
+  }
+
+  // the bid when a viewer starts watching (pipeline/auction.py); the export's choice stays until it returns
+  async function bid(id) {
+    const session=live;
+    if (!session) return;
+    $("auction").textContent="Bidding…";
+    const t0=performance.now();
+    try {
+      const r=await fetch("/api/auction",{method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({clip:session.data.name,profile_id:id})});
+      const body=await r.json();
+      if (!r.ok) throw new Error(body.detail || r.status);
+      body.roundTrip=Math.round(performance.now()-t0);
+      session.auction[id]=body;
+    } catch (error) {
+      if (live===session && profileId===id) $("auction").textContent="Auction unavailable ("+(error.message || error)+"); showing the saved choice.";
+      return;
+    }
+    if (live!==session || profileId!==id) return;
+    profileUI();
+    try { paint(false); } catch (error) { showError(error); }
+  }
+
   function profileUI() {
-    const data=live.data,p=data.profiles[profileId];
+    const data=live.data,p=data.profiles[profileId],a=live.auction[profileId];
     for (const button of $("viewers").children) {
       const selected=button.dataset.profile===profileId;
       button.classList.toggle("selected",selected);
@@ -1028,16 +1061,24 @@ void main() {
       const item=document.createElement("div");
       const name=document.createElement("span"),brand=document.createElement("strong");
       name.textContent=title(slot.id)+(slot.surface ? " · "+slot.surface : "");
-      brand.textContent=p.assignment[slot.id] || "No placement";
+      brand.textContent=(a ? a.assignment : p.assignment)[slot.id] || "No placement";
       item.append(name,brand); list.append(item);
-      if (p.rationale && typeof p.rationale==="object" && p.rationale[slot.id]) {
+      const lot=a && a.placements[slot.id];
+      if (lot && lot.winner) {
+        const price=document.createElement("p"),second=lot.bidders[1];
+        price.textContent="Won at $"+lot.price_cpm.toFixed(2)+" CPM against "+(lot.bidders.length-1)+" other bid"+
+          (lot.bidders.length===2 ? "" : "s")+(second ? " (next: "+second.brand+")" : "");
+        item.append(price);
+      } else if (!a && p.rationale && typeof p.rationale==="object" && p.rationale[slot.id]) {
         const reason=document.createElement("p");
         reason.textContent=String(p.rationale[slot.id]);
         list.append(reason);
       }
     }
-    $("rationale").textContent=typeof p.rationale==="string" ? p.rationale : "";
-    $("chooser").textContent=p.chooser || "Muse";
+    $("rationale").textContent=!a && typeof p.rationale==="string" ? p.rationale : "";
+    $("chooser").textContent=a ? "" : p.chooser || "Muse";
+    $("auction").textContent=a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
+      a.roundTrip+" ms round trip). Placements were prepared at upload, so no rendering was needed." : "";
   }
 
   async function activateClip(name) {
@@ -1059,7 +1100,7 @@ void main() {
       if (token!==generation) { closeVideo(opened); return; }
 
       renderer.setData(data);
-      live=opened;
+      live=opened; live.auction={};
       profileId=Object.hasOwn(data.profiles,profileId)
         ? profileId : Object.keys(data.profiles)[0];
 
@@ -1075,6 +1116,7 @@ void main() {
           profileId=id; profileUI();
           downloadToken++; $("download-status").textContent=""; $("download").disabled=false;
           try { paint(false); } catch (error) { showError(error); }
+          bid(id);
         };
         $("viewers").append(button);
       }
@@ -1085,6 +1127,7 @@ void main() {
       $("play").textContent="Play";
       profileUI(); paint();
       $("placeholder").hidden=true;
+      bid(profileId);
 
       opened.video.addEventListener("play",()=>{
         if (live===opened) $("play").textContent="Pause";
@@ -1154,7 +1197,7 @@ void main() {
       "Rendering with a Video Seal watermark… a new version takes 1–10 minutes.";
     try {
       const r=await fetch("/api/viewer_render",{method:"POST",
-        headers:{"content-type":"application/json"},body:JSON.stringify({clip,profile_id:viewer})});
+        headers:{"content-type":"application/json"},body:JSON.stringify({clip,profile_id:viewer,assignment:won()})});
       const body=await r.json();
       if (!r.ok) throw new Error(body.detail || r.status);
       if (token!==downloadToken) return;
@@ -1170,6 +1213,7 @@ void main() {
   };
 
   $("clip").onchange=e=>activateClip(e.target.value);
+  $("rebid").onclick=()=>{ if (live) { downloadToken++; $("download-status").textContent=""; bid(profileId); } };
   $("play").onclick=togglePlay;
   $("scrub").oninput=e=>requestSeek(Number(e.target.value));
 
