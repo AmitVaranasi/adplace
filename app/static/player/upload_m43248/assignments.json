@@ -6,10 +6,11 @@
    "morning"
   ],
   "assignment": {
-   "c01": "brewlark"
+   "c01": "brewlark",
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Brewlark matches coffee morning interests and cafe context on poster."
+  "rationale": "brewlark matches coffee morning interests and fizzwell fits cafe drink context on eligible surfaces."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -18,10 +19,11 @@
    "fitness"
   ],
   "assignment": {
-   "c01": "kestrel"
+   "c01": "kestrel",
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Kestrel matches running and fitness interests and fits poster surface."
+  "rationale": "kestrel matches viewer running fitness on poster and brewlark matches cafe context on glass."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -30,10 +32,11 @@
    "learning"
   ],
   "assignment": {
-   "c01": "paperwhale"
+   "c01": "paperwhale",
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Paperwhale matches viewer reading and learning interests on eligible poster."
+  "rationale": "Paperwhale matches reading interests on poster and brewlark fits cafe context on glass."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -43,10 +46,11 @@
    "deals"
   ],
   "assignment": {
-   "c01": "nimbus"
+   "c01": "nimbus",
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Matches viewer travel interests on eligible poster."
+  "rationale": "Nimbus matches viewer travel interests on poster and brewlark matches cafe context on glass."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -56,10 +60,11 @@
    "health"
   ],
   "assignment": {
-   "c01": "fernleaf"
+   "c01": "fernleaf",
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fernleaf matches all viewer interests and poster eligibility."
+  "rationale": "Fernleaf matches all viewer interests and brewlark fits cafe context on eligible surfaces."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -69,9 +74,10 @@
    "cycling"
   ],
   "assignment": {
-   "c01": "voltway"
+   "c01": "voltway",
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Voltway matches all viewer interests and poster eligibility."
+  "rationale": "Voltway matches viewer interests and brewlark fits cafe context."
  }
 }

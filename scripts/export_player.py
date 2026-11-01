@@ -10,6 +10,8 @@ change in the player. Writes app/static/player/<stem>/:
   track.json        per slot and frame: corners (null where the surface is not usable), per-channel exposure gain
                     and veil, defocus blur; per brand: artwork file and its extra look-match blur
   art/<slot>_<brand>.png   artwork graded and look-matched to that surface (for ink slots: per-channel transmission)
+  art/<glass>_glass.png    a still glass's light per frame, the same for every brand; the player wraps the brand's logo
+                           (../logos/<brand>_glass.png) round it live, so a brand chosen at bid time needs no render
   assignments.json  per viewer profile: Muse Spark's slot -> brand choice and its reason
 
 The matte reproduces render_dynamic.render's occlusion: SAM occluders plus keyed objects on blank surfaces, refined to
@@ -177,6 +179,59 @@ def export_object(clip, spec, frames, start, inventory, d):
             "brands": {b: {"art": f"art/{spec['id']}_{b}.png"} for b in brands}}
 
 
+def export_glass(clip, spec, frames, start, inventory, d):
+    """A logo on a still glass (scripts/glass_decal.py), wrapped live in the player so any brand, even one that wins
+    its bid after this export, needs no rendering: only the logo's own alpha image.
+
+    art/<id>_glass.png: atlas of fixed-size cells, one per frame at `boxes[i]`; RGB = the print's colour there (the
+    glass's light and highlights, the same for every brand), A = where the glass itself is seen. `place[i]`: rim
+    centre, radius, axis angle, stretch and the logo's motion (px/frame) for the shutter smear. ../logos/<brand>_glass.png:
+    the logo's alpha, shared by every clip. The player reproduces GlassDecal.apply: cylinder wrap, fade at the
+    sides, defocus `sigma`, smear, x 0.88 x visibility, then over with luma grain."""
+    from scripts.glass_decal import CURVE, HALF_ANGLE
+    from scripts.place3d import make
+    obj = make(clip, spec)
+    brands = eligible_brands({"surface": spec.get("surface", "glass"), "creative_format": "glass_print"}, inventory)
+    cells = {}
+    for i, f in enumerate(frames):
+        if i < start or i not in obj.place or not obj.store.any(i):
+            continue
+        L = obj.layer(i, f, brands[0])
+        if L is None:
+            continue
+        (x0, y0, x1, y1), colour, _, _ = L
+        vis = cv2.erode(obj.store[i][y0:y1, x0:x1].astype(np.uint8), np.ones((3, 3), np.uint8)).astype(np.float32)
+        cells[i] = (x0, y0, np.dstack([np.clip(colour, 0, 255), cv2.GaussianBlur(vis, (0, 0), 0.8) * 255]))
+    if not cells:
+        return None
+    sizes = np.array([c[2].shape[1::-1] for c in cells.values()])
+    cw, ch = sizes.max(0) + 2
+    cols = max(1, 4096 // cw)
+    atlas = np.zeros((-(-len(cells) // cols) * ch, cols * cw, 4), np.uint8)
+    boxes, place = [None] * (frames.n - start), [None] * (frames.n - start)
+    for k, (i, (x0, y0, cell)) in enumerate(sorted(cells.items())):
+        cx, cy = (k % cols) * cw, (k // cols) * ch
+        atlas[cy:cy + cell.shape[0], cx:cx + cell.shape[1]] = np.rint(cell)
+        boxes[i - start] = [int(x0), int(y0), int(cell.shape[1]), int(cell.shape[0]), int(cx), int(cy)]
+        nb = [j for j in (i - 1, i + 1) if j in obj.place]   # as ShirtPrint.motion_blur
+        v = ((obj.place[max(nb)][:2] - obj.place[min(nb + [i])][:2]) / max(max(nb) - min(nb + [i]), 1)
+             if nb else np.zeros(2))
+        place[i - start] = [round(float(x), 3) for x in (*obj.place[i][:5], *v)]
+    for old in (d / "art").glob(f"{spec['id']}_*.png"):   # per-brand sprites of the older, pre-rendered format
+        old.unlink()
+    cv2.imwrite(str(d / "art" / f"{spec['id']}_glass.png"), atlas)
+    logos = d.parent / "logos"
+    logos.mkdir(exist_ok=True)
+    for b in brands:
+        cv2.imwrite(str(logos / f"{b}_glass.png"), np.rint(obj.art(b) * 255).astype(np.uint8))
+    print(f"  {spec['id']}: glass, {len(brands)} brands live, {len(cells)} frames, atlas {atlas.shape[1]}x{atlas.shape[0]}",
+          flush=True)
+    return {"id": spec["id"], "kind": "glass", "surface": spec.get("surface", "glass"), "boxes": boxes,
+            "place": place, "atlas": f"art/{spec['id']}_glass.png", "sigma": round(float(obj.sigma), 3),
+            "grain": round(float(obj.grain), 3), "half_angle": HALF_ANGLE, "curve": CURVE, "ink": 0.88,
+            "shutter": 0.5, "brands": {b: {"art": f"../logos/{b}_glass.png"} for b in brands}}
+
+
 def assignments(clip, entry, slots, inventory, brands):
     from pipeline.rank import choose_assignment
     profiles = json.loads((ROOT / "configs" / "profiles.json").read_text())["profiles"]
@@ -254,12 +309,17 @@ def main(clip, skip_video=False):
     from scripts.place3d import active, objects_for
     order = [o.id for o in objects_for(clip, entry)]  # far to near: nearer objects draw on top
     for spec in sorted(active(entry), key=lambda s: order.index(s["id"])):
-        o = export_object(clip, spec, frames, start, inventory, d)
+        o = (export_glass if spec.get("kind") == "glass_decal" else export_object)(clip, spec, frames, start,
+                                                                                   inventory, d)
         if o:
             track["objects"].append(o)
             brands[spec["id"]] = list(o["brands"])
     for old in (d / "art").glob("*_mask.png"):  # superseded atlas format
         old.unlink()
+    placed = {o["id"] for o in track["objects"]}
+    for old in (d / "art").glob("*_glass.png"):  # a glass placed by an earlier export and declined since
+        if old.name[:-len("_glass.png")] not in placed:
+            old.unlink()
     (d / "track.json").write_text(json.dumps(track))
 
     if not skip_video:
