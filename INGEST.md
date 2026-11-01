@@ -17,6 +17,14 @@ viewer sees that report (the "always disclosed" story extends to "and here is wh
 6. **render / export** - accepted candidates become `dynamic_slots`; `render_dynamic` and `export_player` run as for
    the hand-made clips. 3D table objects only when the table calibrates itself (>= 2 round objects agreeing on its
    tilt, the plate-rim method); otherwise flat placements only.
+   Drinking glasses (Muse names "drinking glass", SAM prompt `cup`) become `kind: "glass_decal"` candidates: a white
+   logo wrapped round the glass, placed from its own outline each frame (`scripts/glass_decal.py`), as soft and grainy
+   as the glass measures. Their gates (`ingest.decide_glass`): on screen >= 2 s, longest run >= 1.5 s, glass >= 44 px
+   wide, the glass's shape (a tapered glass measured where it is seen whole) fitted to its visible edges in >= 80% of
+   frames, the logo's centre at least 0.3 radii inside the glass in >= 90% of whole-glass frames, no frames where the
+   glass is seen without the logo, the glass stays still (it travels at most 0.5 radii relative to the room
+   in any one second; glasses people pick up are declined for now), Muse says it is a plain unbranded glass. QA: none automatic for now (the blind
+   judge is off; a person reviews the look). Flat ads: stability only.
 7. **qa** - `eval/qa.py` (owner: GPT Sol) checks every rendered placement; a failing one is removed and re-exported.
 8. **done** - `report.json` written; the upload page shows it (owner: Cursor).
 

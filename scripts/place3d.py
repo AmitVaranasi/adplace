@@ -887,6 +887,9 @@ def make(clip, spec):
     if spec.get("kind") == "shirt_print":
         from scripts.shirt_print import ShirtPrint
         return ShirtPrint(clip, spec)
+    if spec.get("kind") == "glass_decal":
+        from scripts.glass_decal import GlassDecal
+        return GlassDecal(clip, spec)
     return KINDS[spec.get("kind", "can")](clip, spec)
 
 

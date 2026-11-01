@@ -114,6 +114,7 @@ def shade_track(frames, tr, occ, start):
 
 
 FORMAT = {"can": "can_wrap", "bottle": "bottle_label", "tent": "table_tent", "glass_print": "glass_print",
+          "glass_decal": "glass_print",
           "shirt_print": "shirt_print", "aframe": "poster"}
 
 

@@ -33,6 +33,9 @@ API = "https://api.meta.ai/v1"
 SURFACES = {"poster": "poster", "framed picture": "poster", "painting": "poster", "sign": "sign",
             "menu board": "sign", "chalkboard": "sign", "billboard": "billboard", "screen": "screen",
             "television": "screen", "menu": "menu", "pizza box": "box"}
+# Things a logo can be printed on (scripts/glass_decal.py): what Muse calls them -> SAM 3.1 prompt. "cup" finds
+# drinking glasses and nothing else in a bar scene; "glass" also takes fridge doors and jars.
+PRINTABLE = {"drinking glass": "cup"}
 OCCLUDERS = ["person"]
 STAGES = ["upload", "shots", "segment", "track", "score", "render", "export", "qa", "done"]
 
@@ -113,7 +116,7 @@ def read_scene(frames):
     """Muse Spark looks at three keyframes: which surface types are present, is the scene brand-safe, context."""
     keys = [frames[k] for k in (0, frames.n // 2, frames.n - 1)]
     q = ("These are three frames of one video shot. 1) Which of these surface types are clearly visible and large "
-         f"enough to carry an ad: {sorted(SURFACES)}? Only list ones you can actually see. 2) Is the scene safe for "
+         f"enough to carry an ad: {sorted(SURFACES) + sorted(PRINTABLE)}? Only list ones you can actually see. 2) Is the scene safe for "
          "brand advertising (no children as the focus, medical, accident, violence, grief)? 3) Up to 5 context "
          'tags (e.g. food, street, office). Reply JSON: {"surfaces": [...], "scene_safe": bool, '
          '"safety_reason": str, "context_tags": [...]}')
@@ -123,7 +126,7 @@ def read_scene(frames):
     reads = [muse_json("You review video scenes for an ad-placement system. Be literal and conservative.", content)
              for _ in range(2)]
     v = dict(reads[0])
-    v["surfaces"] = sorted({s for r in reads for s in r.get("surfaces", []) if s in SURFACES})
+    v["surfaces"] = sorted({s for r in reads for s in r.get("surfaces", []) if s in SURFACES or s in PRINTABLE})
     v["scene_safe"] = all(r.get("scene_safe") is True for r in reads)
     v["safety_reason"] = "; ".join(str(r.get("safety_reason", "")) for r in reads if r.get("safety_reason"))
     v["context_tags"] = sorted({t for r in reads for t in r.get("context_tags", [])})[:8]
@@ -268,9 +271,9 @@ def fallback_decide(cands):
 
 
 def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
-    """eval/qa.py on a server render of one viewer's version (no disclosure label, so the judge isn't told):
-    stability of each ad against the real wall around it, and Muse's blind judge on sampled frames."""
-    from eval.qa import judge, qa_placement, stability
+    """eval/qa.py on a server render of one viewer's version: stability of each flat ad against the real wall
+    around it. (Muse's blind judge, eval/qa.judge, is switched off for now; a person reviews the look.)"""
+    from eval.qa import qa_placement, stability
     from scripts.render_dynamic import quad_mask, render, scene_dir
     run.progress("qa", 0, "rendering a check copy")
     viewers = json.loads((ROOT / "app" / "static" / "player" / stem / "assignments.json").read_text())
@@ -286,6 +289,9 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
     results = []
     for k, c in enumerate(accepted):
         run.progress("qa", 20 + 70 * k / len(accepted), f"checking {c['id']} ({c['surface']})")
+        if c["kind"] == "glass_decal":   # measured at the gates; the human reviewer judges the look for now
+            results.append({"id": c["id"], "pass": True, "checks": {}, "reasons": []})
+            continue
         with np.load(scene_dir(clip) / f"track_{c['id']}.npz") as z:
             quads, valid = z["quads"], z["valid"]
         # the longest run of frames with the ad on screen
@@ -304,14 +310,83 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
             ring = (cv2.dilate(pm.astype(np.uint8), np.ones((41, 41), np.uint8)) > 0) & \
                    ~(cv2.dilate(pm.astype(np.uint8), np.ones((9, 9), np.uint8)) > 0)
             checks["stability"] = stability([rendered[i] for i in idx], H, pm, ring)
-            pick = [idx[int(j)] for j in np.linspace(0, len(idx) - 1, samples)]
-            ours = judge([rendered[i] for i in pick], f"the advertisement on the {c['surface']}")
-            base = judge([frames[i] for i in pick], f"the {c['prompt']} on the wall")
-            if ours["value"] is not None and base["value"] is not None:
-                excess = float(ours["value"]) - float(base["value"])
-                checks["judge_vs_original"] = {"value": excess, "limit": 0.25, "pass": excess <= 0.25}
-        results.append(qa_placement(c["id"], checks, required=("stability", "judge_vs_original")))
+        # the blind Muse judge is off for now (it rewarded blurring prints until unreadable); a person reviews the look
+        results.append(qa_placement(c["id"], checks, required=("stability",)))
     return results
+
+
+def glass_candidate(clip, cid, oid, frames, fps, thumbs):
+    """A drinking glass SAM found: the logo's own placement (scripts/glass_decal.py), measured like a surface."""
+    from scripts.glass_decal import GlassDecal
+    g = GlassDecal(clip, {"id": cid, "kind": "glass_decal", "prompt": PRINTABLE["drinking glass"], "object": oid})
+    seen = [i for i in range(frames.n) if g.store.any(i)]
+    placed = g.valid
+    run, best = 0, 0
+    for i in range(frames.n):
+        run = run + 1 if i in g.place else 0
+        best = max(best, run)
+    geo = np.array([g.place[i] for i in placed]) if placed else np.zeros((0, 5))
+    fit_ok, on_glass = g.quality()
+    m = {"on_screen_s": len(placed) / fps, "longest_run_s": best / fps, "frames": len(placed),
+         "radius_px_median": float(np.median(geo[:, 2])) if len(geo) else 0.0,
+         "shape_fit_fraction": fit_ok, "print_on_glass_fraction": on_glass,
+         "uncovered_visible_s": sum(1 for i in seen if i not in g.place) / fps,
+         # static objects only: a glass someone picks up needs its logo re-fitted every frame, and that shows
+         "travel_r_max": max_travel(g, fps, float(np.median(geo[:, 2])) if len(geo) else 1.0)}
+    i = placed[len(placed) // 2] if placed else (seen[len(seen) // 2] if seen else 0)
+    f = frames[i].copy()
+    if g.store.any(i):
+        cs, _ = cv2.findContours(g.store[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(f, cs, -1, (60, 220, 120), 3, cv2.LINE_AA)
+    cv2.imwrite(str(thumbs / f"{cid}.jpg"), cv2.resize(f, (640, int(640 * f.shape[0] / f.shape[1]))),
+                [cv2.IMWRITE_JPEG_QUALITY, 85])
+    v = muse_json("You review candidate ad placements for an ad-placement system. Be strict.",
+                  [{"type": "text", "text": "The green outline marks a candidate object. Would a brand's small white logo "
+                    "printed on it look natural: is it one real drinking glass or cup, plain, with no logo, label or "
+                    "print of its own, not a jar, bottle, window or fridge door? Reply JSON: "
+                    '{"plausible": bool, "reason": str}'},
+                   {"type": "image_url", "image_url": {"url": jpeg_url(f)}}], tokens=2000)
+    m["muse_plausible"], m["muse_reason"] = bool(v.get("plausible")), str(v.get("reason", ""))[:200]
+    return m, [int(placed[0]), int(placed[-1])] if placed else [0, 0], f
+
+
+def max_travel(g, fps, r):
+    """The farthest the object moves relative to the room (camera motion taken out) within any one second, in
+    glass radii. A glass on a table only jiggles when someone touches it; one picked up travels several radii."""
+    n, best = int(round(fps)), 0.0
+    for s in range(0, g.frames.n - n + 1):
+        d = [g.rel[i] for i in range(s, s + n) if i in g.rel]
+        if d:
+            best = max(best, float(np.linalg.norm(np.cumsum(d, axis=0), axis=1).max()))
+    return best / r
+
+
+def decide_glass(c):
+    """The gates for a logo on a glass, in the same spirit as pipeline/gates.py for flat surfaces."""
+    m, why = c["metrics"], []
+    if m.get("error"):
+        return {"id": c["id"], "decision": "decline", "score": 0.0, "reasons": [m["error"]]}
+    if not m["on_screen_s"] >= 2.0:
+        why.append(f"on screen {m['on_screen_s']:.1f} s, needs 2.0 s")
+    if not m["longest_run_s"] >= 1.5:
+        why.append(f"longest run {m['longest_run_s']:.1f} s, needs 1.5 s")
+    if not m["radius_px_median"] >= 22:
+        why.append(f"minimum side: glass {2 * m['radius_px_median']:.0f} px wide, needs 44 px")
+    if not m["shape_fit_fraction"] >= 0.8:
+        why.append(f"could not track: the glass's shape fitted in {m['shape_fit_fraction']:.0%} of frames, needs 80%")
+    if not m["print_on_glass_fraction"] >= 0.9:
+        why.append(f"track residual: logo well inside the glass in {m['print_on_glass_fraction']:.0%} of frames, "
+                   "needs 90%")
+    if m["uncovered_visible_s"] > 0.25:
+        why.append(f"visible but not covered for {m['uncovered_visible_s']:.1f} s")
+    if m.get("travel_r_max", 0.0) > 0.5:
+        why.append(f"moves: travels {m['travel_r_max']:.1f} glass radii within a second, needs at most 0.5 "
+                   "(only still objects carry ads)")
+    if not m.get("muse_plausible"):
+        why.append("muse_plausible: " + m.get("muse_reason", ""))
+    if not m.get("scene_safe", True):
+        why.append("scene_safe: false")
+    return {"id": c["id"], "decision": "decline" if why else "accept", "score": 0.0 if why else 1.0, "reasons": why}
 
 
 PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the report should read
@@ -332,6 +407,7 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("overlap with", "It overlaps a better placement on the same surface."),
     ("already has", "The shot already has as many ads as we allow."),
     ("could not track", "We couldn't track it through the shot."),
+    ("moves:", "Someone picks it up or moves it; for now we only place ads on things that stay still."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
     ("failed final check: judge", "A blind reviewer spotted it as inserted much more often than the original."),
     ("failed final check", "It failed the final checks on the rendered video."),
@@ -377,18 +453,21 @@ def ingest(src, run_id=None):
         frames = Frames(ROOT / clip)
         run.progress("segment", 5, "Muse Spark is reading the scene")
         scene = read_scene(frames)
-        prompts = scene["surfaces"]
-        run.progress("segment", 15, f"surfaces seen: {', '.join(prompts) or 'none'}; brand-safe: {scene.get('scene_safe')}")
-        if not prompts or not scene.get("scene_safe", False):
-            prompts = []
+        prompts = [p for p in scene["surfaces"] if p in SURFACES]
+        printable = sorted({PRINTABLE[p] for p in scene["surfaces"] if p in PRINTABLE})
+        run.progress("segment", 15, f"surfaces seen: {', '.join(scene['surfaces']) or 'none'}; "
+                                    f"brand-safe: {scene.get('scene_safe')}")
+        if not scene.get("scene_safe", False):
+            prompts, printable = [], []
         # nothing to place on: skip SAM entirely (segmenting people alone takes minutes)
-        results = segment(clip, prompts + OCCLUDERS) if prompts else []
+        results = segment(clip, prompts + printable + OCCLUDERS) if prompts or printable else []
         failed = [p for p, rc, _ in results if rc != 0]
         run.progress("segment", 100, "SAM 3.1 done" + (f" (failed: {', '.join(failed)})" if failed else ""))
 
         entry = {"hidden": True, "dynamic": True, "upload": True, "source": Path(src).name,
                  # only occluders SAM actually ran for (none when the scene has no surfaces to place on)
-                 "occluder_prompts": [p for p, rc, _ in results if rc == 0 and p in OCCLUDERS],
+                 # glasses too: a glass lifted in front of a poster on the wall stays in front of it
+                 "occluder_prompts": [p for p, rc, _ in results if rc == 0 and (p in OCCLUDERS or p in printable)],
                  "context_tags": scene.get("context_tags", []), "dynamic_slots": []}
         occ = occluders(clip, entry, frames)
         cands, k = [], 0
@@ -428,20 +507,43 @@ def ingest(src, run_id=None):
                 c["frames"], c["thumb"] = [0, 0], None
             c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
             cands.append(c)
+        for p in printable:
+            if p in failed:
+                continue
+            for oid, st in sorted(object_stores(clip, p, frames).items(), key=lambda kv: int(kv[0])):
+                if sum(st.any(i) for i in range(frames.n)) < fps:
+                    continue
+                k += 1
+                cid = f"c{k:02d}"
+                run.progress("track", 95, f"following glass #{oid}")
+                c = {"id": cid, "shot": 0, "prompt": p, "object": int(oid), "kind": "glass_decal", "surface": "glass",
+                     "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg",
+                     "slot": {"id": cid, "kind": "glass_decal", "surface": "glass", "prompt": p, "object": int(oid)}}
+                try:
+                    c["metrics"], c["frames"], _ = glass_candidate(clip, cid, int(oid), frames, fps, run.dir / "thumbs")
+                except Exception as e:
+                    c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
+                    c["frames"], c["thumb"] = [0, 0], None
+                c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
+                cands.append(c)
         run.write("candidates.json", [{kk: v for kk, v in c.items() if kk not in ("slot", "quads")} for c in cands])
         run.progress("track", 100, f"{len(cands)} candidates measured")
 
         run.progress("score", 0, "deciding")
         try:
             from pipeline.gates import decide_all
-            decisions = decide_all([{kk: v for kk, v in c.items() if kk != "slot"} for c in cands])
+            flat = [c for c in cands if c["kind"] == "flat"]
+            by_id = {d["id"]: d for d in decide_all([{kk: v for kk, v in c.items() if kk != "slot"} for c in flat])}
         except ImportError:
-            decisions = fallback_decide(cands)
+            by_id = {d["id"]: d for d in fallback_decide([c for c in cands if c["kind"] == "flat"])}
+        by_id.update({c["id"]: decide_glass(c) for c in cands if c["kind"] == "glass_decal"})
+        decisions = [by_id[c["id"]] for c in cands]
         run.write("decisions.json", decisions)
         accepted = [c for c, d in zip(cands, decisions) if d["decision"] == "accept"]
         run.progress("score", 100, f"{len(accepted)} of {len(cands)} accepted")
 
-        entry["dynamic_slots"] = [c["slot"] for c in accepted]
+        entry["dynamic_slots"] = [c["slot"] for c in accepted if c["kind"] == "flat"]
+        entry["objects3d"] = [c["slot"] for c in accepted if c["kind"] != "flat"]
         from pipeline.clipcfg import save_upload
         save_upload(clip, entry)
         if accepted:
@@ -456,6 +558,7 @@ def ingest(src, run_id=None):
         failed_qa = {q["id"] for q in qa if not q["pass"]}
         if failed_qa:   # a placement that fails its checks is taken out, and the player rebuilt without it
             entry["dynamic_slots"] = [sl for sl in entry["dynamic_slots"] if sl["id"] not in failed_qa]
+            entry["objects3d"] = [sl for sl in entry["objects3d"] if sl["id"] not in failed_qa]
             save_upload(clip, entry)
             accepted = [c for c in accepted if c["id"] not in failed_qa]
             for d in decisions:
