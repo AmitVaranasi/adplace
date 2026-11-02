@@ -18,7 +18,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scripts.render_dynamic import Frames, object_stores  # noqa: E402
+import hashlib  # noqa: E402
+import pickle  # noqa: E402
+
+from scripts.render_dynamic import Frames, object_stores, scene_dir  # noqa: E402
 from scripts.shirt_print import ShirtPrint, smooth_runs  # noqa: E402
 
 HALF_ANGLE = 0.55   # the print covers about +-31 degrees round the front
@@ -93,6 +96,10 @@ def glass_geometry(m, min_ratio=1.2):
     return [cx, cy, r, ang, bottom - top, bx, by]
 
 
+CODE = hashlib.sha1(Path(__file__).read_bytes()).hexdigest()[:12]
+KEEP_LIVE = {"clip", "spec", "id", "tex", "frames", "store"}   # rebuilt on load, not cached
+
+
 class GlassDecal(ShirtPrint):
     shadow = False
     grain = 1.0     # both measured per glass (focus_and_grain)
@@ -116,6 +123,16 @@ class GlassDecal(ShirtPrint):
         self.tex = {}
         self.frames = Frames(ROOT / clip)
         self.store = self.mask_store(object_stores(clip, spec.get("prompt", "cup"), self.frames)[str(spec["object"])])
+        # the measuring below takes about a minute and an upload needs it three times (the gates, the player export,
+        # the final check render): keep it per object, keyed by this file's code so any change re-measures
+        cache = scene_dir(clip) / f"vessel_{type(self).__name__}_{spec.get('prompt', 'cup')}_{spec['object']}_{CODE}.pkl"
+        if cache.exists():
+            self.__dict__.update(pickle.loads(cache.read_bytes()))
+            return
+        self.measure(spec)
+        cache.write_bytes(pickle.dumps({k: v for k, v in self.__dict__.items() if k not in KEEP_LIVE}))
+
+    def measure(self, spec):
         h = self.frames.h
         seen = [i for i in range(self.frames.n) if self.store.any(i)]
         geo = {i: glass_geometry(self.store[i], self.min_ratio) for i in seen}
