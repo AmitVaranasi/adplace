@@ -336,7 +336,8 @@
         <span class="stat"><strong id="stat-declined">—</strong><span>declined</span></span>
       </div>
       <div class="row">
-        <a id="open-player" class="button primary" href="#">Open the live player</a>
+        <a id="open-reels" class="button primary" href="#">Turn on product placement</a>
+        <a id="open-player" class="button" href="#">Open the live player</a>
         <span id="no-player" class="muted" style="font-size:12px" hidden>Nothing was placed, so there is no player to
           open. The cards below say why.</span>
         <button id="restart" type="button">Upload another clip</button>
@@ -936,6 +937,9 @@
     $("stat-placed").textContent = summary.placed ?? placements.filter(p => p.decision === "placed").length;
     $("stat-declined").textContent = summary.declined ?? placements.filter(p => p.decision !== "placed").length;
 
+    const reels = $("open-reels");
+    reels.hidden = !report.player_url;
+    reels.href = report.reels_url || "/reels?clip=" + encodeURIComponent(report.clip_stem || "");
     const player = $("open-player");
     if (report.player_url) {
       player.href = report.player_url;

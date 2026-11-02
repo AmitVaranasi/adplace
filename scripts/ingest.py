@@ -671,6 +671,8 @@ def ingest(src, run_id=None):
         viewers = []
         ap = ROOT / "app" / "static" / "player" / stem / "assignments.json"
         if ap.exists():
+            from pipeline import creator
+            creator.start_off(ap.parent)   # product placement is opt-in: the creator turns it on at /reels
             viewers = [{"profile_id": pid, "label": v["label"]} for pid, v in json.loads(ap.read_text()).items()]
         if not cands:   # say why there is nothing to show, instead of an empty report
             why = ("The scene isn't suitable for advertising, so nothing was placed."
@@ -690,7 +692,8 @@ def ingest(src, run_id=None):
                        "reasons": plain(d["reasons"]), "details": d["reasons"],
                        "qa": next((q for q in qa if q["id"] == c["id"]), None)}
                       for c, d in zip(cands, decisions)], key=lambda p: p["decision"] != "placed"),
-                  "player_url": f"/player?clip={stem}" if accepted else None, "viewers": viewers}
+                  "player_url": f"/player?clip={stem}" if accepted else None,
+                  "reels_url": f"/reels?clip={stem}" if accepted else None, "viewers": viewers}
         run.write("report.json", report)
         run.progress("done", 100, f"{len(accepted)} placed, {len(cands) - len(accepted)} declined")
     except Exception as e:

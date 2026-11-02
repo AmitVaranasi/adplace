@@ -4,11 +4,15 @@ Draft for the Meta AI Developer Hackathon form. Every figure was measured in thi
 
 ## One line
 
-Upload a video once; every viewer then sees brands placed into the scene itself (on the poster on the wall, printed on
-the glass on the counter), picked by an auction when they press play, always labelled and watermarked.
+A prototype of an opt-in ad format for short videos: creators approve placements in videos they've already filmed
+(the poster on the wall, the glass on the counter), and different viewers see different labelled sponsors, picked by an
+auction when they press play, with nothing re-rendered.
 
 ## What it does
 
+- **Opt-in, creator-controlled.** Placement is off for every upload until the creator turns it on (`/reels`). They
+  approve each place and each brand; every auction and every download respects it. Two phones side by side show the
+  same video to two viewers, each with their own auction's brands, prices and runner-up.
 - **Upload once, no hand work.** Muse Spark reads the scene and checks it's safe for ads. SAM 3.1 outlines every
   poster, picture frame, sign, menu board, screen, glass, cup and mug through the shot (and cups' handles, to
   keep logos off them). Each is tracked against the
@@ -68,4 +72,6 @@ frames of the bar clip]. No local models: all segmentation and vision go through
 
 ## What's next
 
-Objects that move (held glasses, carried cups), 3D products on uploads, and faster upload processing.
+Ship it as an opt-in setting in a short-video feed: the creator's switch at upload, placements filled by the
+platform's ad auction. On the technical side: objects that move (held glasses, carried cups), 3D products on uploads,
+and faster upload processing.

@@ -2,6 +2,10 @@
 
 Same scene, a different brand for each viewer, always disclosed.
 
+A prototype of an opt-in ad format for short videos: creators approve placements in videos they've already filmed,
+and different viewers see different labelled sponsors, with nothing re-rendered. Built as a standalone prototype; a
+short-video feed such as Reels is where it would ship.
+
 Upload a video once. AdPlace finds what in it can carry an ad (posters, picture frames, signs, menu boards, screens,
 and glasses, cups and mugs that stay still), tracks each one against the room, and declines anything it can't place
 well, saying why. When a viewer presses play, a second-price auction picks a brand for every placement in well under a
@@ -20,6 +24,7 @@ Demo script: `docs/DEMO.md`. Write-up: `docs/SUBMISSION.md`.
 eval "$(grep '^export MODEL_API_KEY=' ~/.zshrc)"; export MODEL_API_KEY     # Meta Model API key
 .venv/bin/python -m uvicorn app.main:app --port 8411
 # http://127.0.0.1:8411/upload               upload a clip; live progress, then a report of what was placed and why not
+# http://127.0.0.1:8411/reels?clip=<stem>    creator settings (opt in, approve places and brands) + two viewers' phones
 # http://127.0.0.1:8411/player?clip=<stem>   the live per-viewer player with the playback auction
 .venv/bin/python scripts/ingest.py <video>   # the same upload pipeline from the command line
 .venv/bin/python -m pytest -q                # tests
@@ -29,6 +34,7 @@ eval "$(grep '^export MODEL_API_KEY=' ~/.zshrc)"; export MODEL_API_KEY     # Met
 
 | Day | Added |
 |---|---|
+| 9 (Nov 2–3) | The application: an opt-in placement setting for short videos (`/reels`). Uploads start with placement off (`pipeline/creator.py`, `creator.json` beside the export); the creator turns it on and approves each place and brand, and every auction and download respects it. Two phones play the same video in sync for two viewers, each with its own auction (prices, runner-up, time). Open-ended discovery merged: Muse lists every place with its kind, bowls carry logos, logos at least a fifth of the vessel's height |
 | 8 (Nov 2) | Still glasses behind bowls pinned by their outline, upright; logos moved onto the part of a glass that stays in view; each vessel measured once per upload (cached), player export 2.8 min -> 25 s. 23 unseen videos: 3 ads placed |
 | 7 (Nov 1–2) | Glass and cup logos composited live in the browser from a brand-independent atlas, so any brand can win at playback with nothing rendered (matches the server within ~1.5–2 grey levels). Second-price playback auction (`pipeline/auction.py`, `/api/auction`, < 0.2 ms) shown in the player, also driving the watermarked download. Cups and mugs: Muse Spark classifies every SAM "cup" object (glass, cup, other; branded or not), SAM outlines handles to cut out, ink dark on light cups and white on dark, and the logo goes on a blank patch of the cup's own design with clear space round it. Only still objects carry ads; a still object keeps its logo while someone walks in front (camera-carried pose). 13 unseen stock videos: 36 candidates, 1 placed, every decline checked by eye. Demo kit: `docs/DEMO.md`, `docs/SUBMISSION.md`, `scripts/record_demo.py` |
 | 6 (Oct 31) | Logos printed on drinking glasses in any uploaded clip (`scripts/glass_decal.py`): wrapped round the glass, its light, focus and grain, behind the fingers holding it; rigid shape fit per frame, resting glasses pinned to the camera. Gates for glasses; glasses occlude posters behind them. The blind Muse judge removed from the final checks (a person judges the look) |

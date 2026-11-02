@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from pipeline import auction, discover, rank, watermark  # noqa: E402
+from pipeline import auction, creator, discover, rank, watermark  # noqa: E402
 from pipeline.sam_track import read_frames  # noqa: E402
 from scripts.render import render_campaign  # noqa: E402
 
@@ -107,6 +107,11 @@ def player():
     return FileResponse(Path(__file__).parent / "static" / "player.html")
 
 
+@app.get("/reels")
+def reels():
+    return FileResponse(Path(__file__).parent / "static" / "reels.html")
+
+
 class ViewerRenderRequest(BaseModel):
     clip: str          # stem, e.g. "patio_waiter"
     profile_id: str
@@ -134,9 +139,68 @@ def run_auction(req: AuctionRequest):
     if req.profile_id not in viewers:
         raise HTTPException(404, f"unknown profile {req.profile_id}")
     entry = load("clips.json").get(track["clip"], {})
-    r = auction.run(auction.placements_of(track), load("inventory.json"), viewers[req.profile_id].get("preferences", []),
-                    entry.get("context_tags", []), jitter=min(max(req.jitter, 0.0), 0.5))
-    return {**r, "context_tags": entry.get("context_tags", [])}
+    settings = creator.load(player_export_dir(req.clip))
+    r = auction.run(creator.allowed(auction.placements_of(track), settings), load("inventory.json"),
+                    viewers[req.profile_id].get("preferences", []), entry.get("context_tags", []),
+                    jitter=min(max(req.jitter, 0.0), 0.5))
+    return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"]}
+
+
+def player_export_dir(stem):
+    return Path(__file__).parent / "static" / "player" / stem
+
+
+def latest_report(stem):
+    """The newest upload report for this export, for its declined places and their reasons."""
+    best = None
+    for p in (ROOT / "runs").glob("*/report.json"):
+        try:
+            r = json.loads(p.read_text())
+        except (OSError, ValueError):
+            continue
+        if r.get("clip_stem") == stem and (best is None or p.stat().st_mtime > best[0]):
+            best = (p.stat().st_mtime, r)
+    return best[1] if best else {}
+
+
+@app.get("/api/creator/{stem}")
+def creator_get(stem: str):
+    """The creator's settings for one video, with what they're deciding over: the places that passed (approve each)
+    and the brands with artwork for them (allow each), plus the places we declined and why."""
+    d, track, _ = player_export(stem)
+    settings = creator.load(d)
+    report = latest_report(stem)
+    found = {p["id"]: p for p in report.get("placements", [])}
+    campaigns = {c["brand_id"]: c for c in load("inventory.json")["campaigns"]}
+    places, brands = [], {}
+    for p in auction.placements_of(track):
+        r = found.get(p["id"], {})
+        places.append({"id": p["id"], "surface": p["surface"], "approved": settings["places"].get(p["id"], True),
+                       "on_screen_s": r.get("on_screen_s"), "thumb": r.get("thumb")})
+        for b in p["brands"]:
+            brands.setdefault(b, {"id": b, "category": campaigns.get(b, {}).get("category"),
+                                  "allowed": settings["brands"].get(b, True), "places": []})["places"].append(p["id"])
+    declined = [{"id": p["id"], "surface": p.get("surface"), "thumb": p.get("thumb"),
+                 "reason": (p.get("reasons") or ["It did not meet one of the checks."])[0]}
+                for p in report.get("placements", []) if p.get("decision") != "placed"]
+    return {"clip": stem, "enabled": settings["enabled"], "places": places, "brands": list(brands.values()),
+            "declined": declined, "scene": report.get("scene")}
+
+
+class CreatorSettings(BaseModel):
+    enabled: bool
+    places: dict[str, bool] = {}
+    brands: dict[str, bool] = {}
+
+
+@app.put("/api/creator/{stem}")
+def creator_put(stem: str, req: CreatorSettings):
+    d, track, _ = player_export(stem)
+    ids = {p["id"] for p in auction.placements_of(track)}
+    names = {b for p in auction.placements_of(track) for b in p["brands"]}
+    if set(req.places) - ids or set(req.brands) - names:
+        raise HTTPException(400, "settings name a place or brand this video doesn't have")
+    return creator.save(d, req.model_dump())
 
 
 @app.post("/api/viewer_render")
@@ -159,6 +223,11 @@ def viewer_render(req: ViewerRenderRequest):
         if any(k not in brands or v not in brands[k] for k, v in req.assignment.items()):
             raise HTTPException(400, "assignment names a placement or brand this export doesn't have")
         assignment = req.assignment
+    settings = creator.load(d)
+    if not settings["enabled"]:
+        raise HTTPException(403, "the creator hasn't turned on product placement for this video")
+    if any(not settings["places"].get(k, True) or not settings["brands"].get(v, True) for k, v in assignment.items()):
+        raise HTTPException(403, "the creator hasn't approved that place or brand")
     tag = "_".join(f"{k}-{v}" for k, v in sorted(assignment.items()))
     out = ROOT / "outputs" / "viewers" / f"{req.clip}__{tag}.mp4"
     t0 = time.time()

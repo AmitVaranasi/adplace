@@ -20,6 +20,35 @@ CHROME = Path(os.path.expanduser("~/Library/Caches/ms-playwright/chromium-1243/c
 SIZE = {"width": 1440, "height": 900}
 
 
+def creator(base, enabled):
+    """The bar clip's opt-in (pipeline/creator.py): off for the reels part to turn on, on for the rest."""
+    import json
+    import urllib.request
+    req = urllib.request.Request(f"{base}/api/creator/upload_m43248", method="PUT",
+                                 data=json.dumps({"enabled": enabled}).encode(),
+                                 headers={"content-type": "application/json"})
+    urllib.request.urlopen(req).read()
+
+
+def reels(pg, base, run):
+    """Two phones, one video: placement off, the creator turns it on, both play in sync, a brand is turned down."""
+    creator(base, False)
+    pg.goto(f"{base}/reels?clip=upload_m43248&a=viewer-a&b=viewer-b")
+    pg.wait_for_function('!document.getElementById("play").disabled', timeout=120000)
+    pg.wait_for_timeout(2500)
+    pg.click(".switch")
+    pg.wait_for_timeout(2500)
+    pg.click("#play")
+    pg.wait_for_timeout(5000)
+    pg.click("#brands input[value=brewlark]")
+    pg.wait_for_timeout(4000)
+    pg.click("#brands input[value=brewlark]")
+    pg.wait_for_timeout(1500)
+    pg.select_option('[data-side="b"] select', "viewer-c")
+    pg.wait_for_timeout(4000)
+    creator(base, True)
+
+
 def player_ready(pg):
     pg.wait_for_function('!document.getElementById("play").disabled', timeout=120000)
     pg.wait_for_function('document.getElementById("auction").textContent.includes("auction")', timeout=30000)
@@ -79,7 +108,7 @@ def download(pg, base, run):
     pg.wait_for_timeout(3000)
 
 
-PARTS = {"viewers": viewers, "report": report, "auction": auction, "patio": patio, "download": download}
+PARTS = {"reels": reels, "viewers": viewers, "report": report, "auction": auction, "patio": patio, "download": download}
 
 
 def main():
@@ -89,6 +118,7 @@ def main():
     ap.add_argument("--parts", default=",".join(PARTS))
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
+    creator(a.base, True)   # the player parts need the bar clip's ads on
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path=str(CHROME), headless=True,
                                     args=["--headless=new", "--use-angle=metal", "--ignore-gpu-blocklist"])

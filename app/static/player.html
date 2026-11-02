@@ -124,6 +124,12 @@
     opacity: .001;
     pointer-events: none;
   }
+  /* ?embed=1: just the picture, cropped to a phone's 9:16 round the placements (reels.html shows two) */
+  body.embed main { padding: 0; max-width: none; }
+  body.embed header, body.embed aside, body.embed .controls, body.embed .toolbar, body.embed .help { display: none; }
+  body.embed .layout { display: block; }
+  body.embed .stage { border: 0; border-radius: 0; width: 100vw; height: 100vh; }
+  body.embed canvas#screen { width: 100%; height: 100%; object-fit: cover; }
   @media (max-width: 900px) {
     main { padding: 14px; }
     .layout { grid-template-columns: 1fr; }
@@ -442,6 +448,9 @@ void main() {
   const asked = new URLSearchParams(location.search).get("clip");
   if (asked && /^[\w-]+$/.test(asked) && !CLIPS.includes(asked)) CLIPS.unshift(asked);
   const $ = id => document.getElementById(id);
+  const EMBED = new URLSearchParams(location.search).get("embed") === "1";
+  const askedViewer = new URLSearchParams(location.search).get("viewer");
+  if (EMBED) document.body.classList.add("embed");
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   const assetKey = (slot, brand) => slot + "/" + brand;
   const title = s => s.replaceAll("_", " ");
@@ -925,7 +934,7 @@ void main() {
     const video=document.createElement("video");
     if (!video.requestVideoFrameCallback)
       throw new Error("requestVideoFrameCallback is required.");
-    video.muted=true; video.playsInline=true; video.preload="auto";
+    video.muted=true; video.playsInline=true; video.preload="auto"; video.loop=EMBED;
     video.className="decoder"; video.setAttribute("aria-hidden","true");
     document.body.append(video);
     const s={
@@ -1009,6 +1018,7 @@ void main() {
   let live=null,renderer=null,profileId=null,withAds=true,generation=0,drawCount=0;
 
   function showError(error) {
+    if (EMBED) { console.error(error); return; }   // a phone in reels.html keeps playing; the page has no room for it
     $("error").hidden=false;
     $("error").textContent=error.message || String(error);
     if (live) live.video.pause();
@@ -1016,7 +1026,10 @@ void main() {
 
   function paint(upload=true) {
     if (!live || !renderer) return;
-    renderer.render(live.video,live.index,profileId,{ads:withAds,upload,assignment:won()});
+    if (upload && live.video.readyState<2) return;   // mid-seek (reels.html keeping two phones in step): next frame
+    const chosen=won();   // the label marks ads: none shown (Original, or the creator has placement off), no label
+    renderer.render(live.video,live.index,profileId,{ads:withAds,upload,assignment:chosen,
+      label:withAds && !(chosen && !Object.keys(chosen).length)});
     $("scrub").value=live.index;
     $("frame").textContent="Frame "+(live.index+1)+" / "+live.data.track.frames;
     drawCount++;
@@ -1025,10 +1038,44 @@ void main() {
   // the auction's result for the current viewer in this session, if it has come back
   function won() {
     const r=live && live.auction[profileId];
-    return r ? r.assignment : null;
+    return r ? r.assignment : EMBED ? {} : null;   // a phone shows no ad before its own auction (the creator may be off)
   }
 
   // the bid when a viewer starts watching (pipeline/auction.py); the export's choice stays until it returns
+  // A phone shows a 9:16 column of the frame: centred on the placements when they fit in one, else the middle.
+  // The disclosure label moves into that column so it is always seen.
+  function phoneCrop(t) {
+    const w=Math.round(t.height*9/16);
+    if (w>=t.width) return;
+    const xs=[];
+    for (const s of t.slots) for (const q of s.quads) if (q) for (const pt of q) xs.push(pt[0]);
+    for (const o of t.objects || []) for (const b of o.boxes) if (b) xs.push(b[0],b[0]+b[2]);
+    let x0=(t.width-w)/2;
+    if (xs.length) {
+      const lo=Math.min(...xs),hi=Math.max(...xs);
+      if (hi-lo<=w) x0=(lo+hi)/2-w/2;
+    }
+    x0=clamp(Math.round(x0),0,t.width-w);
+    $("screen").style.objectPosition=(100*x0/(t.width-w)).toFixed(2)+"% 50%";
+    renderer.label.x=x0+Math.round(t.height*0.03);
+  }
+
+  // reels.html drives two embedded players (same origin) through this.
+  const embedApi={
+    onAuction:null,onReady:null,
+    video:()=>live && live.video,
+    profiles:()=>live ? live.data.profiles : {},
+    track:()=>live ? live.data.track : null,
+    viewer:()=>profileId,
+    setViewer(id) {
+      if (!live || !Object.hasOwn(live.data.profiles,id)) return;
+      profileId=id; profileUI(); bid(id);
+    },
+    rebid() { if (live) bid(profileId); },
+    setAds(on) { withAds=!!on; try { paint(false); } catch (error) { showError(error); } },
+  };
+  window.embedApi=embedApi;
+
   async function bid(id) {
     const session=live;
     if (!session) return;
@@ -1041,6 +1088,7 @@ void main() {
       if (!r.ok) throw new Error(body.detail || r.status);
       body.roundTrip=Math.round(performance.now()-t0);
       session.auction[id]=body;
+      if (embedApi.onAuction) embedApi.onAuction(id,body);
     } catch (error) {
       if (live===session && profileId===id) $("auction").textContent="Auction unavailable ("+(error.message || error)+"); showing the saved choice.";
       return;
@@ -1080,7 +1128,8 @@ void main() {
     }
     $("rationale").textContent=!a && typeof p.rationale==="string" ? p.rationale : "";
     $("chooser").textContent=a ? "" : p.chooser || "Muse";
-    $("auction").textContent=a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
+    $("auction").textContent=a && a.creator_enabled===false ? "The creator hasn't turned on product placement for "+
+      "this video, so every viewer sees the original." : a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
       a.roundTrip+" ms round trip). Placements were prepared at upload, so no rendering was needed." : "";
   }
 
@@ -1104,8 +1153,10 @@ void main() {
 
       renderer.setData(data);
       live=opened; live.auction={};
+      if (EMBED && Object.hasOwn(data.profiles,askedViewer)) profileId=askedViewer;
       profileId=Object.hasOwn(data.profiles,profileId)
         ? profileId : Object.keys(data.profiles)[0];
+      if (EMBED) phoneCrop(data.track);
 
       for (const [id,p] of Object.entries(data.profiles)) {
         const button=document.createElement("button");
@@ -1131,6 +1182,7 @@ void main() {
       profileUI(); paint();
       $("placeholder").hidden=true;
       bid(profileId);
+      if (embedApi.onReady) embedApi.onReady();
 
       opened.video.addEventListener("play",()=>{
         if (live===opened) $("play").textContent="Pause";
