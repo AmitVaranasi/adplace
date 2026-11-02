@@ -367,7 +367,7 @@ uniform vec2 uOrigin, uLogoSize;
 uniform vec3 uTaps[16];   // shutter smear: pixel offset, weight
 uniform int uTapCount;
 uniform vec4 uPlace;   // rim centre x, y, radius, axis angle (0 = upright)
-uniform float uStretch, uHalf, uCurve;
+uniform float uStretch, uHalf, uCurve, uLateral;   // uLateral: the print turned off the front, onto a blank patch
 
 // GlassDecal.layer: the logo wrapped round the front of the glass, fading where the glass turns away
 float logoAt(vec2 p) {
@@ -377,7 +377,7 @@ float logoAt(vec2 p) {
   if (abs(u)>=r) return 0.0;
   float sn=u/r,theta=asin(sn);
   float dh=2.0*uHalf*r*uLogoSize.y/uLogoSize.x*uStretch;
-  vec2 q=vec2((theta/(2.0*uHalf)+0.5)*(uLogoSize.x-1.0),
+  vec2 q=vec2(((theta-uLateral)/(2.0*uHalf)+0.5)*(uLogoSize.x-1.0),
               (t-uCurve*r*cos(theta)+dh/2.0)/dh*(uLogoSize.y-1.0));
   // cv2.remap with a zero border: samples beyond the logo's edge pixels fade to nothing
   vec2 w=clamp(min(q+1.0,uLogoSize-q),0.0,1.0);
@@ -792,6 +792,7 @@ void main() {
       gl.uniform4f(p.u("uPlace"),cx,cy,r,ang);
       gl.uniform1f(p.u("uStretch"),stretch);
       gl.uniform1f(p.u("uHalf"),obj.half_angle); gl.uniform1f(p.u("uCurve"),obj.curve);
+      gl.uniform1f(p.u("uLateral"),obj.lateral || 0);
       this.draw();
       this.blur(b,obj.sigma);
       p=this.begin("glassmerge",this.full[1-current],t.width,t.height);

@@ -188,7 +188,7 @@ def export_glass(clip, spec, frames, start, inventory, d):
     centre, radius, axis angle, stretch and the logo's motion (px/frame) for the shutter smear. ../logos/<brand>_glass.png:
     the logo's alpha, shared by every clip. The player reproduces GlassDecal.apply: cylinder wrap, fade at the
     sides, defocus `sigma`, smear, x 0.88 x visibility, then over with luma grain."""
-    from scripts.glass_decal import CURVE, HALF_ANGLE
+    from scripts.glass_decal import CURVE
     from scripts.place3d import make
     obj = make(clip, spec)
     brands = eligible_brands({"surface": spec.get("surface", "glass"), "creative_format": "glass_print"}, inventory)
@@ -228,7 +228,8 @@ def export_glass(clip, spec, frames, start, inventory, d):
           flush=True)
     return {"id": spec["id"], "kind": "glass", "surface": spec.get("surface", "glass"), "boxes": boxes,
             "place": place, "atlas": f"art/{spec['id']}_glass.png", "sigma": round(float(obj.sigma), 3),
-            "grain": round(float(obj.grain), 3), "half_angle": HALF_ANGLE, "curve": CURVE, "ink": obj.ink_alpha,
+            "grain": round(float(obj.grain), 3), "half_angle": round(float(obj.half), 4),
+            "lateral": round(float(obj.lateral), 4), "curve": CURVE, "ink": obj.ink_alpha,
             "shutter": 0.5, "brands": {b: {"art": f"../logos/{b}_glass.png"} for b in brands}}
 
 

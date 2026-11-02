@@ -335,14 +335,17 @@ def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
     v = muse_json("You review candidate ad placements for an ad-placement system. Be strict.",
                   [{"type": "text", "text": "The green outline marks a candidate object. What is it: \"glass\" (one "
                     "real drinking glass), \"cup\" (one real coffee cup, teacup or mug, ceramic or paper) or "
-                    "\"other\" (a jar, bottle, bowl, window, fridge door, several objects, ...)? And would a brand's "
-                    "small logo printed on it look natural: is it plain, with no logo, label or print of its own? "
-                    'Reply JSON: {"vessel": "glass" | "cup" | "other", "plain": bool, "reason": str}'},
+                    "\"other\" (a jar, bottle, bowl, window, fridge door, several objects, ...)? Is it plain, with no "
+                    "print of its own? Does it carry a brand's name or logo (another brand's ad must not be covered "
+                    "or sit beside ours)? A decorative pattern or drawing is not a brand. Reply JSON: "
+                    '{"vessel": "glass" | "cup" | "other", "plain": bool, "branded": bool, "reason": str}'},
                    {"type": "image_url", "image_url": {"url": jpeg_url(f)}}], tokens=2000)
     vessel = v.get("vessel") if v.get("vessel") in ("glass", "cup") else "other"
     kind, surface = ("glass_decal", "glass") if vessel == "glass" else ("cup_decal", "cup")
     reason = str(v.get("reason", ""))[:200]
-    if vessel == "other" or not v.get("plain"):   # no point following it for a minute
+    # a cup's own drawing is fine (the print goes on a blank patch of it); a brand's isn't, and a glass's print
+    # can't be told from what's seen through it, so a glass must be plain
+    if vessel == "other" or v.get("branded") is not False or (vessel == "glass" and not v.get("plain")):
         return ({"on_screen_s": len(seen) / fps, "muse_plausible": False, "muse_reason": reason,
                  "error": "muse_plausible: " + reason}, [seen[0], seen[-1]] if seen else [0, 0], kind, surface)
     g = make(clip, {"id": cid, "kind": kind, "prompt": prompt, "object": oid})
@@ -359,7 +362,7 @@ def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
          "uncovered_visible_s": sum(1 for k in range(frames.n) if g.store.any(k) and k not in g.place) / fps,
          # static objects only: a glass someone picks up needs its logo re-fitted every frame, and that shows
          "travel_r_max": max_travel(g, fps, float(np.median(geo[:, 2])) if len(geo) else 1.0),
-         "muse_plausible": True, "muse_reason": reason}
+         "muse_plausible": True, "muse_reason": reason, "blank_patch": bool(g.blank)}
     return m, [int(placed[0]), int(placed[-1])] if placed else [0, 0], kind, surface
 
 
@@ -394,6 +397,8 @@ def decide_glass(c):
                    "needs 90%")
     if m["uncovered_visible_s"] > 0.25:
         why.append(f"visible but not covered for {m['uncovered_visible_s']:.1f} s")
+    if not m.get("blank_patch", True):
+        why.append(f"no blank patch: the {what}'s own design leaves no space the logo fits without touching it")
     if m.get("travel_r_max", 0.0) > 0.5:
         why.append(f"moves: travels {m['travel_r_max']:.1f} {what} radii within a second, needs at most 0.5 "
                    "(only still objects carry ads)")
@@ -423,6 +428,7 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("already has", "The shot already has as many ads as we allow."),
     ("could not track", "We couldn't track it through the shot."),
     ("moves:", "Someone picks it up or moves it; for now we only place ads on things that stay still."),
+    ("no blank patch", "Its own design leaves no blank space big enough for a logo that doesn't touch it."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
     ("failed final check: judge", "A blind reviewer spotted it as inserted much more often than the original."),
     ("failed final check", "It failed the final checks on the rendered video."),
