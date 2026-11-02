@@ -55,20 +55,21 @@ placement can always be found, even after re-encoding."
 
 Say, with the numbers from the test set (below):
 
-- "On 13 videos it had never seen, it placed one ad and declined 35 candidates, explaining why each time. Most
+- "On 23 videos it had never seen, it placed three ads and declined 53 candidates, explaining why each time. Most
   declines are scenes with nothing still to print on."
-- "A 10-second upload takes about 13 minutes, once. Picking brands at playback takes a tenth of a millisecond."
+- "A 10-second upload takes a few minutes, once. Picking brands at playback takes a tenth of a millisecond."
 - "Meta tooling: SAM 3.1 and Muse Spark through the Meta Model API, Muse Image for the brand artwork, Video Seal for
   the watermark."
 - "Next: objects people pick up, and 3D products on any upload."
 
 ## Test-set figures
 
-13 stock videos never used in development, final code (`runs/testset3_summary.txt`, `runs/testset3_cups.txt`):
-36 candidates found, 1 placed (m44025: a glass on a restaurant table, logo kept on it while a shoulder passes in
-front). Declines, all checked by eye: nothing to place on (5 videos), a fast blurred bar sweep (13 surfaces), a night
-terrace's signs (12, one a parking sign), glasses and teacups picked up or carried in. Say: "On 13 videos it had never seen, it placed one ad and declined
-35 candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
+23 stock videos never used in development, final code (`runs/testset_all23.txt`): 56 candidates found, 3 placed,
+all on still glasses on restaurant tables (m44025: kept on while a shoulder passes in front; m43999: moved onto the
+part a bowl doesn't hide; m44007: an orange juice). Declines, all checked by eye: nothing to place on (8 videos), a
+fast blurred bar sweep, a night terrace's signs (one a parking sign), branded glasses, sauce ramekins, glasses and
+teacups picked up or carried in. Say: "On 23 videos it had never seen, it placed three ads and declined 53
+candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
 
 Optional extra shot: `/player?clip=upload_pair` (two mugs with drawings on them; each logo goes on a blank patch,
 dark ink on the light mug, white on the black one).

@@ -54,14 +54,16 @@ frames of the bar clip]. No local models: all segmentation and vision go through
 
 ## Honest limits
 
-- On 13 stock videos it had never seen [`runs/testset3_summary.txt`, `runs/testset3_cups.txt`]: 36 candidate
-  surfaces and objects found, 1 placed (a glass on a restaurant table, kept on it while a diner's shoulder passes in
-  front). Every decline was checked by eye and holds: 5 videos have nothing to place on (pizza close-ups, a tower
+- On 23 stock videos it had never seen [`runs/testset_all23.txt`]: 56 candidate surfaces and objects found, 3
+  placed, all on still glasses on restaurant tables (one kept on while a diner's shoulder passes in front, one moved
+  onto the part of the glass a bowl doesn't hide). Every decline was checked by eye and holds: 8 videos have nothing to place on (pizza close-ups, a tower
   block, dim interiors); a fast, blurred sweep through a bar; a blue parking sign (Muse: an ad must not cover traffic
-  information); glasses and teacups that are picked up or carried in. It is conservative by design: it would rather
+  information); branded or embossed glasses; sauce ramekins Muse rightly refused as cups; glasses and teacups that
+  are picked up or carried in. It is conservative by design: it would rather
   place nothing than place badly.
 - Objects that people pick up don't carry ads yet.
-- A 10-second upload takes about 13 minutes of processing, once [bar clip: 774 s].
+- A 10-second upload takes about 6–10 minutes of processing, once [bar clip: 379 s with SAM cached, plus 1–4 min
+  for SAM 3.1 on a fresh upload].
 - 3D products (a can placed on a table) work on hand-calibrated demo clips, not yet on uploads.
 
 ## What's next

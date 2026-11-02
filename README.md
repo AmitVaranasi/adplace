@@ -29,6 +29,7 @@ eval "$(grep '^export MODEL_API_KEY=' ~/.zshrc)"; export MODEL_API_KEY     # Met
 
 | Day | Added |
 |---|---|
+| 8 (Nov 2) | Still glasses behind bowls pinned by their outline, upright; logos moved onto the part of a glass that stays in view; each vessel measured once per upload (cached), player export 2.8 min -> 25 s. 23 unseen videos: 3 ads placed |
 | 7 (Nov 1–2) | Glass and cup logos composited live in the browser from a brand-independent atlas, so any brand can win at playback with nothing rendered (matches the server within ~1.5–2 grey levels). Second-price playback auction (`pipeline/auction.py`, `/api/auction`, < 0.2 ms) shown in the player, also driving the watermarked download. Cups and mugs: Muse Spark classifies every SAM "cup" object (glass, cup, other; branded or not), SAM outlines handles to cut out, ink dark on light cups and white on dark, and the logo goes on a blank patch of the cup's own design with clear space round it. Only still objects carry ads; a still object keeps its logo while someone walks in front (camera-carried pose). 13 unseen stock videos: 36 candidates, 1 placed, every decline checked by eye. Demo kit: `docs/DEMO.md`, `docs/SUBMISSION.md`, `scripts/record_demo.py` |
 | 6 (Oct 31) | Logos printed on drinking glasses in any uploaded clip (`scripts/glass_decal.py`): wrapped round the glass, its light, focus and grain, behind the fingers holding it; rigid shape fit per frame, resting glasses pinned to the camera. Gates for glasses; glasses occlude posters behind them. The blind Muse judge removed from the final checks (a person judges the look) |
 | 5 (Oct 29–30) | Upload pipeline (`scripts/ingest.py`, `/upload`): shot detection, Muse Spark scene reading and brand safety, SAM 3.1 segmentation, tracking, conservative gates with plain-language reasons, live player export, final checks on a rendered copy; 67x faster SAM mask decoding |
@@ -72,8 +73,8 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 
 | Check | Result |
 |---|---|
-| 13 unseen stock videos, final code | 36 candidates, 1 placed; every decline checked by eye (nothing to place on, a fast blurred sweep, a parking sign, objects picked up or carried in) |
-| Bar clip (10 s) upload, end to end | about 10–13 min; wall poster and the still matcha glass placed, the glass she drinks from declined (travels 4.8 radii in a second, limit 0.5) |
+| 23 unseen stock videos, final code (`runs/testset_all23.txt`) | 56 candidates, 3 placed (3 videos); every decline checked by eye: nothing to place on (8 videos), a fast blurred sweep, a parking sign, branded or embossed glasses, sauce ramekins, objects picked up or carried in |
+| Bar clip (10 s) upload, end to end | 379 s with SAM results cached (595 s before the per-object cache; add 1–4 min for SAM on a fresh upload); wall poster and the still matcha glass placed, the glass she drinks from declined (travels 4.8 radii in a second, limit 0.5) |
 | Still glass vs camera | logo moves with the camera within 0.000 px median per frame |
 | Live player vs server, glass and cup logos | 1.3–1.9 grey levels mean difference on the logo |
 | Playback auction | 0.06–0.2 ms on the server, 5–17 ms round trip |
