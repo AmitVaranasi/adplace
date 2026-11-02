@@ -10,7 +10,7 @@
    "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "brewlark matches coffee morning interests and fizzwell fits cafe drink context on eligible surfaces."
+  "rationale": "brewlark matches coffee-morning interests and cafe context, fizzwell fits drinks-food with eligible surfaces."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -23,7 +23,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "kestrel matches viewer running fitness on poster and brewlark matches cafe context on glass."
+  "rationale": "Kestrel matches running/fitness interests on poster and Brewlark matches cafe context on glass."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -36,7 +36,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Paperwhale matches reading interests on poster and brewlark fits cafe context on glass."
+  "rationale": "paperwhale matches viewer reading interests on poster and brewlark matches cafe context on glass."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -50,7 +50,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Nimbus matches viewer travel interests on poster and brewlark matches cafe context on glass."
+  "rationale": "Nimbus matches viewer travel interests on poster and Brewlark fits cafe glass context."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -64,7 +64,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fernleaf matches all viewer interests and brewlark fits cafe context on eligible surfaces."
+  "rationale": "Fernleaf matches all viewer interests and Brewlark fits cafe context with eligible surfaces."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -78,6 +78,6 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Voltway matches viewer interests and brewlark fits cafe context."
+  "rationale": "voltway matches viewer interests on poster and brewlark fits cafe context on glass."
  }
 }

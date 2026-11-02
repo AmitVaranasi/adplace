@@ -890,6 +890,9 @@ def make(clip, spec):
     if spec.get("kind") == "glass_decal":
         from scripts.glass_decal import GlassDecal
         return GlassDecal(clip, spec)
+    if spec.get("kind") == "cup_decal":
+        from scripts.glass_decal import CupDecal
+        return CupDecal(clip, spec)
     return KINDS[spec.get("kind", "can")](clip, spec)
 
 

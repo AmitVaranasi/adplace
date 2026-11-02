@@ -58,3 +58,10 @@ def test_placements_of_track():
     ps = {p["id"]: p for p in auction.placements_of(track)}
     assert ps["s"]["area"] == 0.01 and ps["s"]["brands"] == ["a"]
     assert ps["g"]["area"] == 0.01
+
+
+def test_left_over_placement_goes_to_a_brand_already_shown():
+    ps = [{"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5},
+          {"id": "small", "surface": "glass", "brands": ["b"], "area": 0.1}]
+    r = auction.run(ps, INV, [])
+    assert r["assignment"] == {"big": "b", "small": "b"}

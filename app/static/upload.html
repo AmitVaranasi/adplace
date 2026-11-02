@@ -926,6 +926,7 @@
       report.duration_s ? Number(report.duration_s).toFixed(1) + " seconds long" : null,
       report.elapsed_s ? "took " + clock(Number(report.elapsed_s)) : null,
       report.run_id ? "run " + report.run_id : null,
+      (report.placements || []).length ? report.note : null,   // with no placements it explains that, below
     ].filter(Boolean).join(" · ");
 
     const summary = report.summary || {};
@@ -943,6 +944,8 @@
     } else {
       player.hidden = true;
       $("no-player").hidden = false;
+      $("no-player").textContent = placements.length ? "Nothing was placed, so there is no player to open. " +
+        "The cards below say why." : report.note || "Nothing was found to place an ad on.";
     }
 
     const viewers = report.viewers || [];

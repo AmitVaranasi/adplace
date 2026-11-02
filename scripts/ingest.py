@@ -35,7 +35,9 @@ SURFACES = {"poster": "poster", "framed picture": "poster", "painting": "poster"
             "television": "screen", "menu": "menu", "pizza box": "box"}
 # Things a logo can be printed on (scripts/glass_decal.py): what Muse calls them -> SAM 3.1 prompt. "cup" finds
 # drinking glasses and nothing else in a bar scene; "glass" also takes fridge doors and jars.
-PRINTABLE = {"drinking glass": "cup"}
+# Glasses, coffee cups and mugs all come from SAM's "cup" ("coffee cup" finds nothing, "mug" misses teacups,
+# "teacup" misses mugs); Muse Spark then says which each object is.
+PRINTABLE = {"drinking glass": "cup", "coffee cup": "cup", "mug": "cup"}
 OCCLUDERS = ["person"]
 STAGES = ["upload", "shots", "segment", "track", "score", "render", "export", "qa", "done"]
 
@@ -289,7 +291,7 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
     results = []
     for k, c in enumerate(accepted):
         run.progress("qa", 20 + 70 * k / len(accepted), f"checking {c['id']} ({c['surface']})")
-        if c["kind"] == "glass_decal":   # measured at the gates; the human reviewer judges the look for now
+        if c["kind"] in ("glass_decal", "cup_decal"):   # measured at the gates; the human reviewer judges the look
             results.append({"id": c["id"], "pass": True, "checks": {}, "reasons": []})
             continue
         with np.load(scene_dir(clip) / f"track_{c['id']}.npz") as z:
@@ -315,39 +317,50 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
     return results
 
 
-def glass_candidate(clip, cid, oid, frames, fps, thumbs):
-    """A drinking glass SAM found: the logo's own placement (scripts/glass_decal.py), measured like a surface."""
-    from scripts.glass_decal import GlassDecal
-    g = GlassDecal(clip, {"id": cid, "kind": "glass_decal", "prompt": PRINTABLE["drinking glass"], "object": oid})
-    seen = [i for i in range(frames.n) if g.store.any(i)]
-    placed = g.valid
-    run, best = 0, 0
-    for i in range(frames.n):
-        run = run + 1 if i in g.place else 0
-        best = max(best, run)
-    geo = np.array([g.place[i] for i in placed]) if placed else np.zeros((0, 5))
-    fit_ok, on_glass = g.quality()
-    m = {"on_screen_s": len(placed) / fps, "longest_run_s": best / fps, "frames": len(placed),
-         "radius_px_median": float(np.median(geo[:, 2])) if len(geo) else 0.0,
-         "shape_fit_fraction": fit_ok, "print_on_glass_fraction": on_glass,
-         "uncovered_visible_s": sum(1 for i in seen if i not in g.place) / fps,
-         # static objects only: a glass someone picks up needs its logo re-fitted every frame, and that shows
-         "travel_r_max": max_travel(g, fps, float(np.median(geo[:, 2])) if len(geo) else 1.0)}
-    i = placed[len(placed) // 2] if placed else (seen[len(seen) // 2] if seen else 0)
+def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
+    """A drinking glass, cup or mug SAM found ("cup" finds all three): Muse Spark says which it is and whether it's
+    plain, then the logo's own placement (scripts/glass_decal.py) is measured like a surface. Returns (metrics,
+    frame range, kind, surface)."""
+    from scripts.place3d import make
+    from scripts.render_dynamic import object_stores
+    st = object_stores(clip, prompt, frames)[str(oid)]
+    seen = [i for i in range(frames.n) if st.any(i)]
+    i = max(seen[len(seen) // 4: 3 * len(seen) // 4 + 1] or seen or [0], key=lambda k: st[k].sum() if st.any(k) else 0)
     f = frames[i].copy()
-    if g.store.any(i):
-        cs, _ = cv2.findContours(g.store[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if st.any(i):
+        cs, _ = cv2.findContours(st[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(f, cs, -1, (60, 220, 120), 3, cv2.LINE_AA)
     cv2.imwrite(str(thumbs / f"{cid}.jpg"), cv2.resize(f, (640, int(640 * f.shape[0] / f.shape[1]))),
                 [cv2.IMWRITE_JPEG_QUALITY, 85])
     v = muse_json("You review candidate ad placements for an ad-placement system. Be strict.",
-                  [{"type": "text", "text": "The green outline marks a candidate object. Would a brand's small white logo "
-                    "printed on it look natural: is it one real drinking glass or cup, plain, with no logo, label or "
-                    "print of its own, not a jar, bottle, window or fridge door? Reply JSON: "
-                    '{"plausible": bool, "reason": str}'},
+                  [{"type": "text", "text": "The green outline marks a candidate object. What is it: \"glass\" (one "
+                    "real drinking glass), \"cup\" (one real coffee cup, teacup or mug, ceramic or paper) or "
+                    "\"other\" (a jar, bottle, bowl, window, fridge door, several objects, ...)? And would a brand's "
+                    "small logo printed on it look natural: is it plain, with no logo, label or print of its own? "
+                    'Reply JSON: {"vessel": "glass" | "cup" | "other", "plain": bool, "reason": str}'},
                    {"type": "image_url", "image_url": {"url": jpeg_url(f)}}], tokens=2000)
-    m["muse_plausible"], m["muse_reason"] = bool(v.get("plausible")), str(v.get("reason", ""))[:200]
-    return m, [int(placed[0]), int(placed[-1])] if placed else [0, 0], f
+    vessel = v.get("vessel") if v.get("vessel") in ("glass", "cup") else "other"
+    kind, surface = ("glass_decal", "glass") if vessel == "glass" else ("cup_decal", "cup")
+    reason = str(v.get("reason", ""))[:200]
+    if vessel == "other" or not v.get("plain"):   # no point following it for a minute
+        return ({"on_screen_s": len(seen) / fps, "muse_plausible": False, "muse_reason": reason,
+                 "error": "muse_plausible: " + reason}, [seen[0], seen[-1]] if seen else [0, 0], kind, surface)
+    g = make(clip, {"id": cid, "kind": kind, "prompt": prompt, "object": oid})
+    placed = g.valid
+    run, best = 0, 0
+    for k in range(frames.n):
+        run = run + 1 if k in g.place else 0
+        best = max(best, run)
+    geo = np.array([g.place[k] for k in placed]) if placed else np.zeros((0, 5))
+    fit_ok, on_glass = g.quality()
+    m = {"on_screen_s": len(placed) / fps, "longest_run_s": best / fps, "frames": len(placed),
+         "radius_px_median": float(np.median(geo[:, 2])) if len(geo) else 0.0,
+         "shape_fit_fraction": fit_ok, "print_on_glass_fraction": on_glass,
+         "uncovered_visible_s": sum(1 for k in range(frames.n) if g.store.any(k) and k not in g.place) / fps,
+         # static objects only: a glass someone picks up needs its logo re-fitted every frame, and that shows
+         "travel_r_max": max_travel(g, fps, float(np.median(geo[:, 2])) if len(geo) else 1.0),
+         "muse_plausible": True, "muse_reason": reason}
+    return m, [int(placed[0]), int(placed[-1])] if placed else [0, 0], kind, surface
 
 
 def max_travel(g, fps, r):
@@ -364,6 +377,7 @@ def max_travel(g, fps, r):
 def decide_glass(c):
     """The gates for a logo on a glass, in the same spirit as pipeline/gates.py for flat surfaces."""
     m, why = c["metrics"], []
+    what = c.get("surface", "glass")
     if m.get("error"):
         return {"id": c["id"], "decision": "decline", "score": 0.0, "reasons": [m["error"]]}
     if not m["on_screen_s"] >= 2.0:
@@ -371,16 +385,17 @@ def decide_glass(c):
     if not m["longest_run_s"] >= 1.5:
         why.append(f"longest run {m['longest_run_s']:.1f} s, needs 1.5 s")
     if not m["radius_px_median"] >= 22:
-        why.append(f"minimum side: glass {2 * m['radius_px_median']:.0f} px wide, needs 44 px")
+        why.append(f"minimum side: {what} {2 * m['radius_px_median']:.0f} px wide, needs 44 px")
     if not m["shape_fit_fraction"] >= 0.8:
-        why.append(f"could not track: the glass's shape fitted in {m['shape_fit_fraction']:.0%} of frames, needs 80%")
+        why.append(f"could not track: the {what}'s shape fitted in {m['shape_fit_fraction']:.0%} of frames, "
+                   "needs 80%")
     if not m["print_on_glass_fraction"] >= 0.9:
-        why.append(f"track residual: logo well inside the glass in {m['print_on_glass_fraction']:.0%} of frames, "
+        why.append(f"track residual: logo well inside the {what} in {m['print_on_glass_fraction']:.0%} of frames, "
                    "needs 90%")
     if m["uncovered_visible_s"] > 0.25:
         why.append(f"visible but not covered for {m['uncovered_visible_s']:.1f} s")
     if m.get("travel_r_max", 0.0) > 0.5:
-        why.append(f"moves: travels {m['travel_r_max']:.1f} glass radii within a second, needs at most 0.5 "
+        why.append(f"moves: travels {m['travel_r_max']:.1f} {what} radii within a second, needs at most 0.5 "
                    "(only still objects carry ads)")
     if not m.get("muse_plausible"):
         why.append("muse_plausible: " + m.get("muse_reason", ""))
@@ -515,15 +530,16 @@ def ingest(src, run_id=None):
                     continue
                 k += 1
                 cid = f"c{k:02d}"
-                run.progress("track", 95, f"following glass #{oid}")
+                run.progress("track", 95, f"following glass or cup #{oid}")
                 c = {"id": cid, "shot": 0, "prompt": p, "object": int(oid), "kind": "glass_decal", "surface": "glass",
-                     "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg",
-                     "slot": {"id": cid, "kind": "glass_decal", "surface": "glass", "prompt": p, "object": int(oid)}}
+                     "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg"}
                 try:
-                    c["metrics"], c["frames"], _ = glass_candidate(clip, cid, int(oid), frames, fps, run.dir / "thumbs")
+                    c["metrics"], c["frames"], c["kind"], c["surface"] = glass_candidate(
+                        clip, cid, int(oid), frames, fps, run.dir / "thumbs", prompt=p)
                 except Exception as e:
                     c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
                     c["frames"], c["thumb"] = [0, 0], None
+                c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid)}
                 c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
                 cands.append(c)
         run.write("candidates.json", [{kk: v for kk, v in c.items() if kk not in ("slot", "quads")} for c in cands])
@@ -532,11 +548,14 @@ def ingest(src, run_id=None):
         run.progress("score", 0, "deciding")
         try:
             from pipeline.gates import decide_all
-            flat = [c for c in cands if c["kind"] == "flat"]
+            # a surface that couldn't be tracked has no measurements for the gates: its error is the reason
+            flat = [c for c in cands if c["kind"] == "flat" and not c["metrics"].get("error")]
             by_id = {d["id"]: d for d in decide_all([{kk: v for kk, v in c.items() if kk != "slot"} for c in flat])}
+            by_id.update({c["id"]: {"id": c["id"], "decision": "decline", "score": 0.0, "reasons": [c["metrics"]["error"]]}
+                          for c in cands if c["kind"] == "flat" and c["metrics"].get("error")})
         except ImportError:
             by_id = {d["id"]: d for d in fallback_decide([c for c in cands if c["kind"] == "flat"])}
-        by_id.update({c["id"]: decide_glass(c) for c in cands if c["kind"] == "glass_decal"})
+        by_id.update({c["id"]: decide_glass(c) for c in cands if c["kind"] in ("glass_decal", "cup_decal")})
         decisions = [by_id[c["id"]] for c in cands]
         run.write("decisions.json", decisions)
         accepted = [c for c, d in zip(cands, decisions) if d["decision"] == "accept"]
@@ -577,6 +596,12 @@ def ingest(src, run_id=None):
         ap = ROOT / "app" / "static" / "player" / stem / "assignments.json"
         if ap.exists():
             viewers = [{"profile_id": pid, "label": v["label"]} for pid, v in json.loads(ap.read_text()).items()]
+        if not cands:   # say why there is nothing to show, instead of an empty report
+            why = ("The scene isn't suitable for advertising, so nothing was placed."
+                   if not scene.get("scene_safe", False) else
+                   "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, "
+                   "screens, and plain glasses, cups and mugs that stay still, and found none.")
+            note = f"{note}. {why}" if note else why
         report = {"run_id": run.id, "clip_stem": stem, "clip": clip, "source_name": Path(src).name,
                   "duration_s": round(frames.n / fps, 2), "status": "done", "elapsed_s": round(time.time() - run.t0),
                   "note": note, "scene": scene,

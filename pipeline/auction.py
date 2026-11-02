@@ -4,7 +4,8 @@ Every placement's geometry, light and mattes were prepared at upload and do not 
 so the auction only has to pick names. Per placement, in order of size (the biggest is worth most):
 
   eligible   the brand has artwork for this placement, can run on this surface, its exclusions don't match the
-             scene, and it hasn't already won another placement in this video (one placement per brand)
+             scene, and it hasn't already won another placement in this video (one placement per brand). A
+             placement no new brand can fill is then auctioned again among the brands already in the video
   score      bid_cpm x relevance; relevance = 1 + 1 per viewer interest the brand matches + 0.25 per scene tag it
              matches. A brand that fits pays less per point of score, as in quality-weighted ad auctions
   price      second price: the least the winner could have bid and still won (runner-up's score / winner's
@@ -35,11 +36,15 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
     scene = set(context_tags)
     known = {x for c in campaigns.values() for x in c.get("eligible_surfaces", [])}   # surfaces campaigns name
     taken, assignment, detail = set(), {}, {}
-    for p in sorted(placements, key=lambda p: -p.get("area", 0.0)):
+    order = sorted(placements, key=lambda p: -p.get("area", 0.0))
+    for p in order + order:   # second pass: placements left empty, brands already in the video may bid again
+        if p["id"] in assignment:
+            continue
+        again = p["id"] in detail
         bidders = []
         for b in p["brands"]:
             c = campaigns.get(b)
-            if c is None or b in taken or scene & set(c.get("contextual_exclusions", [])):
+            if c is None or (b in taken) != again or scene & set(c.get("contextual_exclusions", [])):
                 continue
             if p.get("surface") in known and p["surface"] not in c.get("eligible_surfaces", []):
                 continue

@@ -17,9 +17,13 @@ viewer sees that report (the "always disclosed" story extends to "and here is wh
 6. **render / export** - accepted candidates become `dynamic_slots`; `render_dynamic` and `export_player` run as for
    the hand-made clips. 3D table objects only when the table calibrates itself (>= 2 round objects agreeing on its
    tilt, the plate-rim method); otherwise flat placements only.
-   Drinking glasses (Muse names "drinking glass", SAM prompt `cup`) become `kind: "glass_decal"` candidates: a white
-   logo wrapped round the glass, placed from its own outline each frame (`scripts/glass_decal.py`), as soft and grainy
-   as the glass measures. Their gates (`ingest.decide_glass`): on screen >= 2 s, longest run >= 1.5 s, glass >= 44 px
+   Drinking glasses, coffee cups and mugs (Muse names "drinking glass", "coffee cup" or "mug"; SAM prompt `cup` finds
+   all three) are each classified by Muse Spark first ("glass", "cup" or "other", and plain or not); anything else or
+   already branded is declined without tracking. Glasses become `kind: "glass_decal"` candidates: a white logo
+   wrapped round the glass, placed from its own outline each frame (`scripts/glass_decal.py`), as soft and grainy
+   as the glass measures. Cups and mugs become `kind: "cup_decal"` (`CupDecal`): the same wrap and tracking with the
+   handle opened out of the mask, squat shapes allowed, and an opaque print, dark on a light cup and white on a dark
+   one. The gates below apply to both. Their gates (`ingest.decide_glass`): on screen >= 2 s, longest run >= 1.5 s, glass >= 44 px
    wide, the glass's shape (a tapered glass measured where it is seen whole) fitted to its visible edges in >= 80% of
    frames, the logo's centre at least 0.3 radii inside the glass in >= 90% of whole-glass frames, no frames where the
    glass is seen without the logo, the glass stays still (it travels at most 0.5 radii relative to the room

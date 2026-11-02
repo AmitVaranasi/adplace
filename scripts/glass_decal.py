@@ -53,9 +53,10 @@ def focus_and_grain(frames, store, keys):
     return sigma, grain
 
 
-def glass_geometry(m):
+def glass_geometry(m, min_ratio=1.2):
     """(cx, cy, r, angle, height, bx, by) of a glass mask: centre of the rim, radius, axis angle (0 = upright),
-    height, centre of the base. None when the mask is too small or not glass-shaped."""
+    height, centre of the base. None when the mask is too small or not glass-shaped (shorter than `min_ratio`
+    radii: a glass is tall; a teacup can be squat)."""
     if m.sum() < 150:
         return None
     # a straw or a sliver of finger sticking out of the outline swings its axis: open them away first
@@ -65,6 +66,8 @@ def glass_geometry(m):
     mo = cv2.moments(m.astype(np.uint8), binaryImage=True)
     ang = 0.5 * np.arctan2(2 * mo["mu11"], mo["mu20"] - mo["mu02"]) - np.pi / 2   # major axis vs vertical
     ang = (ang + np.pi / 2) % np.pi - np.pi / 2
+    if min_ratio < 1.2 and abs(ang) > np.pi / 4:   # a cup can be wider than tall: up is the axis nearer vertical
+        ang -= np.sign(ang) * np.pi / 2
     if abs(ang) > 1.2:   # tipped further than ~70 degrees (drinking): the outline no longer says which way is up
         return None
     ys, xs = np.nonzero(m)
@@ -83,7 +86,7 @@ def glass_geometry(m):
     ok = np.isfinite(width)
     r = float(np.percentile(width[ok], 85)) / 2
     mid = float(np.median((left[ok] + right[ok]) / 2))
-    if r < 6 or (bottom - top) < 1.2 * r:
+    if r < 6 or (bottom - top) < min_ratio * r:
         return None
     cx, cy = mx + mid * c - top * s, my + mid * s + top * c
     bx, by = mx + mid * c - bottom * s, my + mid * s + bottom * c
@@ -94,14 +97,20 @@ class GlassDecal(ShirtPrint):
     shadow = False
     grain = 1.0     # both measured per glass (focus_and_grain)
     sigma = 1.0
+    min_ratio = 1.2     # height / radius below which an outline isn't this kind of vessel
+    ink = 230.0         # white enamel
+    ink_alpha = 0.88    # enamel on glass lets a little through
+
+    def mask_store(self, store):
+        return store
 
     def __init__(self, clip, spec):
         self.clip, self.spec, self.id = clip, spec, spec["id"]
         self.frames = Frames(ROOT / clip)
-        self.store = object_stores(clip, spec.get("prompt", "cup"), self.frames)[str(spec["object"])]
+        self.store = self.mask_store(object_stores(clip, spec.get("prompt", "cup"), self.frames)[str(spec["object"])])
         h = self.frames.h
         seen = [i for i in range(self.frames.n) if self.store.any(i)]
-        geo = {i: glass_geometry(self.store[i]) for i in seen}
+        geo = {i: glass_geometry(self.store[i], self.min_ratio) for i in seen}
         geo = {i: g for i, g in geo.items() if g is not None}
         areas = {i: float(self.store[i].sum()) for i in geo}
         typical = np.median(list(areas.values())) if areas else 0
@@ -259,7 +268,7 @@ class GlassDecal(ShirtPrint):
 
         ref = max(good, key=lambda i: self.store[i].sum())
         T = clean(ref).astype(bool)
-        g0 = glass_geometry(T)
+        g0 = glass_geometry(T, self.min_ratio)
         c0 = np.asarray(self.raw_centre[ref], float)
         a0, r0 = g0[3], g0[2]
         eu, et = np.array([np.cos(a0), np.sin(a0)]), np.array([-np.sin(a0), np.cos(a0)])
@@ -340,7 +349,7 @@ class GlassDecal(ShirtPrint):
 
             # two starting points: the flow's guess, and the outline's own reading of where the glass is
             starts = [np.array(q, float)]
-            raw = glass_geometry(m.astype(bool))
+            raw = glass_geometry(m.astype(bool), self.min_ratio)
             if raw is not None and i in self.raw_centre:
                 starts.append(np.array([*(np.asarray(self.raw_centre[i]) - c0), raw[3] - a0, raw[2] / r0, q[4]]))
             best = min(starts, key=cost)
@@ -389,11 +398,76 @@ class GlassDecal(ShirtPrint):
         for i in self.place:
             tx, ty, th, sc, sa = final[i]
             self.place[i][:5] = [c0[0] + tx, c0[1] + ty, r0 * sc, a0 + th, sa]
+        self.fill_gaps(resting)
         self.fitted = fitted
         self.valid = sorted(self.place)
         self.poses = {i: None for i in self.valid}
         self.base = np.array([0.0, 0.0, 5.0])
         self.tex = {}
+
+    def fill_gaps(self, resting, longest=3.0):
+        """A still glass that someone walks in front of: SAM still sees a sliver of it, too little to measure, and the
+        logo would drop out while the glass is in view. Its pose there is the nearest measured frame's, moved only as
+        the camera moves, if the glass was still at that edge of the gap (resting, or travelling under half a radius
+        relative to the room over the second before it: the upload gate's test), or the poses carried in from both
+        edges agree (within a third of its radius). The print is still drawn only where the glass is seen, so whoever is in
+        front covers it. Gaps longer than `longest` seconds stay empty."""
+        def carry(q, M):   # a pose moved by a frame-to-frame similarity of the room
+            out = np.array(q, float)
+            out[:2] = M[:, :2] @ out[:2] + M[:, 2]
+            out[2] *= np.hypot(M[0, 0], M[1, 0])
+            out[3] += np.arctan2(M[1, 0], M[0, 0])
+            return out
+        n = max(2, int(round(self.frames.fps)))
+
+        def still(k, before):
+            d = [self.rel[j] for j in (range(k - n + 1, k + 1) if before else range(k + 1, k + n + 1)) if j in self.rel]
+            return k in resting or (len(d) >= n // 2 and np.linalg.norm(np.sum(d, axis=0)) < 0.5 * self.place[k][2])
+        seen = [i for i in range(self.frames.n) if self.store.any(i)]
+        gaps, cur = [], []
+        for i in seen:
+            if i in self.place:
+                if cur:
+                    gaps.append(cur)
+                cur = []
+            elif not cur or i == cur[-1] + 1:
+                cur.append(i)
+            else:
+                gaps.append(cur)
+                cur = [i]
+        if cur:
+            gaps.append(cur)
+        for gap in gaps:
+            a, b = gap[0] - 1, gap[-1] + 1
+            if len(gap) > longest * self.frames.fps or (a not in self.place and b not in self.place):
+                continue
+            fwd, back = {}, {}
+            if a in self.place:
+                q = self.place[a]
+                for i in range(a + 1, b + 1):
+                    if self.camera.get(i) is None:
+                        break
+                    q = fwd[i] = carry(q, self.camera[i])
+            if b in self.place:
+                q = self.place[b]
+                for i in range(b, a, -1):
+                    if self.camera.get(i) is None:
+                        break
+                    q = back[i - 1] = carry(q, cv2.invertAffineTransform(self.camera[i]))
+            both = a in self.place and b in self.place
+            if both and b in fwd and np.linalg.norm(fwd[b][:2] - self.place[b][:2]) <= 0.33 * self.place[b][2]:
+                for i in gap:
+                    w = (i - a) / (b - a)
+                    if i in fwd and i in back:
+                        self.place[i] = (1 - w) * fwd[i] + w * back[i]
+                continue
+            # the edges disagree: one is measured from a sliver of the glass; trust the edge that saw more of it
+            if both and self.store[a].sum() < self.store[b].sum():
+                a = -1
+            if a in self.place and still(a, True):
+                self.place.update({i: fwd[i] for i in gap if i in fwd})
+            elif b in self.place and still(b, False):
+                self.place.update({i: back[i] for i in gap if i in back})
 
     def settle(self, fitted, steps, resting, c0, gain=0.3, ramp=6):
         """From per-frame fits to the print's pose, without the few-pixel wobble each fit carries.
@@ -557,7 +631,7 @@ class GlassDecal(ShirtPrint):
         alpha = cv2.remap(a, (lu * (a.shape[1] - 1)).astype(np.float32), (v * (a.shape[0] - 1)).astype(np.float32),
                           cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
         alpha *= (np.abs(u) < r) * np.clip((1 - np.abs(sn)) * 4, 0, 1)   # fades where the glass turns away
-        alpha = cv2.GaussianBlur(alpha, (0, 0), self.sigma) * 0.88   # as soft as the glass
+        alpha = cv2.GaussianBlur(alpha, (0, 0), self.sigma) * self.ink_alpha   # as soft as the glass
         alpha = self.motion_blur(alpha, i)
         # only where the glass itself is seen: fingers and straws in front keep the print behind them
         vis = cv2.erode(self.store[i][y0:y1, x0:x1].astype(np.uint8), np.ones((3, 3), np.uint8)).astype(np.float32)
@@ -567,5 +641,56 @@ class GlassDecal(ShirtPrint):
         soft = cv2.GaussianBlur(lum * vis, (0, 0), 4) / np.maximum(cv2.GaussianBlur(vis, (0, 0), 4), 1e-3)
         shade = np.clip((soft / max(self.light[i], 1.0)) ** 0.35, 0.8, 1.12)
         sparkle = np.clip(lum - soft - 6, 0, None)[..., None]                # real highlights stay on top, not noise
-        colour = 0.9 * shade[..., None] * 230 + 0.1 * frame[y0:y1, x0:x1].astype(np.float32) + sparkle
+        colour = 0.9 * shade[..., None] * self.ink + 0.1 * frame[y0:y1, x0:x1].astype(np.float32) + sparkle
         return (x0, y0, x1, y1), colour, np.clip(alpha, 0, 1), np.ones_like(alpha)
+
+
+class HandleFree:
+    """A cup's mask store without its handle: opened with a disc about a third of the cup's width, wider than a
+    handle's loop and narrower than the body, keeping the largest piece. The handle would otherwise swing the axis,
+    widen the radius, and carry the logo off the body. Same interface as pipeline.maskstore.MaskStore."""
+
+    def __init__(self, store):
+        self.store, self.n, self.cache = store, store.n, {}
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, i):
+        if i not in self.cache:
+            m = self.store[i]
+            if self.store.any(i):
+                x0, y0, x1, y1 = self.store.box(i)
+                crop = m[y0:y1, x0:x1].astype(np.uint8)
+                k = max(9, int(0.3 * np.sqrt(crop.sum()))) | 1
+                o = cv2.morphologyEx(crop, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
+                n, lab, st, _ = cv2.connectedComponentsWithStats(o)
+                if n > 1:
+                    o = (lab == 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA]))).astype(np.uint8)
+                if o.sum() >= 0.6 * crop.sum():   # the opening ate the cup itself (a thin sliver): keep it whole
+                    m = np.zeros_like(m)
+                    m[y0:y1, x0:x1] = o.astype(bool)
+            self.cache[i] = m
+        return self.cache[i]
+
+    def any(self, i):
+        return self.store.any(i) and bool(self[i].any())
+
+    def box(self, i):
+        ys, xs = np.nonzero(self[i])
+        return (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1) if len(xs) else (0, 0, 0, 0)
+
+
+class CupDecal(GlassDecal):
+    """A logo printed on a coffee cup or mug: the glass's wrap and tracking, on ceramic. The print is opaque and
+    takes a colour that reads on the cup (dark on a light cup, white on a dark one), and the handle is left out."""
+    min_ratio = 0.8     # cups are squatter than glasses
+    ink_alpha = 0.95
+
+    def mask_store(self, store):
+        return HandleFree(store)
+
+    def __init__(self, clip, spec):
+        super().__init__(clip, spec)
+        body = float(np.median(list(self.light.values()))) if self.light else 128.0
+        self.ink = 40.0 if body > 140 else 230.0

@@ -116,7 +116,7 @@ def shade_track(frames, tr, occ, start):
 
 
 FORMAT = {"can": "can_wrap", "bottle": "bottle_label", "tent": "table_tent", "glass_print": "glass_print",
-          "glass_decal": "glass_print",
+          "glass_decal": "glass_print", "cup_decal": "glass_print",
           "shirt_print": "shirt_print", "aframe": "poster"}
 
 
@@ -228,7 +228,7 @@ def export_glass(clip, spec, frames, start, inventory, d):
           flush=True)
     return {"id": spec["id"], "kind": "glass", "surface": spec.get("surface", "glass"), "boxes": boxes,
             "place": place, "atlas": f"art/{spec['id']}_glass.png", "sigma": round(float(obj.sigma), 3),
-            "grain": round(float(obj.grain), 3), "half_angle": HALF_ANGLE, "curve": CURVE, "ink": 0.88,
+            "grain": round(float(obj.grain), 3), "half_angle": HALF_ANGLE, "curve": CURVE, "ink": obj.ink_alpha,
             "shutter": 0.5, "brands": {b: {"art": f"../logos/{b}_glass.png"} for b in brands}}
 
 
@@ -309,7 +309,7 @@ def main(clip, skip_video=False):
     from scripts.place3d import active, objects_for
     order = [o.id for o in objects_for(clip, entry)]  # far to near: nearer objects draw on top
     for spec in sorted(active(entry), key=lambda s: order.index(s["id"])):
-        o = (export_glass if spec.get("kind") == "glass_decal" else export_object)(clip, spec, frames, start,
+        o = (export_glass if spec.get("kind") in ("glass_decal", "cup_decal") else export_object)(clip, spec, frames, start,
                                                                                    inventory, d)
         if o:
             track["objects"].append(o)
