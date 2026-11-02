@@ -56,7 +56,7 @@ frames of the bar clip]. No local models: all segmentation and vision go through
 
 - On 13 stock videos it had never seen [`runs/testset3_summary.txt`, `runs/testset3_cups.txt`]: 36 candidate
   surfaces and objects found, 1 placed (a glass on a restaurant table, kept on it while a diner's shoulder passes in
-  front). Every decline was checked by eye and holds: 6 videos have nothing to place on (pizza close-ups, a tower
+  front). Every decline was checked by eye and holds: 5 videos have nothing to place on (pizza close-ups, a tower
   block, dim interiors); a fast, blurred sweep through a bar; a blue parking sign (Muse: an ad must not cover traffic
   information); glasses and teacups that are picked up or carried in. It is conservative by design: it would rather
   place nothing than place badly.

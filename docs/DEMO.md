@@ -53,7 +53,7 @@ placement can always be found, even after re-encoding."
 
 ## 2:35–3:00 Honest limits and what's next
 
-Say, with the numbers from the test set (`runs/testset2_summary.txt`, filled in below):
+Say, with the numbers from the test set (below):
 
 - "On 13 videos it had never seen, it placed one ad and declined 35 candidates, explaining why each time. Most
   declines are scenes with nothing still to print on."
@@ -66,8 +66,8 @@ Say, with the numbers from the test set (`runs/testset2_summary.txt`, filled in 
 
 13 stock videos never used in development, final code (`runs/testset3_summary.txt`, `runs/testset3_cups.txt`):
 36 candidates found, 1 placed (m44025: a glass on a restaurant table, logo kept on it while a shoulder passes in
-front). Declines, all checked by eye: nothing to place on (6 videos), a fast blurred bar sweep (25 surfaces), a parking
-sign, glasses and teacups picked up or carried in. Say: "On 13 videos it had never seen, it placed one ad and declined
+front). Declines, all checked by eye: nothing to place on (5 videos), a fast blurred bar sweep (13 surfaces), a night
+terrace's signs (12, one a parking sign), glasses and teacups picked up or carried in. Say: "On 13 videos it had never seen, it placed one ad and declined
 35 candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
 
 Optional extra shot: `/player?clip=upload_pair` (two mugs with drawings on them; each logo goes on a blank patch,
