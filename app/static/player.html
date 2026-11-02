@@ -791,7 +791,9 @@ void main() {
       gl.uniform1i(p.u("uTapCount"),taps.length);
       gl.uniform4f(p.u("uPlace"),cx,cy,r,ang);
       gl.uniform1f(p.u("uStretch"),stretch);
-      gl.uniform1f(p.u("uHalf"),obj.half_angle); gl.uniform1f(p.u("uCurve"),obj.curve);
+      // GlassDecal.half_for: wide enough that this brand's logo is logo_height of the vessel's height
+      const half=obj.logo_height ? Math.min(obj.max_half,obj.logo_height*obj.ratio/(2*logo.h/logo.w)) : obj.half_angle;
+      gl.uniform1f(p.u("uHalf"),half); gl.uniform1f(p.u("uCurve"),obj.curve);
       gl.uniform1f(p.u("uLateral"),obj.lateral || 0);
       this.draw();
       this.blur(b,obj.sigma);
