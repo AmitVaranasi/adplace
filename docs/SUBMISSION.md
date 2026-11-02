@@ -10,13 +10,15 @@ the glass on the counter), picked by an auction when they press play, always lab
 ## What it does
 
 - **Upload once, no hand work.** Muse Spark reads the scene and checks it's safe for ads. SAM 3.1 outlines every
-  poster, picture frame, sign, menu board, screen, glass, cup and mug through the shot. Each is tracked against the
+  poster, picture frame, sign, menu board, screen, glass, cup and mug through the shot (and cups' handles, to
+  keep logos off them). Each is tracked against the
   room and measured: how long it's visible, how steady its outline is, how much people cover it, whether it moves.
   Only surfaces that pass strict gates carry ads, and only objects that stay still. Everything else is declined with a
   plain reason ("Someone picks it up or moves it", "It's mostly cut off by the edge of the frame").
 - **Placements that look filmed.** Flat ads take the surface's perspective, light, focus, motion blur and grain; people
   walking in front stay in front. Logos on glasses, cups and mugs wrap round the curve, take the vessel's light and
-  highlights, sit behind the fingers holding it, and are white enamel on glass, dark ink on a light mug.
+  highlights, sit behind the fingers holding it, and are white enamel on glass, dark ink on a light mug. On a cup with
+  a design of its own the logo goes on a blank patch with clear space round it, never over the design.
 - **The bid at playback.** Everything that depends on the video is worked out at upload and is the same for every
   brand. When a viewer presses play, a second-price auction, weighted by how well each brand fits the viewer and the
   scene, picks a brand per placement in under a tenth of a millisecond [`/api/auction`, 0.06–0.09 ms]. The browser
@@ -52,8 +54,12 @@ frames of the bar clip]. No local models: all segmentation and vision go through
 
 ## Honest limits
 
-- On 13 videos it had never seen [`runs/testset2_summary.txt`]: RESULTS. Most had no poster, sign, screen or still
-  vessel big and steady enough; a fast blurred sweep through a bar and a parking sign (correctly) got nothing.
+- On 13 stock videos it had never seen [`runs/testset3_summary.txt`, `runs/testset3_cups.txt`]: 36 candidate
+  surfaces and objects found, 1 placed (a glass on a restaurant table, kept on it while a diner's shoulder passes in
+  front). Every decline was checked by eye and holds: 6 videos have nothing to place on (pizza close-ups, a tower
+  block, dim interiors); a fast, blurred sweep through a bar; a blue parking sign (Muse: an ad must not cover traffic
+  information); glasses and teacups that are picked up or carried in. It is conservative by design: it would rather
+  place nothing than place badly.
 - Objects that people pick up don't carry ads yet.
 - A 10-second upload takes about 13 minutes of processing, once [bar clip: 774 s].
 - 3D products (a can placed on a table) work on hand-calibrated demo clips, not yet on uploads.

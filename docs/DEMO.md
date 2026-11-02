@@ -55,13 +55,20 @@ placement can always be found, even after re-encoding."
 
 Say, with the numbers from the test set (`runs/testset2_summary.txt`, filled in below):
 
-- "On 13 videos it had never seen, it placed ads on N and declined the rest, explaining why each time. Most declines are
-  scenes with nothing still to print on."
+- "On 13 videos it had never seen, it placed one ad and declined 35 candidates, explaining why each time. Most
+  declines are scenes with nothing still to print on."
 - "A 10-second upload takes about 13 minutes, once. Picking brands at playback takes a tenth of a millisecond."
 - "Meta tooling: SAM 3.1 and Muse Spark through the Meta Model API, Muse Image for the brand artwork, Video Seal for
   the watermark."
-- "Next: coffee cups and mugs, the most common still object in our test videos, and objects people pick up."
+- "Next: objects people pick up, and 3D products on any upload."
 
 ## Test-set figures
 
-(filled in from `runs/testset2_summary.txt` when the run finishes)
+13 stock videos never used in development, final code (`runs/testset3_summary.txt`, `runs/testset3_cups.txt`):
+36 candidates found, 1 placed (m44025: a glass on a restaurant table, logo kept on it while a shoulder passes in
+front). Declines, all checked by eye: nothing to place on (6 videos), a fast blurred bar sweep (25 surfaces), a parking
+sign, glasses and teacups picked up or carried in. Say: "On 13 videos it had never seen, it placed one ad and declined
+35 candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
+
+Optional extra shot: `/player?clip=upload_pair` (two mugs with drawings on them; each logo goes on a blank patch,
+dark ink on the light mug, white on the black one).

@@ -43,3 +43,14 @@ def test_squat_cup_accepted_only_with_cup_ratio():
     cv2.rectangle(m, (100, 80), (200, 140), 1, -1)                       # 100 wide, 60 tall: a teacup
     assert glass_geometry(m.astype(bool)) is None
     assert glass_geometry(m.astype(bool), 0.8) is not None
+
+
+def test_handle_cut_out_where_sam_outlined_it():
+    plain = mug(False)
+    lobe = np.zeros_like(plain, np.uint8)
+    cv2.ellipse(lobe, (215, 120), (22, 34), 0, 0, 360, 1, -1)        # a handle whose hole SAM filled in
+    lobe[:, :201] = 0
+    handled = plain | lobe.astype(bool)
+    assert HandleFree(Store(handled))[0].sum() > 1.1 * plain.sum()    # too solid for the opening to remove
+    out = HandleFree(Store(handled), [Store(lobe.astype(bool))])[0]
+    assert (out & ~plain).sum() == 0 and out.sum() >= 0.97 * plain.sum()

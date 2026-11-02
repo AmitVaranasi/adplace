@@ -398,7 +398,8 @@ def decide_glass(c):
     if m["uncovered_visible_s"] > 0.25:
         why.append(f"visible but not covered for {m['uncovered_visible_s']:.1f} s")
     if not m.get("blank_patch", True):
-        why.append(f"no blank patch: the {what}'s own design leaves no space the logo fits without touching it")
+        why.append(f"no blank patch: no blank area of the {what} (clear of its own design, rim and what covers it) "
+                   "is big enough for the logo with a margin round it")
     if m.get("travel_r_max", 0.0) > 0.5:
         why.append(f"moves: travels {m['travel_r_max']:.1f} {what} radii within a second, needs at most 0.5 "
                    "(only still objects carry ads)")
@@ -428,7 +429,8 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("already has", "The shot already has as many ads as we allow."),
     ("could not track", "We couldn't track it through the shot."),
     ("moves:", "Someone picks it up or moves it; for now we only place ads on things that stay still."),
-    ("no blank patch", "Its own design leaves no blank space big enough for a logo that doesn't touch it."),
+    ("no blank patch", "No blank area of it is big enough for a logo with clear space round it, so the logo would "
+                       "touch its own design or edges."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
     ("failed final check: judge", "A blind reviewer spotted it as inserted much more often than the original."),
     ("failed final check", "It failed the final checks on the rendered video."),
@@ -481,7 +483,9 @@ def ingest(src, run_id=None):
         if not scene.get("scene_safe", False):
             prompts, printable = [], []
         # nothing to place on: skip SAM entirely (segmenting people alone takes minutes)
-        results = segment(clip, prompts + printable + OCCLUDERS) if prompts or printable else []
+        # cups' handles too, to cut out of their outlines (scripts/glass_decal.HandleFree)
+        results = segment(clip, prompts + printable + (["cup handle"] if printable else []) + OCCLUDERS) \
+            if prompts or printable else []
         failed = [p for p, rc, _ in results if rc != 0]
         run.progress("segment", 100, "SAM 3.1 done" + (f" (failed: {', '.join(failed)})" if failed else ""))
 

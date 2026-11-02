@@ -656,12 +656,14 @@ class GlassDecal(ShirtPrint):
 
 
 class HandleFree:
-    """A cup's mask store without its handle: opened with a disc about a third of the cup's width, wider than a
-    handle's loop and narrower than the body, keeping the largest piece. The handle would otherwise swing the axis,
-    widen the radius, and carry the logo off the body. Same interface as pipeline.maskstore.MaskStore."""
+    """A cup's mask store without its handle, which would otherwise swing the axis, widen the radius and carry the
+    logo off the body. Where SAM 3.1 outlined handles ("cup handle", `handles`), they are cut out, with a pixel to
+    spare. Otherwise the cup is opened with a disc about a third of its width, wider than a handle's loop and
+    narrower than the body (this misses a handle whose hole SAM filled in). The largest piece is kept. Same interface
+    as pipeline.maskstore.MaskStore."""
 
-    def __init__(self, store):
-        self.store, self.n, self.cache = store, store.n, {}
+    def __init__(self, store, handles=()):
+        self.store, self.handles, self.n, self.cache = store, list(handles), store.n, {}
 
     def __len__(self):
         return self.n
@@ -672,14 +674,22 @@ class HandleFree:
             if self.store.any(i):
                 x0, y0, x1, y1 = self.store.box(i)
                 crop = m[y0:y1, x0:x1].astype(np.uint8)
-                k = max(9, int(0.3 * np.sqrt(crop.sum()))) | 1
-                o = cv2.morphologyEx(crop, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
+                handle = np.zeros_like(crop)
+                for h in self.handles:
+                    if h.any(i):
+                        handle |= h[i][y0:y1, x0:x1].astype(np.uint8)
+                if handle.any():
+                    o = crop & (1 - cv2.dilate(handle, np.ones((3, 3), np.uint8)))
+                else:
+                    k = max(9, int(0.3 * np.sqrt(crop.sum()))) | 1
+                    o = cv2.morphologyEx(crop, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
                 n, lab, st, _ = cv2.connectedComponentsWithStats(o)
                 if n > 1:
                     o = (lab == 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA]))).astype(np.uint8)
-                if o.sum() >= 0.6 * crop.sum():   # the opening ate the cup itself (a thin sliver): keep it whole
-                    m = np.zeros_like(m)
-                    m[y0:y1, x0:x1] = o.astype(bool)
+                if o.sum() < 0.6 * crop.sum():   # it ate the cup itself (a thin sliver, a handle mask over it)
+                    o = crop
+                m = np.zeros_like(m)
+                m[y0:y1, x0:x1] = o.astype(bool)
             self.cache[i] = m
         return self.cache[i]
 
@@ -698,7 +708,11 @@ class CupDecal(GlassDecal):
     ink_alpha = 0.95
 
     def mask_store(self, store):
-        return HandleFree(store)
+        try:   # handles SAM 3.1 outlined in this clip (ingest asks for them whenever there are cups)
+            handles = list(object_stores(self.clip, "cup handle", self.frames).values())
+        except (FileNotFoundError, OSError):
+            handles = []
+        return HandleFree(store, handles)
 
     def __init__(self, clip, spec):
         super().__init__(clip, spec)
@@ -745,7 +759,9 @@ class CupDecal(GlassDecal):
         blank on every frame looked at. Sized for the tallest logo in the inventory, so it fits whichever brand wins
         the bid. None found: `blank` is False and the upload declines the cup."""
         share, seen = self.design_map(good, step_a, step_t)
-        free = seen & (share < 0.04)
+        # a real design is design in nearly every sample of its cells, or in a cluster of them; a lone cell of shading
+        # noise or grain is neither
+        free = seen & (share < 0.5) & (cv2.blur(share.astype(np.float32), (3, 3)) < 0.12)
         aspect = max(a.shape[0] / a.shape[1] for a in (self.art(b) for b in logo_brands()))
         heights = sorted(np.arange(0.12, 0.88, 0.02), key=lambda c: abs(c - CENTRE))
         for scale in np.arange(1.0, 0.49, -0.05):
