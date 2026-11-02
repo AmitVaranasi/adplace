@@ -113,7 +113,78 @@ class GlassDecal(ShirtPrint):
     blank = True        # False: no blank patch big enough
 
     def choose_spot(self, good):
-        """Where on the vessel the print goes; a glass is see-through, so always the default."""
+        """Where on the vessel the print goes: the default spot, unless something that stays in front of the glass
+        (a bowl, a jug) hides part of it there; then the biggest print nearest the default whose footprint is in
+        view. A glass is see-through, so only what hides it counts, not what's seen through it."""
+        _, seen = self.design_map(good, check_design=False)
+        self.search_spot(seen)
+
+    def design_map(self, good, step_a=0.05, step_t=0.02, check_design=True):
+        """Where the cup carries a design of its own, in its wrapped coordinates: (angle round the cup from the
+        front, -1.2..1.2 rad) x (height from rim to base, 0..1). From up to 8 frames with the whole cup in view, a
+        pixel is design where its lightness departs from the cup's smooth shading (a blur over the body) or its
+        colour from the body's own. Returns (design share, seen) grids; unseen cells are not blank. `check_design`
+        False: only where the vessel is seen (a glass, whose "design" would be whatever is behind it)."""
+        na, nt = int(2.4 / step_a), int(1 / step_t)
+        des, tot = np.zeros((na, nt)), np.zeros((na, nt))
+        keys = sorted(good)
+        for i in keys[:: max(1, len(keys) // 8)][:8]:
+            cx, cy, r, ang, height = good[i][:5]
+            m = cv2.erode(self.store[i].astype(np.uint8), np.ones((5, 5), np.uint8))
+            if m.sum() < 200:
+                continue
+            body = m.astype(bool)
+            ys, xs = np.nonzero(body)
+            if not check_design:
+                design = np.zeros_like(body)
+            else:
+                design = self.design_pixels(i, body, r)
+            c, s = np.cos(ang), np.sin(ang)
+            u = (xs - cx) * c + (ys - cy) * s
+            t = -(xs - cx) * s + (ys - cy) * c
+            theta = np.arcsin(np.clip(u / r, -1, 1))
+            tn = (t - CURVE * r * np.cos(theta)) / (self.ratio * r)
+            ia, it = ((theta + 1.2) / step_a).astype(int), (tn / step_t).astype(int)
+            ok = (ia >= 0) & (ia < na) & (it >= 0) & (it < nt)
+            np.add.at(tot, (ia[ok], it[ok]), 1)
+            np.add.at(des, (ia[ok], it[ok]), design[ys, xs][ok])
+        return np.where(tot > 0, des / np.maximum(tot, 1), 1.0), tot > 0
+
+    def design_pixels(self, i, body, r):
+        """Pixels of the vessel's body in frame i that are a design of its own, not its shading."""
+        lab = cv2.cvtColor(self.frames[i], cv2.COLOR_BGR2LAB).astype(np.float32)
+        # the cup's own shading: a wide median over the body (outside it filled with the body's median), which
+        # a small dark eye or a letter doesn't drag along the way a blur does
+        L = lab[..., 0].copy()
+        L[~body] = np.median(L[body])
+        smooth = cv2.medianBlur(np.clip(L, 0, 255).astype(np.uint8), max(5, int(r / 2)) | 1).astype(np.float32)
+        a0, b0 = np.median(lab[..., 1][body]), np.median(lab[..., 2][body])
+        design = (np.abs(lab[..., 0] - smooth) > 14) | (np.hypot(lab[..., 1] - a0, lab[..., 2] - b0) > 12)
+        design = cv2.dilate((design & body).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+        return design
+
+    def search_spot(self, free, step_a=0.05, step_t=0.02):
+        """The biggest print, nearest the front and the usual height, whose footprint and a margin round it are all
+        `free` cells. Sized for the tallest logo in the inventory, so it fits whichever brand wins the bid. None
+        found: `blank` is False and the upload declines the vessel."""
+        aspect = max(a.shape[0] / a.shape[1] for a in (self.art(b) for b in logo_brands()))
+        heights = sorted(np.arange(0.12, 0.88, 0.02), key=lambda c: abs(c - CENTRE))
+        for scale in np.arange(1.0, 0.49, -0.05):
+            half = HALF_ANGLE * scale
+            dh = 2 * half * aspect / self.ratio            # the print's height as a share of the vessel's
+            for lat in (0.0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3):
+                if abs(lat) + half * 1.25 > 0.95:          # it would wrap out of sight
+                    continue
+                # a clear margin round it: a quarter of its width each side, a third of its height above and below
+                a0, a1 = int((lat - 1.25 * half + 1.2) / step_a), int(np.ceil((lat + 1.25 * half + 1.2) / step_a))
+                for c in heights:
+                    t0, t1 = c - 0.83 * dh, c + 0.83 * dh
+                    if t0 < 0.06 or t1 > 0.94:
+                        continue
+                    if free[a0:a1, int(t0 / step_t):int(np.ceil(t1 / step_t))].all():
+                        self.half, self.lateral, self.centre = half, lat, c
+                        return
+        self.blank = False
 
     def mask_store(self, store):
         return store
@@ -514,6 +585,7 @@ class GlassDecal(ShirtPrint):
         def full(M):
             return np.vstack([M, [0, 0, 1]])
         good_fit = {i for i, c in self.fit_cost.items() if c[1] < 8.0}
+        self.pinned = set()   # frames placed by a resting stay's single pose
         frames = sorted(self.place)
         # where the shape fit fails (a fast, blurred swing), the outline's simpler reading of the print centre still
         # moves with the glass; it sits a fixed offset (in the glass's own axes) from the fit's, measured where both work
@@ -574,7 +646,16 @@ class GlassDecal(ShirtPrint):
                 C[i] = (full(M) if M is not None else np.eye(3)) @ C[i - 1]
             back = [carry(fitted[i], cv2.invertAffineTransform(C[i][:2])) for i in run if i in good_fit]
             if not back:
+                # no frame of the stay fits the shape (something that isn't a person, a bowl say, cuts the outline
+                # the same way all along): a still glass's place is then its outline's, at the reference size,
+                # standing upright (a cut outline's axis leans; glasses on a table don't) as the stay's first frame
+                # shows it, steadied the same way
+                upright = np.array([0.0, 0.0, -self.a0, 1.0, 1.0])
+                back = [carry(outline_pose(i, upright), cv2.invertAffineTransform(C[i][:2]))
+                        for i in run if i in self.raw_centre]
+            if not back:
                 continue
+            self.pinned.update(run)
             pose = np.median(np.array(back), axis=0)
             for k, i in enumerate(run):
                 pinned = carry(pose, C[i][:2])
@@ -585,11 +666,13 @@ class GlassDecal(ShirtPrint):
         return final
 
     def quality(self):
-        """How well the glass was followed: the share of frames whose shape fit was accepted, and, over the frames
+        """How well the glass was followed: the share of frames whose shape fit was accepted or that a resting stay
+        placed, and, over the frames
         with the whole glass in view, the share where the print's centre lies at least 0.3 radii inside the glass
         (its outline with the gaps fingers leave filled in)."""
         seen = [i for i in self.valid if self.store.any(i)]
-        fit_ok = sum(1 for i in seen if i in self.fit_cost and self.fit_cost[i][1] < 8.0) / max(len(seen), 1)
+        fit_ok = sum(1 for i in seen if (i in self.fit_cost and self.fit_cost[i][1] < 8.0)
+                     or i in getattr(self, "pinned", ())) / max(len(seen), 1)
         inside = []
         for i in self.valid:
             if i in self.good:
@@ -736,67 +819,12 @@ class CupDecal(GlassDecal):
         body = float(np.median(list(self.light.values()))) if self.light else 128.0
         self.ink = 40.0 if body > 140 else 230.0
 
-    def design_map(self, good, step_a=0.05, step_t=0.02):
-        """Where the cup carries a design of its own, in its wrapped coordinates: (angle round the cup from the
-        front, -1.2..1.2 rad) x (height from rim to base, 0..1). From up to 8 frames with the whole cup in view, a
-        pixel is design where its lightness departs from the cup's smooth shading (a blur over the body) or its
-        colour from the body's own. Returns (design share, seen) grids; unseen cells are not blank."""
-        na, nt = int(2.4 / step_a), int(1 / step_t)
-        des, tot = np.zeros((na, nt)), np.zeros((na, nt))
-        keys = sorted(good)
-        for i in keys[:: max(1, len(keys) // 8)][:8]:
-            cx, cy, r, ang, height = good[i][:5]
-            m = cv2.erode(self.store[i].astype(np.uint8), np.ones((5, 5), np.uint8))
-            if m.sum() < 200:
-                continue
-            lab = cv2.cvtColor(self.frames[i], cv2.COLOR_BGR2LAB).astype(np.float32)
-            body = m.astype(bool)
-            # the cup's own shading: a wide median over the body (outside it filled with the body's median), which
-            # a small dark eye or a letter doesn't drag along the way a blur does
-            L = lab[..., 0].copy()
-            L[~body] = np.median(L[body])
-            smooth = cv2.medianBlur(np.clip(L, 0, 255).astype(np.uint8), max(5, int(r / 2)) | 1).astype(np.float32)
-            a0, b0 = np.median(lab[..., 1][body]), np.median(lab[..., 2][body])
-            design = (np.abs(lab[..., 0] - smooth) > 14) | (np.hypot(lab[..., 1] - a0, lab[..., 2] - b0) > 12)
-            design = cv2.dilate((design & body).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
-            ys, xs = np.nonzero(body)
-            c, s = np.cos(ang), np.sin(ang)
-            u = (xs - cx) * c + (ys - cy) * s
-            t = -(xs - cx) * s + (ys - cy) * c
-            theta = np.arcsin(np.clip(u / r, -1, 1))
-            tn = (t - CURVE * r * np.cos(theta)) / (self.ratio * r)
-            ia, it = ((theta + 1.2) / step_a).astype(int), (tn / step_t).astype(int)
-            ok = (ia >= 0) & (ia < na) & (it >= 0) & (it < nt)
-            np.add.at(tot, (ia[ok], it[ok]), 1)
-            np.add.at(des, (ia[ok], it[ok]), design[ys, xs][ok])
-        return np.where(tot > 0, des / np.maximum(tot, 1), 1.0), tot > 0
-
-    def choose_spot(self, good, step_a=0.05, step_t=0.02):
-        """The biggest print, nearest the front and the usual height, whose footprint (and a margin round it) is
-        blank on every frame looked at. Sized for the tallest logo in the inventory, so it fits whichever brand wins
-        the bid. None found: `blank` is False and the upload declines the cup."""
-        share, seen = self.design_map(good, step_a, step_t)
+    def choose_spot(self, good):
+        """On a cup with a design of its own, the print goes on a blank patch of it, never over the design."""
+        share, seen = self.design_map(good)
         # a real design is design in nearly every sample of its cells, or in a cluster of them; a lone cell of shading
         # noise or grain is neither
-        free = seen & (share < 0.5) & (cv2.blur(share.astype(np.float32), (3, 3)) < 0.12)
-        aspect = max(a.shape[0] / a.shape[1] for a in (self.art(b) for b in logo_brands()))
-        heights = sorted(np.arange(0.12, 0.88, 0.02), key=lambda c: abs(c - CENTRE))
-        for scale in np.arange(1.0, 0.49, -0.05):
-            half = HALF_ANGLE * scale
-            dh = 2 * half * aspect / self.ratio            # the print's height as a share of the cup's
-            for lat in (0.0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3):
-                if abs(lat) + half * 1.25 > 0.95:          # it would wrap out of sight
-                    continue
-                # a clear margin round it: a quarter of its width each side, a third of its height above and below
-                a0, a1 = int((lat - 1.25 * half + 1.2) / step_a), int(np.ceil((lat + 1.25 * half + 1.2) / step_a))
-                for c in heights:
-                    t0, t1 = c - 0.83 * dh, c + 0.83 * dh
-                    if t0 < 0.06 or t1 > 0.94:
-                        continue
-                    if free[a0:a1, int(t0 / step_t):int(np.ceil(t1 / step_t))].all():
-                        self.half, self.lateral, self.centre = half, lat, c
-                        return
-        self.blank = False
+        self.search_spot(seen & (share < 0.5) & (cv2.blur(share.astype(np.float32), (3, 3)) < 0.12))
 
 
 def logo_brands():
