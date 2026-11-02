@@ -24,7 +24,7 @@ import pickle  # noqa: E402
 from scripts.render_dynamic import Frames, object_stores, scene_dir  # noqa: E402
 from scripts.shirt_print import ShirtPrint, smooth_runs  # noqa: E402
 
-HALF_ANGLE = 0.55   # the print covers about +-31 degrees round the front
+HALF_ANGLE = 0.75   # the print covers about +-43 degrees round the front (+-31 read too small on small glasses)
 CENTRE = 0.55       # its centre, as a fraction of the glass's height from the rim
 CURVE = 0.12        # rows on the glass bow down at the front: the camera usually looks slightly down
 
@@ -236,6 +236,9 @@ class GlassDecal(ShirtPrint):
         tilt = smooth_runs({i: p[3:4] for i, p in self.place.items()}, self.frames, sigma=2.5)
         if good:
             self.sigma, self.grain = focus_and_grain(self.frames, self.store, sorted(good))
+            # the print's own softness: half the glass's, at most a pixel. A logo blurred as much as a shallow-focus
+            # glass's edge smears its letters; the reviewer wants it readable
+            self.sigma = min(0.5 * self.sigma, 1.0)
         if good:
             self.choose_spot(good)
         self.raw_centre = self.print_centres()
