@@ -8,10 +8,14 @@ viewer sees that report (the "always disclosed" story extends to "and here is wh
 
 1. **upload** - the file is saved as `runs/<run_id>/input.mp4` (re-encoded to <= 1280 px wide, constant frame rate).
 2. **shots** - hard cuts and dissolves split the clip; each shot is processed on its own.
-3. **segment** - SAM 3.1 (Meta Model API) per shot for a fixed vocabulary:
-   surfaces `poster, sign, billboard, screen, television, menu, pizza box, table` and occluders
-   `person, hand, plant, tree, pole, car`. Muse Spark looks at a keyframe per shot and says which candidates are
-   plausible ad surfaces and whether the scene is brand-safe (children, hospital, accident -> no ads at all).
+3. **segment** - Muse Spark reads three keyframes (twice, independently) and lists, open-ended, every place that
+   could carry an ad, each with a short name SAM can find and a kind: `display` (an existing poster, picture, sign,
+   menu board, screen: the ad covers it), `print` (napkin, menu, placemat, table card, box: the logo is printed on
+   it), `vessel` (glass, cup, mug, bowl, ramekin: printed round it) or `other` (walls, tables, plates, clothing...).
+   It also judges brand safety (children, hospital, accident -> no ads at all) and gives context tags. SAM 3.1 (Meta
+   Model API) then outlines every display and print place by its name (up to 10), vessels through `cup` and `bowl`,
+   cups' handles, and `person` for what's in front. `other` places are reported as found, with no placement method
+   yet. Nothing is excluded by a fixed list: the gates below do the filtering.
 4. **track** - each candidate surface is tracked through its shot (planar_track / mask tracking, as now).
 5. **score** - `pipeline/gates.py` (owner: GPT Sol) accepts or declines each candidate from measured facts.
 6. **render / export** - accepted candidates become `dynamic_slots`; `render_dynamic` and `export_player` run as for

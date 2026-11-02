@@ -23,7 +23,8 @@
     "glass",
     "shirt",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "children",
@@ -57,7 +58,8 @@
     "cup",
     "shirt",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "funeral",
@@ -88,7 +90,8 @@
     "mug",
     "cup",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "safety_signage"
@@ -117,7 +120,8 @@
     "screen",
     "sign",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "children",
@@ -151,7 +155,8 @@
     "bottle",
     "glass",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "children",
@@ -182,7 +187,8 @@
     "screen",
     "sign",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "children",
@@ -219,7 +225,8 @@
     "glass",
     "shirt",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "children",
@@ -253,7 +260,8 @@
     "menu",
     "shirt",
     "table_card",
-    "sidewalk_sign"
+    "sidewalk_sign",
+    "print"
    ],
    "contextual_exclusions": [
     "hospital",

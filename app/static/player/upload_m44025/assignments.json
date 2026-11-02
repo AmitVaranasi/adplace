@@ -6,10 +6,10 @@
    "morning"
   ],
   "assignment": {
-   "c02": "brewlark"
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "brewlark matches viewer coffee-morning interests and glass eligibility."
+  "rationale": "Brewlark matches coffee and morning interests on glass."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -18,10 +18,10 @@
    "fitness"
   ],
   "assignment": {
-   "c02": "fizzwell"
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Matches food and dining context on eligible glass surface."
+  "rationale": "Fizzwell fits glass and matches dining and food context best."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -30,10 +30,10 @@
    "learning"
   ],
   "assignment": {
-   "c02": "fizzwell"
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fizzwell matches food and dining context and fits the glass surface."
+  "rationale": "Fizzwell fits glass and matches dining and food context best."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -43,10 +43,10 @@
    "deals"
   ],
   "assignment": {
-   "c02": "fizzwell"
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fizzwell matches dining and food context on eligible glass surface."
+  "rationale": "Fizzwell best matches dining and food context on glass."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -56,10 +56,10 @@
    "health"
   ],
   "assignment": {
-   "c02": "fernleaf"
+   "c03": "fernleaf"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fernleaf matches all viewer interests and fits the glass surface."
+  "rationale": "Fernleaf matches all viewer interests and fits glass surface."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -69,9 +69,9 @@
    "cycling"
   ],
   "assignment": {
-   "c02": "fizzwell"
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fizzwell matches dining and food context on eligible glass surface."
+  "rationale": "fizzwell matches dining and food context and glass is eligible."
  }
 }

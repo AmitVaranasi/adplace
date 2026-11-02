@@ -24,7 +24,9 @@ import pickle  # noqa: E402
 from scripts.render_dynamic import Frames, object_stores, scene_dir  # noqa: E402
 from scripts.shirt_print import ShirtPrint, smooth_runs  # noqa: E402
 
-HALF_ANGLE = 0.55   # the print covers about +-31 degrees round the front
+HALF_ANGLE = 0.75   # the print covers about +-43 degrees round the front (+-31 read too small on small glasses)
+LOGO_HEIGHTS = (0.34, 0.2)   # a logo is this share of the vessel's height: as big as the clear space allows, never
+MAX_HALF = 0.9               # under a fifth; a wide wordmark gets wider for it, up to +-52 degrees round the front
 CENTRE = 0.55       # its centre, as a fraction of the glass's height from the rim
 CURVE = 0.12        # rows on the glass bow down at the front: the camera usually looks slightly down
 
@@ -110,6 +112,7 @@ class GlassDecal(ShirtPrint):
     half = HALF_ANGLE   # the print's half-width round the vessel (radians), its centre's height (fraction of the
     centre = CENTRE     # way from rim to base) and sideways turn from the front (radians): a cup with a design of
     lateral = 0.0       # its own moves and shrinks the print onto a blank patch (CupDecal.choose_spot)
+    logo_h = None       # the logo's height as a share of the vessel's (search_spot); None: `half` sets its width
     blank = True        # False: no blank patch big enough
 
     def choose_spot(self, good):
@@ -163,27 +166,39 @@ class GlassDecal(ShirtPrint):
         design = cv2.dilate((design & body).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
         return design
 
+    def half_for(self, art):
+        """The print's half-width round the vessel for one brand's logo: wide enough that the logo is `logo_h` of the
+        vessel's height."""
+        if self.logo_h is None:
+            return self.half
+        return min(MAX_HALF, self.logo_h * self.ratio / (2 * art.shape[0] / art.shape[1]))
+
     def search_spot(self, free, step_a=0.05, step_t=0.02):
-        """The biggest print, nearest the front and the usual height, whose footprint and a margin round it are all
-        `free` cells. Sized for the tallest logo in the inventory, so it fits whichever brand wins the bid. None
-        found: `blank` is False and the upload declines the vessel."""
-        aspect = max(a.shape[0] / a.shape[1] for a in (self.art(b) for b in logo_brands()))
+        """The biggest logo (from LOGO_HEIGHTS[0] of the vessel's height down to LOGO_HEIGHTS[1]), nearest the front
+        and the usual height, whose footprint and a margin round it are all `free` cells. The footprint is the widest
+        any brand's logo would be at that height, so it fits whichever brand wins the bid. None found: `blank` is
+        False and the upload declines the vessel."""
+        arts = [self.art(b) for b in logo_brands()]
         heights = sorted(np.arange(0.12, 0.88, 0.02), key=lambda c: abs(c - CENTRE))
-        for scale in np.arange(1.0, 0.49, -0.05):
-            half = HALF_ANGLE * scale
-            dh = 2 * half * aspect / self.ratio            # the print's height as a share of the vessel's
+        for H in np.arange(LOGO_HEIGHTS[0], LOGO_HEIGHTS[1] - 1e-6, -0.02):
+            self.logo_h = H
+            hw = max(self.half_for(a) for a in arts)
+            if hw >= MAX_HALF and H > LOGO_HEIGHTS[1]:   # capped: the widest logo would come out shorter than H
+                continue
+            ma, mt = min(0.25 * hw, 0.15), 0.25 * H     # clear margin round it
             for lat in (0.0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3):
-                if abs(lat) + half * 1.25 > 0.95:          # it would wrap out of sight
+                if abs(lat) + hw > 0.95:                 # it would wrap out of sight
                     continue
-                # a clear margin round it: a quarter of its width each side, a third of its height above and below
-                a0, a1 = int((lat - 1.25 * half + 1.2) / step_a), int(np.ceil((lat + 1.25 * half + 1.2) / step_a))
+                lo, hi = max(lat - hw - ma, -1.0), min(lat + hw + ma, 1.0)
+                a0, a1 = int((lo + 1.2) / step_a), int(np.ceil((hi + 1.2) / step_a))
                 for c in heights:
-                    t0, t1 = c - 0.83 * dh, c + 0.83 * dh
+                    t0, t1 = c - H / 2 - mt, c + H / 2 + mt
                     if t0 < 0.06 or t1 > 0.94:
                         continue
                     if free[a0:a1, int(t0 / step_t):int(np.ceil(t1 / step_t))].all():
-                        self.half, self.lateral, self.centre = half, lat, c
+                        self.lateral, self.centre = lat, c
                         return
+        self.logo_h = None
         self.blank = False
 
     def mask_store(self, store):
@@ -236,6 +251,9 @@ class GlassDecal(ShirtPrint):
         tilt = smooth_runs({i: p[3:4] for i, p in self.place.items()}, self.frames, sigma=2.5)
         if good:
             self.sigma, self.grain = focus_and_grain(self.frames, self.store, sorted(good))
+            # the print's own softness: half the glass's, at most a pixel. A logo blurred as much as a shallow-focus
+            # glass's edge smears its letters; the reviewer wants it readable
+            self.sigma = min(0.5 * self.sigma, 1.0)
         if good:
             self.choose_spot(good)
         self.raw_centre = self.print_centres()
@@ -734,9 +752,10 @@ class GlassDecal(ShirtPrint):
         sn = np.clip(u / r, -1, 1)
         theta = np.arcsin(sn)
         a = self.art(brand)
-        arc = 2 * self.half * r                      # the print's width along the glass
+        half = self.half_for(a)
+        arc = 2 * half * r                           # the print's width along the glass
         dh = arc * a.shape[0] / a.shape[1] * stretch
-        lu = (theta - self.lateral) / (2 * self.half) + 0.5
+        lu = (theta - self.lateral) / (2 * half) + 0.5
         v = (t - CURVE * r * np.cos(theta) + dh / 2) / dh
         alpha = cv2.remap(a, (lu * (a.shape[1] - 1)).astype(np.float32), (v * (a.shape[0] - 1)).astype(np.float32),
                           cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
