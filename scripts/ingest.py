@@ -39,6 +39,34 @@ SURFACES = {"poster": "poster", "framed picture": "poster", "painting": "poster"
 # "teacup" misses mugs); Muse Spark then says which each object is.
 PRINTABLE = {"drinking glass": "cup", "coffee cup": "cup", "mug": "cup"}
 OCCLUDERS = ["person"]
+# Muse lists every place in a scene that could carry an ad, open-ended, each with a kind that says how an ad goes on
+# it; nothing is ruled out by a fixed list. Kinds with a placement method: "display" (an existing flat board or screen
+# the ad covers; flat tracking), "print" (paper, card or packaging the logo is printed on; flat tracking, ink),
+# "vessel" (glasses, cups, mugs, bowls: scripts/glass_decal.py). "other" (walls, tables, plates, clothing, ...) is
+# reported as found, with no placement yet.
+KINDS = ("display", "print", "vessel", "other")
+MAX_PLACES = 10   # SAM prompts per upload for display and print places (each costs API time)
+
+
+def display_surface(name):
+    """The inventory surface a display place becomes."""
+    n = name.lower()
+    if any(w in n for w in ("screen", "tv", "television", "monitor", "display")):
+        return "screen"
+    if "billboard" in n:
+        return "billboard"
+    return "sign" if any(w in n for w in ("sign", "board", "chalkboard")) else "poster"
+
+
+def flat_slot(name, kind):
+    """The slot settings for a display or print place."""
+    if kind == "print":
+        if "box" in name.lower():
+            return {"surface": "box", "creative_format": "box_print", "blend": "multiply", "ink_strength": 0.85,
+                    "dynamic_content": False}
+        return {"surface": "print", "creative_format": "menu_card", "shading": True, "dynamic_content": False}
+    surface = SURFACES.get(name, display_surface(name))
+    return {"surface": surface, "dynamic_content": surface == "screen", "wall_light": surface != "screen"}
 STAGES = ["upload", "shots", "segment", "track", "score", "render", "export", "qa", "done"]
 
 
@@ -101,12 +129,13 @@ def jpeg_url(img, width=1024):
     return "data:image/jpeg;base64," + base64.b64encode(cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 88])[1]).decode()
 
 
-def muse_json(system, content, tokens=4000, tries=3):
-    """A JSON reply from Muse Spark; retried, since a call occasionally comes back empty."""
+def muse_json(system, content, tokens=4000, tries=4):
+    """A JSON reply from Muse Spark; retried, since a call occasionally comes back empty (its reasoning can use up
+    the token budget, so each retry allows more)."""
     from pipeline.rank import chat
     for k in range(tries):
         text = chat(API, os.environ["MODEL_API_KEY"], "muse-spark-1.3", system, content,
-                    extra={"max_completion_tokens": tokens}, timeout=300)
+                    extra={"max_completion_tokens": tokens * (k + 1)}, timeout=300)
         try:
             return json.loads(text[text.index("{"):text.rindex("}") + 1])
         except (AttributeError, TypeError, ValueError):
@@ -115,20 +144,35 @@ def muse_json(system, content, tokens=4000, tries=3):
 
 
 def read_scene(frames):
-    """Muse Spark looks at three keyframes: which surface types are present, is the scene brand-safe, context."""
+    """Muse Spark looks at three keyframes: every place that could carry an ad (open-ended, with its kind), is the
+    scene brand-safe, context tags."""
     keys = [frames[k] for k in (0, frames.n // 2, frames.n - 1)]
-    q = ("These are three frames of one video shot. 1) Which of these surface types are clearly visible and large "
-         f"enough to carry an ad: {sorted(SURFACES) + sorted(PRINTABLE)}? Only list ones you can actually see. 2) Is the scene safe for "
-         "brand advertising (no children as the focus, medical, accident, violence, grief)? 3) Up to 5 context "
-         'tags (e.g. food, street, office). Reply JSON: {"surfaces": [...], "scene_safe": bool, '
+    q = ("These are three frames of one video shot, for a system that adds brands' ads to video after filming. "
+         "1) List every object or surface you can actually see that could carry an ad or logo, each with its kind: "
+         '"display" (an existing flat poster, picture, painting, sign, menu board, chalkboard, billboard or screen; '
+         'the ad covers it), "print" (a flat paper, card or packaging item, e.g. napkin, menu, placemat, table card, '
+         'pizza box; the logo is printed on it), "vessel" (a drinking glass, cup, mug, bowl or ramekin; the logo is '
+         'printed round it), "other" (anything else: walls, table tops, plates, serving boards, clothing, umbrellas, '
+         "vehicles ...). For each give a short generic name a segmentation model can find (one or two words, singular, "
+         'e.g. "napkin", "menu board", "plate") and where it is. 2) Is the scene safe for brand advertising (no '
+         "children as the focus, medical, accident, violence, grief)? 3) Up to 5 context tags (e.g. food, street, "
+         'office). Reply JSON: {"places": [{"name": str, "kind": str, "where": str}], "scene_safe": bool, '
          '"safety_reason": str, "context_tags": [...]}')
     content = [{"type": "text", "text": q}] + [{"type": "image_url", "image_url": {"url": jpeg_url(k)}} for k in keys]
-    # Two independent reads: one read of the same clip said "menu board", another "none". Surfaces either read
+    # Two independent reads: one read of the same clip said "menu board", another "none". Places either read
     # sees are kept (the gates judge them on measurements later); the scene is safe only if both reads agree.
-    reads = [muse_json("You review video scenes for an ad-placement system. Be literal and conservative.", content)
+    reads = [muse_json("You review video scenes for an ad-placement system. Be literal and thorough.", content)
              for _ in range(2)]
     v = dict(reads[0])
-    v["surfaces"] = sorted({s for r in reads for s in r.get("surfaces", []) if s in SURFACES or s in PRINTABLE})
+    places = {}
+    for r in reads:
+        for pl in r.get("places", []):
+            name = str(pl.get("name", "")).strip().lower()
+            kind = pl.get("kind") if pl.get("kind") in KINDS else "other"
+            if name and name not in places:
+                places[name] = {"name": name, "kind": kind, "where": str(pl.get("where", ""))[:120]}
+    v["places"] = list(places.values())
+    v["surfaces"] = sorted(places)
     v["scene_safe"] = all(r.get("scene_safe") is True for r in reads)
     v["safety_reason"] = "; ".join(str(r.get("safety_reason", "")) for r in reads if r.get("safety_reason"))
     v["context_tags"] = sorted({t for r in reads for t in r.get("context_tags", [])})[:8]
@@ -232,12 +276,16 @@ def thumb(frames, tr, path):
     return f
 
 
-def plausible(img):
+def plausible(img, kind="display"):
+    q = ("The green outline marks a candidate surface for inserting an ad after filming. Is it one real, flat (or "
+         "screen) surface where a printed ad, sign or screen picture would naturally be, fully inside the outline, "
+         "not a person, window, floor or sky?") if kind != "print" else (
+        "The green outline marks a flat paper, card or packaging item (a napkin, menu, placemat, table card, box) "
+        "for printing a brand's logo on after filming, the way restaurants use branded napkins and menus. Is it one "
+        "real such item, mostly inside the outline, plain enough that a printed logo would look natural on it, and "
+        "carrying no other brand's name or logo?")
     v = muse_json("You review candidate ad surfaces for an ad-placement system. Be strict.",
-                  [{"type": "text", "text": "The green outline marks a candidate surface for inserting an ad after "
-                    "filming. Is it one real, flat (or screen) surface where a printed ad, sign or screen picture "
-                    "would naturally be, fully inside the outline, not a person, window, floor or sky? Reply JSON: "
-                    '{"plausible": bool, "reason": str}'},
+                  [{"type": "text", "text": q + ' Reply JSON: {"plausible": bool, "reason": str}'},
                    {"type": "image_url", "image_url": {"url": jpeg_url(img)}}], tokens=2000)
     return bool(v.get("plausible")), str(v.get("reason", ""))[:200]
 
@@ -334,13 +382,15 @@ def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
                 [cv2.IMWRITE_JPEG_QUALITY, 85])
     v = muse_json("You review candidate ad placements for an ad-placement system. Be strict.",
                   [{"type": "text", "text": "The green outline marks a candidate object. What is it: \"glass\" (one "
-                    "real drinking glass), \"cup\" (one real coffee cup, teacup or mug, ceramic or paper) or "
-                    "\"other\" (a jar, bottle, bowl, window, fridge door, several objects, ...)? Is it plain, with no "
+                    "real drinking glass), \"cup\" (one real coffee cup, teacup or mug, ceramic or paper), \"bowl\" "
+                    "(one real bowl, ramekin or dipping dish with an outside wall a logo could be printed round) or "
+                    "\"other\" (a jar, bottle, plate, window, fridge door, several objects, ...)? Is it plain, with no "
                     "print of its own? Does it carry a brand's name or logo (another brand's ad must not be covered "
                     "or sit beside ours)? A decorative pattern or drawing is not a brand. Reply JSON: "
-                    '{"vessel": "glass" | "cup" | "other", "plain": bool, "branded": bool, "reason": str}'},
+                    '{"vessel": "glass" | "cup" | "bowl" | "other", "plain": bool, "branded": bool, "reason": str}'},
                    {"type": "image_url", "image_url": {"url": jpeg_url(f)}}], tokens=2000)
-    vessel = v.get("vessel") if v.get("vessel") in ("glass", "cup") else "other"
+    vessel = v.get("vessel") if v.get("vessel") in ("glass", "cup", "bowl") else "other"
+    # a bowl is printed like a cup (opaque ink, squat shapes allowed); the inventory sells both as "cup"
     kind, surface = ("glass_decal", "glass") if vessel == "glass" else ("cup_decal", "cup")
     reason = str(v.get("reason", ""))[:200]
     # a cup's own drawing is fine (the print goes on a blank patch of it); a brand's isn't, and a glass's print
@@ -429,6 +479,7 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("already has", "The shot already has as many ads as we allow."),
     ("could not track", "We couldn't track it through the shot."),
     ("moves:", "Someone picks it up or moves it; for now we only place ads on things that stay still."),
+    ("not yet:", "We found it, but can't place an ad on this kind of thing yet."),
     ("no blank patch", "No blank area of it is big enough for a logo with clear space round it, so the logo would "
                        "touch its own design or edges."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
@@ -476,8 +527,13 @@ def ingest(src, run_id=None):
         frames = Frames(ROOT / clip)
         run.progress("segment", 5, "Muse Spark is reading the scene")
         scene = read_scene(frames)
-        prompts = [p for p in scene["surfaces"] if p in SURFACES]
-        printable = sorted({PRINTABLE[p] for p in scene["surfaces"] if p in PRINTABLE})
+        places = scene["places"]
+        flat_kind = {pl["name"]: pl["kind"] for pl in places if pl["kind"] in ("display", "print")}
+        prompts = list(flat_kind)[:MAX_PLACES]
+        # every vessel comes from SAM's "cup" (it finds glasses, cups and mugs; "coffee cup" finds nothing) and bowls
+        # from "bowl"; Muse then says what each object is
+        vessels = [pl["name"] for pl in places if pl["kind"] == "vessel"]
+        printable = sorted({"bowl" if any(w in v for w in ("bowl", "ramekin", "dish")) else "cup" for v in vessels})
         run.progress("segment", 15, f"surfaces seen: {', '.join(scene['surfaces']) or 'none'}; "
                                     f"brand-safe: {scene.get('scene_safe')}")
         if not scene.get("scene_safe", False):
@@ -504,12 +560,11 @@ def ingest(src, run_id=None):
             if seen < fps or peak < 0.002:   # under a second, or tiny: not worth tracking
                 continue
             k += 1
-            slot = {"id": f"c{k:02d}", "prompt": p, "object": int(oid), "surface": SURFACES[p],
-                    "dynamic_content": SURFACES[p] == "screen", "wall_light": SURFACES[p] != "screen"}
+            slot = {"id": f"c{k:02d}", "prompt": p, "object": int(oid), **flat_slot(p, flat_kind[p])}
 
             run.progress("track", 100 * j / max(len(objs), 1), f"tracking {p} #{oid}")
             c = {"id": slot["id"], "shot": 0, "prompt": p, "object": int(oid), "kind": "flat",
-                 "surface": SURFACES[p], "fps": fps, "frame_size": [frames.w, frames.h], "slot": slot}
+                 "surface": slot["surface"], "fps": fps, "frame_size": [frames.w, frames.h], "slot": slot}
             try:
                 from scripts.render_dynamic import static_surface
                 if static_surface(object_stores(clip, p, frames)[str(oid)], frames) is not None:
@@ -521,7 +576,7 @@ def ingest(src, run_id=None):
                 img = thumb(frames, tr, run.dir / "thumbs" / f"{slot['id']}.jpg")
                 c["thumb"] = f"thumbs/{slot['id']}.jpg"
                 try:
-                    c["metrics"]["muse_plausible"], c["metrics"]["muse_reason"] = plausible(img)
+                    c["metrics"]["muse_plausible"], c["metrics"]["muse_reason"] = plausible(img, flat_kind[p])
                 except RuntimeError as e:   # no answer: decline rather than place unchecked
                     c["metrics"]["muse_plausible"], c["metrics"]["muse_reason"] = False, f"Muse unavailable ({e})"
                 lo, hi = c["frames"]   # gates.py: quads local to the inclusive frame range
@@ -552,6 +607,15 @@ def ingest(src, run_id=None):
                 c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid)}
                 c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
                 cands.append(c)
+        # places with no placement method yet: reported as found, so the report shows every opportunity
+        for pl in places:
+            if pl["kind"] == "other" or (pl["kind"] in ("display", "print") and pl["name"] not in prompts):
+                k += 1
+                why = (f"not yet: we can't place an ad on a {pl['name']} yet" if pl["kind"] == "other" else
+                       f"not yet: more than {MAX_PLACES} places in one video; this one wasn't looked at")
+                cands.append({"id": f"c{k:02d}", "shot": 0, "prompt": pl["name"], "kind": "found", "surface": pl["name"],
+                              "fps": fps, "frame_size": [frames.w, frames.h], "thumb": None, "frames": [0, 0],
+                              "metrics": {"on_screen_s": 0.0, "error": why, "where": pl["where"]}})
         run.write("candidates.json", [{kk: v for kk, v in c.items() if kk not in ("slot", "quads")} for c in cands])
         run.progress("track", 100, f"{len(cands)} candidates measured")
 
@@ -566,6 +630,8 @@ def ingest(src, run_id=None):
         except ImportError:
             by_id = {d["id"]: d for d in fallback_decide([c for c in cands if c["kind"] == "flat"])}
         by_id.update({c["id"]: decide_glass(c) for c in cands if c["kind"] in ("glass_decal", "cup_decal")})
+        by_id.update({c["id"]: {"id": c["id"], "decision": "decline", "score": 0.0, "reasons": [c["metrics"]["error"]]}
+                      for c in cands if c["kind"] == "found"})
         decisions = [by_id[c["id"]] for c in cands]
         run.write("decisions.json", decisions)
         accepted = [c for c, d in zip(cands, decisions) if d["decision"] == "accept"]
