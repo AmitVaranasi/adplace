@@ -26,10 +26,11 @@ from pipeline.sam_track import read_frames  # noqa: E402
 from scripts.render import render_campaign  # noqa: E402
 
 app = FastAPI(title="AdPlace")
+for d in ("outputs", "assets/clips", "runs"):   # git-ignored: a fresh clone has none of them
+    (ROOT / d).mkdir(parents=True, exist_ok=True)
 app.mount("/outputs", StaticFiles(directory=ROOT / "outputs"), name="outputs")
 app.mount("/clips", StaticFiles(directory=ROOT / "assets" / "clips"), name="clips")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
-(ROOT / "runs").mkdir(exist_ok=True)
 app.mount("/runs", StaticFiles(directory=ROOT / "runs"), name="runs")
 
 
