@@ -65,18 +65,32 @@ names. About 500 automated tests, passing on a fresh clone.
 - Cups with designs of their own: the logo goes on a blank patch, measured on the unwrapped cup with the handle cut
   out, never over the cup's own drawing.
 
+## How it would make money (hypothetical)
+
+Each placement is sold per viewer, at the second price the auction clears: per 1,000 views, a video earns the sum of
+its placements' clearing CPMs, shared between the creator and the platform. With the demo inventory's test bids the
+auction clears at a median of $4.00 CPM per placement ($2.02–$8.70) [`pipeline/auction.py`, 20 bids per viewer on
+the bar and m44007 players], so a video with one or two places would earn about $4–8 per 1,000 views on top
+of whatever else it earns, without the creator making a sponsored video. These are test bids, not market prices.
+Against that, yield is low today: 1 of the 23 unseen videos has a place that passes on today's code (3 did
+before the Nov 3 gates), all in cafés and restaurants, so the first market is footage of tables, counters and walls: food, drink and lifestyle creators.
+
 ## Honest limits
 
 - Yield is low. On 23 stock videos it had never seen, it placed 3 ads from 56 candidates, and every decline was
-  checked by eye [`runs/testset_all23.txt`]. With open-ended discovery on 4 clips Muse named 43 places, 19 of them kinds we can measure, and 6 were placed
-  [`runs/r_eval_*`]; the two sets ran on different code and aren't comparable.
+  checked by eye [`runs/testset_all23.txt`]. Re-run on today's code, which adds readability gates (a logo at least
+  28 px tall on screen, and sharp enough to read), two of those three are declined (too small; no clear space for
+  the logo): 1 placed. With open-ended discovery on 4 clips Muse named
+  43 places, 19 of them kinds we can measure; 6 were placed before the gates and 3 after (a bar's wall poster and
+  two glasses) [`runs/r_eval_*`, `runs/r_v2_m44025`, `runs/r_v4_m43999`].
 - Only still objects carry ads. Objects people pick up are declined.
 - Processing a 10-second upload takes a few minutes, once, offline [5.7 s clip: 8.6 min; 5 s clip with nothing to
   place: 57 s]. Picking brands at playback takes about 0.1 ms.
 - The bids are test bids from a demo inventory of fictional brands. It's a standalone prototype, not connected to a
   real ad auction, with no accounts: it runs locally.
 - The 3D products and the nine placements on the patio clip were set up by hand; uploads get flat surfaces and
-  vessels only. Uploads use one shot (the longest) and play without sound.
+  vessels only. Uploads use one shot (the longest); its sound plays muted until a viewer turns it on (the stock
+  test footage has none).
 
 ## What's next
 

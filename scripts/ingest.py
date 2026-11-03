@@ -122,6 +122,18 @@ def trim(src, dst, a, b, fps):
                     "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", "-an", str(dst)], check=True)
 
 
+def extract_audio(src, dst, a, b, fps):
+    """The chosen shot's sound, on the same timeline as trim()."""
+    dst.unlink(missing_ok=True)
+    probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=index",
+                            "-of", "csv=p=0", str(src)], check=True, capture_output=True, text=True)
+    if not probe.stdout.strip():
+        return
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-ss", str(a / fps),
+                    "-t", str((b - a) / fps), "-map", "0:a:0", "-vn", "-af", "apad", "-c:a", "aac",
+                    "-movflags", "+faststart", str(dst)], check=True)
+
+
 # --- segment -----------------------------------------------------------------------------------------------------
 
 def jpeg_url(img, width=1024):
@@ -375,6 +387,7 @@ def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
     """A drinking glass, cup or mug SAM found ("cup" finds all three): Muse Spark says which it is and whether it's
     plain, then the logo's own placement (scripts/glass_decal.py) is measured like a surface. Returns (metrics,
     frame range, kind, surface)."""
+    from scripts.glass_decal import LOGO_HEIGHTS
     from scripts.place3d import make
     from scripts.render_dynamic import object_stores
     st = object_stores(clip, prompt, frames)[str(oid)]
@@ -418,7 +431,10 @@ def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
          "uncovered_visible_s": sum(1 for k in range(frames.n) if g.store.any(k) and k not in g.place) / fps,
          # static objects only: a glass someone picks up needs its logo re-fitted every frame, and that shows
          "travel_r_max": max_travel(g, fps, float(np.median(geo[:, 2])) if len(geo) else 1.0),
-         "muse_plausible": True, "muse_reason": reason, "blank_patch": bool(g.blank)}
+         "muse_plausible": True, "muse_reason": reason, "blank_patch": bool(g.blank),
+         # how tall the logo comes out on screen: a share of the vessel's height (ratio x radius)
+         "logo_px": float((g.logo_h or LOGO_HEIGHTS[1]) * g.ratio * np.median(geo[:, 2])) if len(geo) else 0.0,
+         "print_sigma": float(g.sigma)}   # the logo's blur, matched to the vessel's focus
     return m, [int(placed[0]), int(placed[-1])] if placed else [0, 0], kind, surface
 
 
@@ -431,6 +447,10 @@ def max_travel(g, fps, r):
         if d:
             best = max(best, float(np.linalg.norm(np.cumsum(d, axis=0), axis=1).max()))
     return best / r
+
+
+LOGO_PX_MIN = 28   # below this the wordmark breaks into speckle (an orange juice glass 98 px tall: 20 px, unreadable)
+LOGO_SHARPNESS_MIN = 30   # logo height / its blur: a 40 px logo on a bowl blurred 2 px (19) can't be read
 
 
 def decide_glass(c):
@@ -453,6 +473,12 @@ def decide_glass(c):
                    "needs 90%")
     if m["uncovered_visible_s"] > 0.25:
         why.append(f"visible but not covered for {m['uncovered_visible_s']:.1f} s")
+    if m.get("logo_px", LOGO_PX_MIN) < LOGO_PX_MIN:
+        why.append(f"logo too small: the logo would be {m['logo_px']:.0f} px tall on screen, needs {LOGO_PX_MIN} px "
+                   "to be readable")
+    if m.get("logo_px", 0) / max(m.get("print_sigma", 0.5), 0.5) < LOGO_SHARPNESS_MIN and m.get("logo_px", 0) >= LOGO_PX_MIN:
+        why.append(f"logo out of focus: the {what} is out of focus (blur {m['print_sigma']:.1f} px), so a "
+                   f"{m['logo_px']:.0f} px logo would be unreadable; needs height / blur of {LOGO_SHARPNESS_MIN}")
     if not m.get("blank_patch", True):
         why.append(f"no blank patch: no blank area of the {what} (clear of its own design, rim and what covers it) "
                    "is big enough for the logo with a margin round it")
@@ -472,6 +498,8 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("track residual", "We couldn't follow its outline precisely enough; an ad would drift on it."),
     ("corner jitter", "Its outline wobbles from frame to frame; an ad would shake."),
     ("minimum side", "It's too small to carry readable artwork."),
+    ("logo too small", "It's too small on screen for a readable logo."),
+    ("logo out of focus", "It's out of focus, so a logo on it couldn't be read."),
     ("mean area fraction", "It's too small in the picture."),
     ("edge-clipped", "It's mostly cut off by the edge of the frame."),
     ("maximum occlusion", "People or things cover too much of it at some point."),
@@ -525,8 +553,14 @@ def ingest(src, run_id=None):
         run.progress("shots", 0, "looking for cuts")
         sh = shots(raw)
         a, b = max(sh, key=lambda s: s[1] - s[0])
+        if len(sh) == 1:   # the single-shot path keeps the whole video
+            a, b = 0, n
         note = "" if len(sh) == 1 else f"{len(sh)} shots; using the longest ({(b - a) / fps:.1f} s)"
         trim(raw, ROOT / clip, a, b, fps) if len(sh) > 1 else normalise(raw, ROOT / clip)
+        try:
+            extract_audio(src, (ROOT / clip).with_suffix(".m4a"), a, b, fps)
+        except subprocess.CalledProcessError:   # sound is a bonus: a stream ffmpeg can't read leaves the clip silent
+            (ROOT / clip).with_suffix(".m4a").unlink(missing_ok=True)
         run.progress("shots", 100, note or "one continuous shot")
 
         from scripts.render_dynamic import Frames, object_stores, occluders, track_slot, area
@@ -687,6 +721,7 @@ def ingest(src, run_id=None):
                    "screens, and plain glasses, cups and mugs that stay still, and found none.")
             note = f"{note}. {why}" if note else why
         report = {"run_id": run.id, "clip_stem": stem, "clip": clip, "source_name": source_name(src),
+                  "finished_at": time.time(),   # the library's "newest run" (file times don't survive a git clone)
                   "duration_s": round(frames.n / fps, 2), "status": "done", "elapsed_s": round(time.time() - run.t0),
                   "note": note, "scene": scene,
                   "summary": {"candidates": len(cands), "placed": len(accepted), "declined": len(cands) - len(accepted)},

@@ -1,33 +1,34 @@
 {
- "run_id": "r_eval_m44025",
+ "run_id": "r_v2_m44025",
  "clip_stem": "upload_m44025",
  "clip": "assets/clips/uploads/upload_m44025.mp4",
  "source_name": "m44025.mp4",
+ "finished_at": 1793687234.538829,
  "duration_s": 14.26,
  "status": "done",
- "elapsed_s": 314,
+ "elapsed_s": 268,
  "note": "",
  "scene": {
   "places": [
    {
     "name": "table",
     "kind": "other",
-    "where": "foreground center under food and drinks"
+    "where": "in foreground center"
    },
    {
     "name": "plate",
     "kind": "other",
-    "where": "on table in front of woman in blue robe"
+    "where": "on table in front of woman on left"
    },
    {
     "name": "serving board",
     "kind": "other",
-    "where": "foreground center under pizza slices"
+    "where": "on table under pizza in foreground"
    },
    {
     "name": "glass",
     "kind": "vessel",
-    "where": "on table middle holding yellow drink"
+    "where": "on table middle with yellow drink"
    },
    {
     "name": "napkin",
@@ -37,36 +38,32 @@
    {
     "name": "wall",
     "kind": "other",
-    "where": "background behind plants"
+    "where": "in background behind plants"
    },
    {
     "name": "shirt",
     "kind": "other",
-    "where": "foreground right worn by person with braids"
+    "where": "on person in foreground on right"
    },
    {
     "name": "robe",
     "kind": "other",
-    "where": "worn by woman with curly hair on left"
-   },
-   {
-    "name": "mug",
-    "kind": "vessel",
-    "where": "on table foreground left with dark drink"
+    "where": "on woman on left"
    }
   ],
   "scene_safe": true,
-  "safety_reason": "Two adults sharing pizza and talking at outdoor table, no children as focus, medical, accident, violence or grief visible.; Two adults eating pizza and talking outdoors, no children, medical, accident, violence or grief visible",
+  "safety_reason": "Two adults sharing pizza and talking at a table, no children, medical, accident, violence or grief visible; Two adults sharing pizza and talking at an outdoor table; no children, medical, accident, violence or grief visible.",
   "context_tags": [
    "conversation",
+   "daytime",
    "dining",
    "food",
    "outdoor",
-   "restaurant"
+   "restaurant",
+   "social"
   ],
   "surfaces": [
    "glass",
-   "mug",
    "napkin",
    "plate",
    "robe",
@@ -78,30 +75,15 @@
  },
  "summary": {
   "candidates": 9,
-  "placed": 1,
-  "declined": 8
+  "placed": 0,
+  "declined": 9
  },
  "placements": [
-  {
-   "id": "c03",
-   "surface": "glass",
-   "decision": "placed",
-   "thumb": "/runs/r_eval_m44025/thumbs/c03.jpg",
-   "on_screen_s": 10.43,
-   "reasons": [],
-   "details": [],
-   "qa": {
-    "id": "c03",
-    "pass": true,
-    "checks": {},
-    "reasons": []
-   }
-  },
   {
    "id": "c01",
    "surface": "print",
    "decision": "declined",
-   "thumb": "/runs/r_eval_m44025/thumbs/c01.jpg",
+   "thumb": "/runs/r_v2_m44025/thumbs/c01.jpg",
    "on_screen_s": 5.0,
    "reasons": [
     "Muse Spark judged it not a natural place for an ad.",
@@ -123,7 +105,7 @@
    "id": "c02",
    "surface": "glass",
    "decision": "declined",
-   "thumb": "/runs/r_eval_m44025/thumbs/c02.jpg",
+   "thumb": "/runs/r_v2_m44025/thumbs/c02.jpg",
    "on_screen_s": 10.59,
    "reasons": [
     "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
@@ -132,6 +114,20 @@
    "details": [
     "no blank patch: no blank area of the glass (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
     "moves: travels 0.6 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_v2_m44025/thumbs/c03.jpg",
+   "on_screen_s": 10.43,
+   "reasons": [
+    "It isn't on screen long enough to register."
+   ],
+   "details": [
+    "logo too small: the logo would be 18 px tall on screen, needs 28 px to be readable"
    ],
    "qa": null
   },
@@ -220,7 +216,8 @@
    "qa": null
   }
  ],
- "player_url": "/player?clip=upload_m44025",
+ "player_url": null,
+ "reels_url": null,
  "viewers": [
   {
    "profile_id": "viewer-a",

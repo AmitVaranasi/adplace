@@ -2,144 +2,316 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AdPlace</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check a file</title>
 <style>
-  :root { --bg: #0f1115; --panel: #181b22; --text: #e8eaef; --muted: #9aa1ad; --accent: #e07a3a; --ok: #3fb47a; --bad: #e0574f; }
+  :root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    background: #101216;
+    color: #eef0f4;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
-  header { padding: 20px 24px 8px; }
-  h1 { margin: 0; font-size: 22px; }
-  header p { margin: 4px 0 0; color: var(--muted); }
-  main { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px 24px 32px; }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
-  section { background: var(--panel); border-radius: 10px; padding: 16px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
-  select, button, input[type=file] { width: 100%; padding: 8px 10px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #2a2f3a; background: #11141a; color: var(--text); font: inherit; }
-  button { background: var(--accent); border: 0; color: #fff; font-weight: 600; cursor: pointer; }
-  button:disabled { opacity: .5; cursor: wait; }
-  .videos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 860px) { .videos { grid-template-columns: 1fr; } }
-  video { width: 100%; border-radius: 8px; background: #000; }
-  .cap { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
-  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
-  dt { color: var(--muted); }
-  .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 13px; font-weight: 600; }
-  .ok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
-  .bad { background: color-mix(in srgb, var(--bad) 20%, transparent); color: var(--bad); }
-  #choice { font-size: 16px; margin: 8px 0; }
-  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  body { margin: 0; }
+  main { max-width: 760px; margin: auto; padding: 24px; }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 22px; flex-wrap: wrap; }
   nav.site a { color: #a2a9b8; text-decoration: none; }
   nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
   nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
+  header { margin-bottom: 18px; }
+  h1 { font-size: 21px; margin: 0 0 5px; font-weight: 650; }
+  h2 { font-size: 14px; margin: 0 0 10px; }
+  h3 { font-size: 12px; margin: 16px 0 8px; color: #a2a9b8; font-weight: 600; text-transform: uppercase;
+       letter-spacing: .04em; }
+  p { line-height: 1.55; }
+  .muted, small { color: #a2a9b8; }
+  header p { margin: 0 0 8px; font-size: 13px; max-width: 70ch; }
+  [hidden] { display: none !important; }
+  a.button, button {
+    display: inline-block; border: 1px solid #353a46; background: #20242d; color: inherit; border-radius: 8px;
+    padding: 8px 12px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer;
+  }
+  a.button:hover, button:hover { background: #2a303b; }
+  .primary, a.button.primary { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
+  .primary:hover, a.button.primary:hover { background: #2a4a42; }
+  button:disabled, .primary:disabled { opacity: .45; cursor: default; }
+  button:disabled:hover { background: #20242d; }
+  .primary:disabled:hover { background: #233e38; }
+  a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid #6bd6b2; outline-offset: 3px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    clip: rect(0 0 0 0); clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+  }
+
+  .panel { border: 1px solid #2c3039; border-radius: 12px; background: #171a20; padding: 18px; }
+
+  .drop {
+    border: 1px dashed #3a4150; border-radius: 12px; background: #171a20; padding: 30px 16px; text-align: center;
+    cursor: pointer; display: grid; gap: 6px; justify-items: center;
+  }
+  .drop:hover { border-color: #4a5160; background: #1b1f26; }
+  .drop.over { border-color: #6bd6b2; background: #1a241f; }
+  .drop strong { font-size: 14px; font-weight: 600; }
+  .drop small { font-size: 12px; line-height: 1.5; max-width: 46ch; }
+  .picked { font-size: 13px; overflow-wrap: anywhere; }
+  .picked span { color: #a2a9b8; }
+
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+
+  #status { display: flex; gap: 10px; align-items: center; font-size: 13px; min-height: 1.4em;
+            color: #c0c6d2; margin-top: 14px; overflow-wrap: anywhere; }
+  .spinner { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #353a46;
+             border-top-color: #6bd6b2; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+  #result { margin-top: 18px; }
+  #result .verdict { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 0 0 10px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.found { background: #1f5f4c; color: #d4fff0; }
+  .pill.none { background: #20242d; border: 1px solid #353a46; color: #a2a9b8; }
+  #result .verdict strong { font-size: 15px; font-weight: 600; }
+  #result p { margin: 0 0 4px; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  caption { text-align: left; font-size: 12px; color: #a2a9b8; padding-bottom: 6px; }
+  th, td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid #262a33; overflow-wrap: anywhere; }
+  th { font-size: 11px; font-weight: 600; color: #a2a9b8; text-transform: uppercase; letter-spacing: .04em; }
+  td:last-child, th:last-child { padding-right: 0; }
+  dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 14px 0 0; font-size: 13px; }
+  dt { color: #a2a9b8; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+
+  #error { border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px;
+           margin-top: 14px; overflow-wrap: anywhere; }
+  @media (max-width: 600px) { main { padding: 16px; } .drop { padding: 24px 12px; } }
 </style>
 </head>
 <body>
-<header>
-<nav class="site" aria-label="AdPlace">
+<main>
+  <nav class="site" aria-label="AdPlace">
     <a class="brand" href="/">AdPlace</a>
     <a href="/">My videos</a>
     <a href="/upload">Upload</a>
     <a href="/verify" aria-current="page">Check a file</a>
-</nav>
-  <h1>AdPlace</h1>
-  <p>Same scene, a different brand for each viewer, always disclosed. Brands are fictional; footage is openly licensed.</p>
-</header>
-<main>
-  <div>
-    <section>
-      <h2>1. Clip</h2>
-      <select id="clip"></select>
-      <h2>2. Viewer</h2>
-      <select id="profile"></select>
-      <button id="go">Choose and render placement</button>
-    </section>
-    <section style="margin-top:16px">
-      <h2>Verify a file</h2>
-      <input type="file" id="file" accept="video/*">
-      <button id="verify">Check for a placement watermark</button>
-      <div id="vresult" class="cap"></div>
-    </section>
-  </div>
-  <div>
-    <section>
-      <div class="videos">
-        <div><video id="orig" controls muted loop playsinline></video><p class="cap">Original</p></div>
-        <div><video id="placed" controls muted loop playsinline></video><p class="cap" id="placedcap">Placement appears here</p></div>
-      </div>
-    </section>
-    <section style="margin-top:16px">
-      <h2>Why this ad</h2>
-      <div id="choice" class="cap">Pick a clip and a viewer.</div>
-      <dl id="facts"></dl>
-    </section>
-  </div>
+  </nav>
+
+  <header>
+    <h1>Check a file</h1>
+    <p class="muted">Every copy a viewer downloads carries an invisible Meta Video Seal watermark naming the campaigns
+      in it. Drop a video to check whether it carries one.</p>
+    <p class="muted">The mark survives re-encoding, so a copy that has been compressed again or re-uploaded by another
+      app still answers.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="pick-title">
+    <h2 id="pick-title">The video to check</h2>
+
+    <div id="drop" class="drop" role="button" tabindex="0" aria-labelledby="drop-title" aria-describedby="drop-hint">
+      <strong id="drop-title">Drop a video here, or press Enter to choose one</strong>
+      <small id="drop-hint">mp4, mov, m4v or webm, up to 200&nbsp;MB. The file is sent to this server only; nothing
+        leaves your machine otherwise.</small>
+    </div>
+
+    <label class="sr-only" for="file">Video file</label>
+    <input class="sr-only" id="file" type="file" tabindex="-1"
+           accept=".mp4,.mov,.m4v,.webm,video/mp4,video/quicktime,video/webm">
+
+    <p id="picked" class="picked" hidden></p>
+
+    <div class="actions">
+      <button id="check" class="primary" type="button" disabled>Check this file</button>
+      <button id="clear" type="button" hidden>Clear</button>
+    </div>
+
+    <div id="status" role="status"></div>
+    <div id="error" role="alert" hidden></div>
+  </section>
+
+  <section id="result" class="panel" tabindex="-1" aria-labelledby="result-title" hidden>
+    <h2 id="result-title" class="sr-only">Result</h2>
+    <div id="result-body"></div>
+  </section>
 </main>
+
 <script>
-const $ = (id) => document.getElementById(id);
-const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-  .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
+"use strict";
+(() => {
+  const $ = id => document.getElementById(id);
+  const make = (tag, props, ...kids) => {
+    const el = Object.assign(document.createElement(tag), props || {});
+    el.append(...kids.filter(k => k != null));
+    return el;
+  };
+  const MAX_BYTES = 200 * 1024 * 1024;
+  const KINDS = [".mp4", ".mov", ".m4v", ".webm"];
+  const pct = x => (100 * Number(x || 0)).toFixed(1) + "%";
+  const mb = n => (n / (1024 * 1024)).toFixed(1) + " MB";
 
-let catalog;
-fetch("/api/catalog").then((r) => r.json()).then((c) => {
-  catalog = c;
-  for (const clip of c.clips) $("clip").add(new Option(clip.title, clip.id));
-  for (const p of c.profiles) $("profile").add(new Option(p.label, p.profile_id));
-  showOriginal();
-});
-$("clip").onchange = showOriginal;
+  let file = null, checking = false, ticker = 0;
 
-function showOriginal() {
-  const clip = catalog.clips.find((c) => c.id === $("clip").value);
-  $("orig").src = clip.url; $("orig").play();
-  $("placed").removeAttribute("src"); $("placed").load();
-  $("placedcap").textContent = "Placement appears here";
-}
+  function showError(message) {
+    $("error").textContent = message;
+    $("error").hidden = false;
+  }
 
-$("go").onclick = async () => {
-  $("go").disabled = true; $("choice").textContent = "Choosing…"; $("facts").innerHTML = "";
-  try {
-    const r = await post("/api/choose", { clip: $("clip").value, profile_id: $("profile").value });
-    const m = r.slot.metrics;
-    $("facts").innerHTML = `
-      <dt>Surface</dt><dd>${r.slot.slot_id}: ${r.slot.surface}, on screen ${m.on_screen_s.toFixed(1)} s, ${(100 * m.mean_area_frac).toFixed(1)}% of frame</dd>
-      <dt>Slots found</dt><dd>${r.slots.length}</dd>
-      <dt>Eligible</dt><dd>${r.eligible.map((e) => e.slot_id + " × " + e.brand_id).join(", ") || "none"}</dd>
-      <dt>Chooser</dt><dd>${r.chooser}</dd>
-      <dt>Tried</dt><dd>${r.attempts.map((a) => `${a.provider}: ${a.result}`).join("; ") || "none (rules only)"}</dd>`;
-    if (r.choice.status !== "ok") {
-      $("choice").innerHTML = `<span class="pill bad">No placement</span> ${r.choice.reason}`;
-      return;
-    }
-    $("choice").innerHTML = `<span class="pill ok">${r.choice.brand_id}</span> ${r.choice.rationale}`;
-    $("placedcap").textContent = "Rendering (first time takes about a minute)…";
-    const v = await post("/api/render", { clip: $("clip").value, brand: r.choice.brand_id, slot_id: r.choice.slot_id });
-    $("placed").src = v.video_url + "?t=" + Date.now(); $("placed").play(); $("orig").currentTime = 0;
-    $("placedcap").innerHTML = `${v.brand} · watermark ${v.verified ? '<span class="pill ok">verified</span>' : '<span class="pill bad">not verified</span>'}
-      · ${v.cached ? "cached render" : `rendered in ${v.seconds} s`} · composite ${v.timings.composite_ms_per_frame} ms/frame`;
-  } catch (e) {
-    $("choice").innerHTML = `<span class="pill bad">Error</span> ${e.message}`;
-  } finally { $("go").disabled = false; }
-};
+  function clearError() {
+    $("error").textContent = "";
+    $("error").hidden = true;
+  }
 
-$("verify").onclick = async () => {
-  const f = $("file").files[0];
-  if (!f) { $("vresult").textContent = "Choose a video file first."; return; }
-  $("verify").disabled = true; $("vresult").textContent = "Checking…";
-  const fd = new FormData(); fd.append("file", f);
-  try {
-    const r = await fetch("/api/verify", { method: "POST", body: fd }).then((r) => r.json());
-    if (!r.campaign) {
-      $("vresult").innerHTML = `<span class="pill bad">No placement watermark</span> best match ${(100 * r.bit_accuracy).toFixed(1)}% bits (chance is 50%)`;
+  function setStatus(text, busy) {
+    const box = $("status");
+    box.replaceChildren(...(busy ? [make("span", {className: "spinner"})] : []));
+    if (text) box.append(make("span", {textContent: text}));
+  }
+
+  function take(chosen) {
+    if (!chosen) return;
+    clearError();
+    $("result").hidden = true;
+    setStatus("");
+    const name = chosen.name || "";
+    const dot = name.lastIndexOf(".");
+    const kind = dot < 0 ? "" : name.slice(dot).toLowerCase();
+    if (!KINDS.includes(kind)) {
+      file = null;
+      showError("That's not a video this page can read. Choose an mp4, mov, m4v or webm file.");
+    } else if (chosen.size > MAX_BYTES) {
+      file = null;
+      showError("That file is " + mb(chosen.size) + ". Videos up to 200 MB, please.");
     } else {
-      const what = r.campaigns
-        ? `${r.manifest_id}: ${Object.entries(r.campaigns).map(([slot, c]) => `${slot} ${c}`).join(", ")} (clip ${r.clip})`
-        : `campaign ${r.campaign}`;
-      $("vresult").innerHTML = `<span class="pill ok">Placement detected</span> `;
-      $("vresult").append(`${what} (${(100 * r.bit_accuracy).toFixed(1)}% bits)`);
+      file = chosen;
     }
-  } finally { $("verify").disabled = false; }
-};
+    $("picked").hidden = !file;
+    if (file) {
+      $("picked").replaceChildren(make("strong", {textContent: file.name}),
+        make("span", {textContent: " · " + mb(file.size)}));
+    }
+    $("check").disabled = !file;
+    $("clear").hidden = !file;
+  }
+
+  function reset() {
+    file = null;
+    $("file").value = "";
+    $("picked").hidden = true;
+    $("picked").replaceChildren();
+    $("check").disabled = true;
+    $("clear").hidden = true;
+    $("result").hidden = true;
+    setStatus("");
+    clearError();
+    $("drop").focus();
+  }
+
+  function found(data) {
+    const body = $("result-body");
+    const bits = make("p", {className: "muted",
+      textContent: "Bit accuracy " + pct(data.bit_accuracy) + " — far above the 50% you'd get by chance."});
+    const kids = [make("div", {className: "verdict"},
+      make("span", {className: "pill found", textContent: "Watermark found"}),
+      make("strong", {textContent: "This file came from AdPlace."})), bits];
+
+    const places = data.campaigns && typeof data.campaigns === "object" ? Object.entries(data.campaigns) : [];
+    if (places.length) {
+      const rows = places.map(([place, campaign]) => make("tr", null,
+        make("td", {textContent: String(place)}), make("td", {textContent: String(campaign)})));
+      kids.push(make("h3", {textContent: "What is in it"}));
+      kids.push(make("table", null,
+        make("caption", {textContent: "Each place in the scene and the campaign shown there."}),
+        make("thead", null, make("tr", null,
+          make("th", {scope: "col", textContent: "Place"}), make("th", {scope: "col", textContent: "Campaign"}))),
+        make("tbody", null, ...rows)));
+      const facts = make("dl");
+      if (data.clip) facts.append(make("dt", {textContent: "Clip"}), make("dd", {textContent: String(data.clip)}));
+      if (data.manifest_id) {
+        facts.append(make("dt", {textContent: "Manifest"}), make("dd", {textContent: String(data.manifest_id)}));
+      }
+      if (facts.childElementCount) kids.push(facts);
+    } else if (data.campaign) {
+      kids.push(make("h3", {textContent: "What is in it"}));
+      kids.push(make("dl", null,
+        make("dt", {textContent: "Campaign"}), make("dd", {textContent: String(data.campaign)}),
+        make("dt", {textContent: "Render"}), make("dd", {textContent: "A single-ad render, not a viewer's download."})));
+    }
+    body.replaceChildren(...kids);
+  }
+
+  function notFound(data) {
+    $("result-body").replaceChildren(
+      make("div", {className: "verdict"},
+        make("span", {className: "pill none", textContent: "Nothing found"}),
+        make("strong", {textContent: "No AdPlace watermark found."})),
+      make("p", {className: "muted",
+        textContent: "Best match " + pct(data.bit_accuracy) + " of the bits, and chance is 50%, so this file "
+          + "carries no mark this server issued."}),
+      make("p", {className: "muted",
+        textContent: "A viewer's download from /player or /reels always carries one, even after re-encoding."}));
+  }
+
+  async function check() {
+    if (!file || checking) return;
+    checking = true;
+    clearError();
+    $("result").hidden = true;
+    $("check").disabled = true;
+    const started = Date.now();
+    const tick = () => {
+      const s = Math.round((Date.now() - started) / 1000);
+      setStatus("Reading the watermark… " + s + " s. This usually takes 10 to 60 seconds.", true);
+    };
+    tick();
+    ticker = setInterval(tick, 1000);
+
+    const body = new FormData();
+    body.append("file", file, file.name);
+    try {
+      const r = await fetch("/api/verify", {method: "POST", body: body});
+      let data = null;
+      try { data = await r.json(); } catch (_) { data = null; }
+      if (!r.ok) throw new Error((data && data.detail) || ("the server said " + r.status));
+      if (data.campaign) found(data); else notFound(data);
+      setStatus("Checked " + file.name + " in " + Math.round((Date.now() - started) / 1000) + " s.");
+      $("result").hidden = false;
+      $("result").focus();
+    } catch (error) {
+      setStatus("");
+      showError("Couldn't check that file: " + (error.message || error));
+    } finally {
+      clearInterval(ticker);
+      checking = false;
+      $("check").disabled = !file;
+    }
+  }
+
+  const drop = $("drop");
+  drop.onclick = () => $("file").click();
+  drop.onkeydown = event => {
+    if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+      event.preventDefault();
+      $("file").click();
+    }
+  };
+  for (const name of ["dragenter", "dragover"]) drop.addEventListener(name, event => {
+    event.preventDefault();
+    drop.classList.add("over");
+  });
+  for (const name of ["dragleave", "dragend"]) drop.addEventListener(name, () => drop.classList.remove("over"));
+  drop.addEventListener("drop", event => {
+    event.preventDefault();
+    drop.classList.remove("over");
+    const dropped = event.dataTransfer && event.dataTransfer.files;
+    if (dropped && dropped.length) take(dropped[0]);
+  });
+  document.addEventListener("dragover", event => event.preventDefault());
+  document.addEventListener("drop", event => event.preventDefault());
+
+  $("file").onchange = () => take($("file").files[0]);
+  $("check").onclick = check;
+  $("clear").onclick = reset;
+})();
 </script>
 </body>
 </html>

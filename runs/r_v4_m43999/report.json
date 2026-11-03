@@ -1,28 +1,29 @@
 {
- "run_id": "r_eval_m43999",
+ "run_id": "r_v4_m43999",
  "clip_stem": "upload_m43999",
  "clip": "assets/clips/uploads/upload_m43999.mp4",
  "source_name": "m43999.mp4",
+ "finished_at": 1793730890.037077,
  "duration_s": 11.39,
  "status": "done",
- "elapsed_s": 391,
+ "elapsed_s": 375,
  "note": "",
  "scene": {
   "places": [
    {
+    "name": "table",
+    "kind": "other",
+    "where": "foreground under dishes"
+   },
+   {
     "name": "serving board",
     "kind": "other",
-    "where": "foreground center under pizza"
+    "where": "center foreground under pizza"
    },
    {
     "name": "plate",
     "kind": "other",
-    "where": "center behind pizza"
-   },
-   {
-    "name": "table",
-    "kind": "other",
-    "where": "foreground wooden table top"
+    "where": "center middle behind pizza"
    },
    {
     "name": "bowl",
@@ -32,17 +33,17 @@
    {
     "name": "ramekin",
     "kind": "vessel",
-    "where": "left side behind bowl"
+    "where": "left middle behind bowl"
    },
    {
     "name": "glass",
     "kind": "vessel",
-    "where": "left side behind bowl"
+    "where": "left middle with dark drink"
    },
    {
     "name": "jacket",
     "kind": "other",
-    "where": "worn by person in center"
+    "where": "center worn by man"
    },
    {
     "name": "wall",
@@ -51,7 +52,7 @@
    }
   ],
   "scene_safe": true,
-  "safety_reason": "adult man eating pizza outdoors, smiling and relaxed, no children, medical, accident, violence or grief content; Adult man happily eating pizza outdoors; no children, medical, accident, violence or grief visible.",
+  "safety_reason": "Adult man eating pizza outdoors smiling, no children, medical, accident, violence or grief visible; adult man eating pizza outdoors in a cheerful setting, no children as focus, medical, accident, violence or grief",
   "context_tags": [
    "dining",
    "food",
@@ -72,51 +73,49 @@
  },
  "summary": {
   "candidates": 10,
-  "placed": 2,
-  "declined": 8
+  "placed": 0,
+  "declined": 10
  },
  "placements": [
   {
    "id": "c01",
    "surface": "cup",
-   "decision": "placed",
-   "thumb": "/runs/r_eval_m43999/thumbs/c01.jpg",
+   "decision": "declined",
+   "thumb": "/runs/r_v4_m43999/thumbs/c01.jpg",
    "on_screen_s": 11.39,
-   "reasons": [],
-   "details": [],
-   "qa": {
-    "id": "c01",
-    "pass": true,
-    "checks": {},
-    "reasons": []
-   }
-  },
-  {
-   "id": "c03",
-   "surface": "cup",
-   "decision": "placed",
-   "thumb": "/runs/r_eval_m43999/thumbs/c03.jpg",
-   "on_screen_s": 11.39,
-   "reasons": [],
-   "details": [],
-   "qa": {
-    "id": "c03",
-    "pass": true,
-    "checks": {},
-    "reasons": []
-   }
+   "reasons": [
+    "It's out of focus, so a logo on it couldn't be read."
+   ],
+   "details": [
+    "logo out of focus: the cup is out of focus (blur 2.1 px), so a 35 px logo would be unreadable; needs height / blur of 30"
+   ],
+   "qa": null
   },
   {
    "id": "c02",
    "surface": "cup",
    "decision": "declined",
-   "thumb": "/runs/r_eval_m43999/thumbs/c02.jpg",
+   "thumb": "/runs/r_v4_m43999/thumbs/c02.jpg",
    "on_screen_s": 11.39,
    "reasons": [
     "Muse Spark judged it not a natural place for an ad."
    ],
    "details": [
-    "muse_plausible: The green outline does not enclose the tumbler behind it; it covers only a small dark spoon/utensil handle fragment in front of the glass, so not a complete glass, cup, or bowl and carries no print or"
+    "muse_plausible: Green outline encloses only a small dark utensil handle/fragment next to the black bowl, not one whole drinking glass, cup or bowl, so no valid printable vessel is marked."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_v4_m43999/thumbs/c03.jpg",
+   "on_screen_s": 11.39,
+   "reasons": [
+    "It's out of focus, so a logo on it couldn't be read."
+   ],
+   "details": [
+    "logo out of focus: the cup is out of focus (blur 1.7 px), so a 37 px logo would be unreadable; needs height / blur of 30"
    ],
    "qa": null
   },
@@ -124,13 +123,24 @@
    "id": "c04",
    "surface": "glass",
    "decision": "declined",
-   "thumb": null,
+   "thumb": "/runs/r_v4_m43999/thumbs/c04.jpg",
    "on_screen_s": 0.0,
    "reasons": [
-    "We couldn't track it through the shot."
+    "It isn't on screen long enough to register.",
+    "It's never visible long enough in one go.",
+    "It's too small to carry readable artwork.",
+    "We couldn't track it through the shot.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "An ad would vanish while the surface is still in view."
    ],
    "details": [
-    "could not track: 'GlassDecal' object has no attribute 'valid'"
+    "on screen 0.0 s, needs 2.0 s",
+    "longest run 0.0 s, needs 1.5 s",
+    "minimum side: glass 0 px wide, needs 44 px",
+    "could not track: the glass's shape fitted in 0% of frames, needs 80%",
+    "track residual: logo well inside the glass in 0% of frames, needs 90%",
+    "visible but not covered for 11.4 s",
+    "logo too small: the logo would be 0 px tall on screen, needs 28 px to be readable"
    ],
    "qa": null
   },
@@ -138,7 +148,7 @@
    "id": "c05",
    "surface": "glass",
    "decision": "declined",
-   "thumb": "/runs/r_eval_m43999/thumbs/c05.jpg",
+   "thumb": "/runs/r_v4_m43999/thumbs/c05.jpg",
    "on_screen_s": 11.39,
    "reasons": [
     "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges."
@@ -150,6 +160,20 @@
   },
   {
    "id": "c06",
+   "surface": "table",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a table yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c07",
    "surface": "serving board",
    "decision": "declined",
    "thumb": null,
@@ -163,7 +187,7 @@
    "qa": null
   },
   {
-   "id": "c07",
+   "id": "c08",
    "surface": "plate",
    "decision": "declined",
    "thumb": null,
@@ -173,20 +197,6 @@
    ],
    "details": [
     "not yet: we can't place an ad on a plate yet"
-   ],
-   "qa": null
-  },
-  {
-   "id": "c08",
-   "surface": "table",
-   "decision": "declined",
-   "thumb": null,
-   "on_screen_s": 0.0,
-   "reasons": [
-    "We found it, but can't place an ad on this kind of thing yet."
-   ],
-   "details": [
-    "not yet: we can't place an ad on a table yet"
    ],
    "qa": null
   },
@@ -219,7 +229,8 @@
    "qa": null
   }
  ],
- "player_url": "/player?clip=upload_m43999",
+ "player_url": null,
+ "reels_url": null,
  "viewers": [
   {
    "profile_id": "viewer-a",

@@ -181,6 +181,7 @@
           <button type="button" data-mode="original" aria-pressed="false">Original</button>
           <button type="button" data-mode="ads" class="selected" aria-pressed="true">With ads</button>
         </div>
+        <button id="sound" type="button" aria-pressed="false" disabled hidden>Sound: off</button>
         <output id="fps">0.0 compositor fps</output>
       </div>
       <p class="help muted">Space: play / pause · Left / right: step one frame</p>
@@ -955,10 +956,22 @@ void main() {
     video.muted=true; video.playsInline=true; video.preload="auto"; video.loop=EMBED;
     video.className="decoder"; video.setAttribute("aria-hidden","true");
     document.body.append(video);
+    const audio=data.track.audio ? document.createElement("audio") : null;
     const s={
-      data,video,decoded:0,index:0,callback:0,wanted:null,
+      data,video,audio,decoded:0,index:0,callback:0,wanted:null,
       seekBusy:false,closed:false,seekingTo:null
     };
+    if (audio) {
+      audio.muted=true; audio.preload="auto";
+      audio.src=new URL(data.track.audio,data.base).href;
+      document.body.append(audio);
+      // Only the decoder loops; AAC can end a few samples later.
+      for (const event of ["play","playing","pause","seeking","seeked","ended","ratechange"])
+        video.addEventListener(event,()=>syncAudio(s,true));
+      video.addEventListener("waiting",()=>audio.pause());
+      video.addEventListener("timeupdate",()=>syncAudio(s));
+      audio.addEventListener("loadedmetadata",()=>syncAudio(s,true));
+    }
     try {
       await new Promise((resolve,reject)=>{
         const timeout=setTimeout(()=>finish(new Error("Video load timed out.")),20000);
@@ -981,11 +994,26 @@ void main() {
     } catch (error) { closeVideo(s); throw error; }
   }
 
+  function syncAudio(s,force=false) {
+    const a=s.audio,v=s.video;
+    if (!a || s.closed) return;
+    const playing=!v.paused && !v.ended && !v.seeking && v.readyState>=3;
+    if (!playing) a.pause();
+    if (a.readyState<1) return;
+    const t=Math.min(v.currentTime,a.duration);
+    if (force || Math.abs(a.currentTime-t)>0.08) a.currentTime=t;
+    a.playbackRate=v.playbackRate;
+    if (playing && t<a.duration && a.paused) a.play().catch(()=>{});
+  }
+
   function closeVideo(s) {
     if (!s) return;
     s.closed=true;
     if (s.abortSeek) s.abortSeek();
     if (s.callback) s.video.cancelVideoFrameCallback(s.callback);
+    if (s.audio) {
+      s.audio.pause(); s.audio.removeAttribute("src"); s.audio.load(); s.audio.remove();
+    }
     s.video.pause(); s.video.removeAttribute("src"); s.video.load(); s.video.remove();
   }
 
@@ -1034,6 +1062,15 @@ void main() {
   }
 
   let live=null,renderer=null,profileId=null,withAds=true,generation=0,drawCount=0;
+
+  function setMuted(muted) {
+    const a=live && live.audio;
+    if (a) { a.muted=!!muted; syncAudio(live,true); }
+    const on=!!a && !a.muted;
+    $("sound").textContent=on ? "Sound: on" : "Sound: off";
+    $("sound").classList.toggle("selected",on);
+    $("sound").setAttribute("aria-pressed",String(on));
+  }
 
   function showError(error) {
     if (EMBED) { console.error(error); return; }   // a phone in reels.html keeps playing; the page has no room for it
@@ -1087,6 +1124,7 @@ void main() {
   const embedApi={
     onAuction:null,onReady:null,
     video:()=>live && live.video,
+    setMuted,
     profiles:()=>live ? live.data.profiles : {},
     track:()=>live ? live.data.track : null,
     viewer:()=>profileId,
@@ -1160,6 +1198,7 @@ void main() {
   async function activateClip(name) {
     const token=++generation;
     closeVideo(live); live=null;
+    $("sound").disabled=true; setMuted(true);
     $("play").disabled=true;
     $("scrub").disabled=true;
     $("download").disabled=true;
@@ -1177,6 +1216,7 @@ void main() {
 
       renderer.setData(data);
       live=opened; live.auction={};
+      $("sound").disabled=$("sound").hidden=!opened.audio; setMuted(true);
       if (EMBED && Object.hasOwn(data.profiles,askedViewer)) profileId=askedViewer;
       profileId=Object.hasOwn(data.profiles,profileId)
         ? profileId : Object.keys(data.profiles)[0];
@@ -1219,6 +1259,7 @@ void main() {
         if (live!==opened || opened.closed) return;
         opened.index=clamp(Math.round(meta.mediaTime*data.track.fps),0,data.track.frames-1);
         opened.decoded=opened.index;
+        syncAudio(opened);
         try { paint(); } catch (error) { showError(error); return; }
         opened.callback=opened.video.requestVideoFrameCallback(onFrame);
       };
@@ -1240,7 +1281,10 @@ void main() {
     if (!live) return;
     const s=live;
     if (!s.video.paused) s.video.pause();
-    else s.video.play().catch(error=>{ if (s===live) showError(error); });
+    else {
+      s.video.play().catch(error=>{ if (s===live) showError(error); });
+      syncAudio(s,true);   // start sound in the button's user gesture
+    }
   }
 
   async function requestSeek(index) {
@@ -1294,6 +1338,7 @@ void main() {
   $("clip").onchange=e=>activateClip(e.target.value);
   $("rebid").onclick=()=>{ if (live) { downloadToken++; $("download-status").textContent=""; bid(profileId); } };
   $("play").onclick=togglePlay;
+  $("sound").onclick=()=>{ if (live && live.audio) setMuted(!live.audio.muted); };
   $("scrub").oninput=e=>requestSeek(Number(e.target.value));
 
   for (const button of document.querySelectorAll("[data-mode]")) button.onclick=()=>{

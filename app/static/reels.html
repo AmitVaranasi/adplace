@@ -119,6 +119,8 @@
   .lots span { color: #a2a9b8; }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .modes { display: inline-flex; gap: 5px; }
+  .sound { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: #a2a9b8; }
+  .sound[hidden] { display: none; }
   #note { text-align: right; font-size: 11px; margin: 8px 0 0; }
   #error {
     border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px;
@@ -160,6 +162,13 @@
         <button id="play" type="button" disabled>Play</button>
         <button id="restart" type="button" disabled>From the start</button>
         <button id="rebid" type="button" disabled>Run both bids again</button>
+        <label class="sound" id="sound-wrap" hidden>Sound
+          <select id="sound">
+            <option value="off">Off</option>
+            <option value="a">Left phone</option>
+            <option value="b">Right phone</option>
+          </select>
+        </label>
         <span class="modes" aria-label="Placement visibility">
           <button type="button" data-mode="original" aria-pressed="false">Original</button>
           <button type="button" data-mode="ads" class="selected" aria-pressed="true">With ads</button>
@@ -258,6 +267,12 @@
       ? "No auction: placement is off." : "Auction decided in " + r.ms.toFixed(2) + " ms."}));
   }
 
+  function setSound() {
+    sides.forEach(s => { if (s.api) s.api.setMuted(true); });
+    const side = sides.find(s => s.el.dataset.side === $("sound").value);
+    if (side && side.api) side.api.setMuted(false);
+  }
+
   function load(side, viewer) {
     return new Promise(resolve => {
       side.api = null; side.last = null;
@@ -267,6 +282,9 @@
           const api = w.embedApi;
           if (!api || !api.track()) { setTimeout(wait, 100); return; }
           side.api = api;
+          // silent clips (the stock footage has no sound track) don't offer the choice
+          $("sound-wrap").hidden = !sides.some(s => s.api && s.api.track().audio);
+          setSound();
           api.onAuction = (id, body) => { side.last = body; showLots(side); };
           side.last = api.auction();
           if (!side.select.options.length) {
@@ -295,7 +313,9 @@
       v.addEventListener("seeked", res, {once: true});
       v.currentTime = t;
     })));
-    await Promise.all(vs.map(v => v.play()));
+    const started = vs.map(v => v.play());
+    setSound();
+    await Promise.all(started);
     playing = true; $("play").textContent = "Pause";
   }
   function pauseBoth() {
@@ -313,6 +333,7 @@
   for (const side of sides) side.select.onchange = () => { side.api.setViewer(side.select.value); };
   $("play").onclick = () => playing ? pauseBoth() : playBoth(false).catch(showError);
   $("restart").onclick = () => playBoth(true).catch(showError);
+  $("sound").onchange = setSound;
   $("rebid").onclick = () => sides.forEach(s => s.api && s.api.rebid());
   for (const button of document.querySelectorAll("[data-mode]")) button.onclick = () => {
     const ads = button.dataset.mode === "ads";
