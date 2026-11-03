@@ -253,10 +253,20 @@
     .viewer { align-items: stretch; }
     .viewer button { width: 100%; }
   }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
 </style>
 </head>
 <body>
 <main>
+  <nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/">My videos</a>
+    <a href="/upload" aria-current="page">Upload</a>
+    <a href="/verify">Check a file</a>
+  </nav>
   <header>
     <h1>Place ads in your own clip</h1>
     <p class="lede muted">Upload a clip. We find surfaces that can carry an ad, place ads only where we can show they
@@ -341,6 +351,7 @@
         <span id="no-player" class="muted" style="font-size:12px" hidden>Nothing was placed, so there is no player to
           open. The cards below say why.</span>
         <button id="restart" type="button">Upload another clip</button>
+        <a class="button" href="/">My videos</a>
       </div>
     </div>
 

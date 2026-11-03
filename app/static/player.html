@@ -136,10 +136,21 @@
     #viewers { grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); }
     #frame { min-width: 108px; }
   }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
+  body.embed nav.site { display: none; }
 </style>
 </head>
 <body>
 <main>
+  <nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/">My videos</a>
+    <a href="/upload">Upload</a>
+    <a href="/verify">Check a file</a>
+  </nav>
   <header>
     <div>
       <h1>Live product placement</h1>
@@ -1067,6 +1078,7 @@ void main() {
     profiles:()=>live ? live.data.profiles : {},
     track:()=>live ? live.data.track : null,
     viewer:()=>profileId,
+    auction:()=>live && live.auction[profileId] || null,   // one that finished before the host was listening
     setViewer(id) {
       if (!live || !Object.hasOwn(live.data.profiles,id)) return;
       profileId=id; profileUI(); bid(id);

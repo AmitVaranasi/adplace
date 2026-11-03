@@ -128,10 +128,20 @@
     main { padding: 16px; }
     .layout { grid-template-columns: 1fr; }
   }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
 </style>
 </head>
-<body style="--phone-w: min(330px, calc((100vh - 330px) * 9 / 16), calc(50vw - 40px))">
+<body style="--phone-w: min(330px, calc((100vh - 370px) * 9 / 16), calc(50vw - 40px))">
 <main>
+  <nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/">My videos</a>
+    <a href="/upload">Upload</a>
+    <a href="/verify">Check a file</a>
+  </nav>
   <header>
     <div>
       <h1>Two viewers, one video</h1>
@@ -252,6 +262,7 @@
           if (!api || !api.track()) { setTimeout(wait, 100); return; }
           side.api = api;
           api.onAuction = (id, body) => { side.last = body; showLots(side); };
+          side.last = api.auction();
           if (!side.select.options.length) {
             for (const [id, p] of Object.entries(api.profiles()))
               side.select.append(make("option", {value: id, textContent: p.label || id}));

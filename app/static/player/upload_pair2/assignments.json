@@ -1,0 +1,83 @@
+{
+ "viewer-a": {
+  "label": "Morning commuter",
+  "preferences": [
+   "coffee",
+   "morning"
+  ],
+  "assignment": {
+   "c01": "brewlark",
+   "c02": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Cup slot matches coffee interest with morning relevance."
+ },
+ "viewer-b": {
+  "label": "Weekend runner",
+  "preferences": [
+   "running",
+   "fitness"
+  ],
+  "assignment": {
+   "c01": "brewlark",
+   "c02": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "brewlark is eligible for cup with no neighbour conflict."
+ },
+ "viewer-c": {
+  "label": "Book lover",
+  "preferences": [
+   "reading",
+   "learning"
+  ],
+  "assignment": {
+   "c01": "brewlark",
+   "c02": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "cup slot is eligible for coffee with no neighbor conflict."
+ },
+ "viewer-d": {
+  "label": "Weekend traveller",
+  "preferences": [
+   "travel",
+   "holidays",
+   "deals"
+  ],
+  "assignment": {
+   "c01": "brewlark",
+   "c02": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Brewlark is eligible for cup surface."
+ },
+ "viewer-e": {
+  "label": "Home cook",
+  "preferences": [
+   "cooking",
+   "food",
+   "health"
+  ],
+  "assignment": {
+   "c01": "brewlark",
+   "c02": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Cup is eligible and food tag matches viewer interest."
+ },
+ "viewer-f": {
+  "label": "Tech commuter",
+  "preferences": [
+   "tech",
+   "commuting",
+   "cycling"
+  ],
+  "assignment": {
+   "c01": "brewlark",
+   "c02": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Cup slot is eligible for coffee brand with no neighbour conflict."
+ }
+}

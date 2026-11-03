@@ -33,6 +33,11 @@ app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), na
 app.mount("/runs", StaticFiles(directory=ROOT / "runs"), name="runs")
 
 
+def page(name):
+    """An app page, revalidated on every visit so a browser never runs a stale copy after an update."""
+    return FileResponse(Path(__file__).parent / "static" / name, headers={"Cache-Control": "no-cache"})
+
+
 def load(name):
     if name == "clips.json":  # hand-made clips plus uploaded ones
         from pipeline.clipcfg import all_clips
@@ -104,12 +109,12 @@ def scene_jpeg(clip_id):
 
 @app.get("/player")
 def player():
-    return FileResponse(Path(__file__).parent / "static" / "player.html")
+    return page("player.html")
 
 
 @app.get("/reels")
 def reels():
-    return FileResponse(Path(__file__).parent / "static" / "reels.html")
+    return page("reels.html")
 
 
 class ViewerRenderRequest(BaseModel):
@@ -187,10 +192,33 @@ def creator_get(stem: str):
             "declined": declined, "scene": report.get("scene")}
 
 
-class CreatorSettings(BaseModel):
-    enabled: bool
-    places: dict[str, bool] = {}
-    brands: dict[str, bool] = {}
+@app.delete("/api/videos/{stem}")
+def remove_video(stem: str):
+    """Take a video out of the library: placement off, every run of it marked removed. Nothing is deleted from disk,
+    so it can be brought back by deleting the runs' `removed` files."""
+    if not stem.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(404, "unknown video")
+    runs = []
+    for rp in (ROOT / "runs").glob("r_*/report.json"):
+        try:
+            if json.loads(rp.read_text()).get("clip_stem") == stem:
+                runs.append(rp.parent)
+        except ValueError:
+            continue
+    if not runs:
+        raise HTTPException(404, "unknown video")
+    d = player_export_dir(stem)
+    if (d / "track.json").exists():
+        creator.save(d, {**creator.load(d), "enabled": False})
+    for r in runs:
+        (r / "removed").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"))
+    return {"removed": stem, "runs": len(runs)}
+
+
+class CreatorSettings(BaseModel):   # fields left out keep their saved value (the library only flips `enabled`)
+    enabled: bool | None = None
+    places: dict[str, bool] | None = None
+    brands: dict[str, bool] | None = None
 
 
 @app.put("/api/creator/{stem}")
@@ -198,9 +226,9 @@ def creator_put(stem: str, req: CreatorSettings):
     d, track, _ = player_export(stem)
     ids = {p["id"] for p in auction.placements_of(track)}
     names = {b for p in auction.placements_of(track) for b in p["brands"]}
-    if set(req.places) - ids or set(req.brands) - names:
+    if set(req.places or {}) - ids or set(req.brands or {}) - names:
         raise HTTPException(400, "settings name a place or brand this video doesn't have")
-    return creator.save(d, req.model_dump())
+    return creator.save(d, {**creator.load(d), **req.model_dump(exclude_none=True)})
 
 
 @app.post("/api/viewer_render")
@@ -246,8 +274,84 @@ def viewer_render(req: ViewerRenderRequest):
 
 
 @app.get("/")
+def home():
+    return page("videos.html")
+
+
+@app.get("/videos")
+def videos_page():
+    return page("videos.html")
+
+
+@app.get("/verify")
 def index():
-    return FileResponse(Path(__file__).parent / "static" / "index.html")
+    """The first demo page: pick a clip and viewer, render, and check any file for the Video Seal watermark."""
+    return page("index.html")
+
+
+STALLED_S = 30 * 60   # a run with no progress for this long has stopped (the process died or the machine slept)
+
+
+def poster(run_dir, report):
+    """A still from the video for its card, made once: a third of the way in, 480 px wide."""
+    out = run_dir / "poster.jpg"
+    if not out.exists():
+        src = next((p for p in [run_dir / "input.mp4", *run_dir.glob("source.*"), ROOT / report.get("clip", "-")]
+                    if p.is_file()), None)
+        if src is None:
+            return None
+        cap = cv2.VideoCapture(str(src))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) / 3))
+        ok, frame = cap.read()
+        cap.release()
+        if not ok:
+            return None
+        frame = cv2.resize(frame, (480, round(frame.shape[0] * 480 / frame.shape[1])), interpolation=cv2.INTER_AREA)
+        cv2.imwrite(str(out), frame, [cv2.IMWRITE_JPEG_QUALITY, 82])
+    return f"/runs/{run_dir.name}/poster.jpg"
+
+
+@app.get("/api/videos")
+def videos():
+    """The creator's library: every uploaded video (its newest finished run), plus uploads still processing."""
+    latest, active = {}, []
+    now = time.time()
+    for d in (ROOT / "runs").iterdir():
+        if not d.is_dir() or not d.name.startswith("r_"):
+            continue
+        rp, pp = d / "report.json", d / "progress.jsonl"
+        if (d / "removed").exists():
+            continue
+        if rp.exists():
+            try:
+                r = json.loads(rp.read_text())
+            except ValueError:
+                continue
+            t = rp.stat().st_mtime
+            stem = r.get("clip_stem")
+            if stem and (stem not in latest or t > latest[stem][0]):
+                latest[stem] = (t, d, r)
+        elif pp.exists() and now - pp.stat().st_mtime < STALLED_S:
+            lines = pp.read_text().splitlines()
+            last = json.loads(lines[-1]) if lines else {"stage": "upload", "pct": 0, "msg": "starting"}
+            name = (d / "name.txt").read_text().strip() if (d / "name.txt").exists() else "Your video"
+            active.append({"run_id": d.name, "name": name, "status": "failed" if last["stage"] == "error" else "processing",
+                           "stage": last["stage"], "pct": last.get("pct", 0), "message": last.get("msg", ""),
+                           "uploaded": d.stat().st_mtime})
+    items = []
+    for stem, (t, d, r) in latest.items():
+        has_player = (player_export_dir(stem) / "track.json").exists() and bool(r.get("player_url"))
+        summary = r.get("summary", {})
+        items.append({"run_id": r.get("run_id", d.name), "clip": stem, "status": "ready",
+                      "name": r.get("source_name") or stem, "duration_s": r.get("duration_s"),
+                      "placed": summary.get("placed", 0) if has_player else 0,
+                      "found": summary.get("candidates", 0), "note": r.get("note"),
+                      "enabled": creator.load(player_export_dir(stem))["enabled"] if has_player else False,
+                      "has_player": has_player, "poster": poster(d, r), "updated": t,
+                      "places": [p["surface"] for p in r.get("placements", []) if p.get("decision") == "placed"]})
+    active.sort(key=lambda v: -v["uploaded"])
+    items.sort(key=lambda v: (-v["placed"], -v["updated"]))
+    return {"processing": active, "videos": items}
 
 
 @app.get("/api/catalog")
@@ -321,7 +425,7 @@ async def verify(file: UploadFile):
 
 @app.get("/upload")
 def upload_page():
-    return FileResponse(Path(__file__).parent / "static" / "upload.html")
+    return page("upload.html")
 
 
 @app.post("/api/ingest")
@@ -342,6 +446,7 @@ async def ingest(file: UploadFile):
             if size > 200 << 20:
                 raise HTTPException(413, "videos up to 200 MB")
             f.write(chunk)
+    (run_dir / "name.txt").write_text(Path(file.filename).name)   # for the library while it processes
     log = open(run_dir / "ingest.log", "w")
     subprocess.Popen([sys.executable, str(ROOT / "scripts" / "ingest.py"), str(src), "--run-id", run_id],
                      cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)

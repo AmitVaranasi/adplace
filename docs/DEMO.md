@@ -14,10 +14,11 @@ the scene itself, labelled as AI product placement. Nothing was re-rendered for 
 
 ## 0:20–0:50 The creator opts in
 
-Screen: same page, start with the switch off (both phones show the original, "The creator hasn't turned on product
-placement"). Cut to `/upload` with `assets/clips/raw3/m43248.mp4` dropped in; skip past the processing ("a few minutes,
-once"). Back on `/reels`: turn on "Allow product placement"; both phones' ads appear. Untick Brewlark: the commuter's
-poster re-bids to another brand.
+Screen: `/` (My videos): the creator's library, each video with its places for ads and its placement switch. Click
+"Upload a video", drop `assets/clips/raw3/m43248.mp4`; back in the library it shows as processing; skip past the wait
+("a few minutes, once"). Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
+original, "The creator hasn't turned on product placement"), turn on "Allow product placement"; both phones' ads
+appear. Untick Brewlark: the commuter's poster re-bids to another brand.
 
 Say: "Placement is off until the creator turns it on. They approve each place we found and each brand they're happy
 to carry, and every viewer's auction respects that."
@@ -75,5 +76,5 @@ fast blurred bar sweep, a night terrace's signs (one a parking sign), branded gl
 teacups picked up or carried in. Say: "On 23 videos it had never seen, it placed three ads and declined 53
 candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
 
-Optional extra shot: `/player?clip=upload_pair` (two mugs with drawings on them; each logo goes on a blank patch,
+Optional extra shot: `/player?clip=upload_pair2` (two mugs with drawings on them; each logo goes on a blank patch,
 dark ink on the light mug, white on the black one).
