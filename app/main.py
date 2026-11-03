@@ -261,6 +261,10 @@ def viewer_render(req: ViewerRenderRequest):
     out = ROOT / "outputs" / "viewers" / f"{req.clip}__{tag}.mp4"
     t0 = time.time()
     cached = out.with_suffix(".json").exists()
+    if not cached and not (ROOT / clip).exists():
+        raise HTTPException(409, "the original video isn't on this server (a fresh copy of the repo carries the live "
+                                 "players, not the source clips), so a watermarked copy can't be rendered here. "
+                                 "Upload the video to render one.")
     if not cached:
         clip_entry(clip)
         out.parent.mkdir(parents=True, exist_ok=True)
