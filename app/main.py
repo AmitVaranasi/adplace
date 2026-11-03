@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -32,6 +32,18 @@ from scripts.render import render_campaign  # noqa: E402
 app = FastAPI(title="AdPlace")
 for d in ("outputs", "assets/clips", "runs"):   # git-ignored: a fresh clone has none of them
     (ROOT / d).mkdir(parents=True, exist_ok=True)
+PLAYERS = Path(__file__).parent / "static" / "player"
+
+
+@app.middleware("http")
+async def removed_videos_stay_gone(request, call_next):
+    """A video its creator removed is gone for viewers: its player files (the video, the artwork) are refused too."""
+    parts = request.url.path.split("/")
+    if len(parts) > 4 and parts[1:3] == ["static", "player"] and (PLAYERS / parts[3] / "removed").exists():
+        return JSONResponse({"detail": "This video was removed by its creator."}, status_code=404)
+    return await call_next(request)
+
+
 app.mount("/outputs", StaticFiles(directory=ROOT / "outputs"), name="outputs")
 app.mount("/clips", StaticFiles(directory=ROOT / "assets" / "clips"), name="clips")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
@@ -202,6 +214,8 @@ def creator_get(stem: str):
                        "on_screen_s": r.get("on_screen_s"), "thumb": r.get("thumb"),
                        "where": where(centre.get(p["id"]))})
         for b in p["brands"]:
+            if p["surface"] not in campaigns.get(b, {}).get("eligible_surfaces", [p["surface"]]):
+                continue   # artwork exists, but the brand doesn't run on this kind of surface (no sportswear on a juice glass)
             brands.setdefault(b, {"id": b, "category": campaigns.get(b, {}).get("category"),
                                   "allowed": settings["brands"].get(b, True), "places": []})["places"].append(p["id"])
     unsupported = lambda p: any(str(d).startswith("not yet:") for d in p.get("details", []))  # noqa: E731
@@ -252,7 +266,8 @@ def players():
     """The videos a viewer can open in the full player: exports with a placement, not removed, publishable."""
     out = []
     clips, uploads = load("clips.json"), load("uploads.json")
-    for d in sorted((Path(__file__).parent / "static" / "player").iterdir()):
+    # real uploads first (the default video), the hand-built clip last
+    for d in sorted(PLAYERS.iterdir(), key=lambda d: (not d.name.startswith("upload_"), d.name)):
         if not ((d / "track.json").exists() and (d / "stack.mp4").exists()) or (d / "removed").exists():
             continue
         clip = json.loads((d / "track.json").read_text()).get("clip", "")
@@ -269,13 +284,15 @@ def players():
 
 @app.get("/api/creator/{stem}/rev")
 def creator_rev(stem: str):
-    """Cheap: an open player polls this and bids again when the creator's settings change."""
+    """Cheap: an open player polls this and keeps what it shows within the creator's current settings."""
     d = player_export_dir(stem)
     if not stem.replace("_", "").replace("-", "").isalnum() or not (d / "track.json").exists():
         raise HTTPException(404, "We don't have a player for that video.")
     p = d / creator.NAME
+    settings = creator.load(d)
     return {"rev": p.stat().st_mtime_ns if p.exists() else 0, "removed": (d / "removed").exists(),
-            "enabled": False if (d / "removed").exists() else creator.load(d)["enabled"]}
+            "enabled": settings["enabled"] and not (d / "removed").exists(),
+            "places": settings["places"], "brands": settings["brands"]}
 
 
 class CreatorSettings(BaseModel):   # fields left out keep their saved value (the library only flips `enabled`)

@@ -514,6 +514,7 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("could not track", "We couldn't track it through the shot."),
     ("moves:", "Someone picks it up or moves it; for now we only place ads on things that stay still."),
     ("not yet:", "We found it, but can't place an ad on this kind of thing yet."),
+    ("not yet: more than", f"We measure the first {MAX_PLACES} places in a video; this one wasn't looked at."),
     ("no blank patch", "No blank area of it is big enough for a logo with clear space round it, so the logo would "
                        "touch its own design or edges."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
@@ -586,7 +587,8 @@ def ingest(src, run_id=None):
         results = segment(clip, prompts + printable + (["cup handle"] if printable else []) + OCCLUDERS) \
             if prompts or printable else []
         failed = [p for p, rc, _ in results if rc != 0]
-        run.progress("segment", 100, "SAM 3.1 done" + (f" (failed: {', '.join(failed)})" if failed else ""))
+        run.progress("segment", 100, ("SAM 3.1 outlined them" + (f" (failed: {', '.join(failed)})" if failed else ""))
+                     if results else "nothing here is a kind we can place on yet, so SAM 3.1 wasn't needed")
 
         entry = {"hidden": True, "dynamic": True, "upload": True, "source": Path(src).name,
                  # only occluders SAM actually ran for (none when the scene has no surfaces to place on)
@@ -597,6 +599,10 @@ def ingest(src, run_id=None):
         cands, k = [], 0
         objs = [(p, oid, st) for p in prompts if p not in failed
                 for oid, st in sorted(object_stores(clip, p, frames).items())]
+        held = [(p, oid) for p in printable if p not in failed
+                for oid, st in sorted(object_stores(clip, p, frames).items(), key=lambda kv: int(kv[0]))
+                if sum(st.any(i) for i in range(frames.n)) >= fps]
+        total = max(len(objs) + len(held), 1)   # progress counts every object, flat ones and vessels
         for j, (p, oid, st) in enumerate(objs):
             seen = sum(st.any(i) for i in range(frames.n))
             peak = max(area(st, i) for i in range(frames.n)) / (frames.w * frames.h)
@@ -605,7 +611,7 @@ def ingest(src, run_id=None):
             k += 1
             slot = {"id": f"c{k:02d}", "prompt": p, "object": int(oid), **flat_slot(p, flat_kind[p])}
 
-            run.progress("track", 100 * j / max(len(objs), 1), f"tracking {p} #{oid}")
+            run.progress("track", 100 * j / total, f"object {j + 1} of {total}: tracking the {p}")
             c = {"id": slot["id"], "shot": 0, "prompt": p, "object": int(oid), "kind": "flat",
                  "surface": slot["surface"], "fps": fps, "frame_size": [frames.w, frames.h], "slot": slot}
             try:
@@ -630,37 +636,37 @@ def ingest(src, run_id=None):
                 c["frames"], c["thumb"] = [0, 0], None
             c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
             cands.append(c)
-        for p in printable:
-            if p in failed:
-                continue
-            for oid, st in sorted(object_stores(clip, p, frames).items(), key=lambda kv: int(kv[0])):
-                if sum(st.any(i) for i in range(frames.n)) < fps:
-                    continue
-                k += 1
-                cid = f"c{k:02d}"
-                run.progress("track", 95, f"following glass or cup #{oid}")
-                c = {"id": cid, "shot": 0, "prompt": p, "object": int(oid), "kind": "glass_decal", "surface": "glass",
-                     "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg"}
-                try:
-                    c["metrics"], c["frames"], c["kind"], c["surface"] = glass_candidate(
-                        clip, cid, int(oid), frames, fps, run.dir / "thumbs", prompt=p)
-                except Exception as e:
-                    c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
-                    c["frames"], c["thumb"] = [0, 0], None
-                c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid)}
-                c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
-                cands.append(c)
+        for i, (p, oid) in enumerate(held):
+            k += 1
+            cid = f"c{k:02d}"
+            run.progress("track", 100 * (len(objs) + i) / total,
+                         f"object {len(objs) + i + 1} of {total}: following a glass, cup or bowl")
+            c = {"id": cid, "shot": 0, "prompt": p, "object": int(oid), "kind": "glass_decal", "surface": "glass",
+                 "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg"}
+            try:
+                c["metrics"], c["frames"], c["kind"], c["surface"] = glass_candidate(
+                    clip, cid, int(oid), frames, fps, run.dir / "thumbs", prompt=p)
+            except Exception as e:
+                c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
+                c["frames"], c["thumb"] = [0, 0], None
+            c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid)}
+            c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
+            cands.append(c)
         # places with no placement method yet: reported as found, so the report shows every opportunity
+        safe = bool(scene.get("scene_safe", False))
         for pl in places:
             if pl["kind"] == "other" or (pl["kind"] in ("display", "print") and pl["name"] not in prompts):
                 k += 1
                 why = (f"not yet: we can't place an ad on a {pl['name']} yet" if pl["kind"] == "other" else
+                       f"scene_safe is False: {scene.get('safety_reason', '')}"[:300] if not safe else
                        f"not yet: more than {MAX_PLACES} places in one video; this one wasn't looked at")
                 cands.append({"id": f"c{k:02d}", "shot": 0, "prompt": pl["name"], "kind": "found", "surface": pl["name"],
                               "fps": fps, "frame_size": [frames.w, frames.h], "thumb": None, "frames": [0, 0],
                               "metrics": {"on_screen_s": 0.0, "error": why, "where": pl["where"]}})
         run.write("candidates.json", [{kk: v for kk, v in c.items() if kk not in ("slot", "quads")} for c in cands])
-        run.progress("track", 100, f"{len(cands)} candidates measured")
+        unsupported = sum(1 for c in cands if c["kind"] == "found")
+        run.progress("track", 100, f"{len(cands) - unsupported} places measured"
+                                   + (f"; {unsupported} more of kinds we can't place on yet" if unsupported else ""))
 
         run.progress("score", 0, "deciding")
         try:
@@ -739,7 +745,9 @@ def ingest(src, run_id=None):
                   "player_url": f"/player?clip={stem}" if accepted else None,
                   "reels_url": f"/reels?clip={stem}" if accepted else None, "viewers": viewers}
         run.write("report.json", report)
-        run.progress("done", 100, f"{len(accepted)} placed, {len(cands) - len(accepted)} declined")
+        measured = sum(1 for c in cands if c["kind"] != "found")
+        run.progress("done", 100, f"{len(accepted)} placed, {measured - len(accepted)} declined"
+                                  + (f", {len(cands) - measured} not placeable yet" if len(cands) > measured else ""))
     except Exception as e:
         traceback.print_exc()   # the details go to the run's ingest.log; the creator reads a sentence
         run.progress("error", 100, failure_message(e))

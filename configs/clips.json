@@ -418,6 +418,8 @@
    },
    {
     "id": "patio_napkin",
+    "player": false,
+    "note": "off in the player: the menu print on a napkin this small was unreadable",
     "prompt": "napkin",
     "object": 0,
     "surface": "menu",

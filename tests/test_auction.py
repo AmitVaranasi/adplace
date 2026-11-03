@@ -18,10 +18,18 @@ def test_second_price_and_relevance():
 
 
 def test_one_placement_per_brand_biggest_first():
-    ps = [{"id": "small", "surface": "glass", "brands": ["a", "b"], "area": 0.1},
+    ps = [{"id": "small", "surface": "poster", "brands": ["a", "b"], "area": 0.1},
           {"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5}]
     r = auction.run(ps, INV, [])
     assert r["assignment"] == {"big": "b", "small": "a"}
+
+
+def test_drinkware_near_the_camera_is_sold_first():
+    # a glass on the table is in focus and legible; the bigger poster behind it is often soft
+    ps = [{"id": "glass", "surface": "glass", "brands": ["a", "b"], "area": 0.1},
+          {"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5}]
+    r = auction.run(ps, INV, [])
+    assert r["assignment"] == {"glass": "b", "big": "a"}
 
 
 def test_exclusions_artwork_and_reserve():
@@ -62,6 +70,6 @@ def test_placements_of_track():
 
 def test_left_over_placement_goes_to_a_brand_already_shown():
     ps = [{"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5},
-          {"id": "small", "surface": "glass", "brands": ["b"], "area": 0.1}]
+          {"id": "small", "surface": "poster", "brands": ["b"], "area": 0.1}]
     r = auction.run(ps, INV, [])
     assert r["assignment"] == {"big": "b", "small": "b"}

@@ -1,7 +1,8 @@
 """The bid at playback: which brand each placement in a video carries for this viewer, decided when they press play.
 
 Every placement's geometry, light and mattes were prepared at upload and do not depend on the brand (export_player),
-so the auction only has to pick names. Per placement, in order of size (the biggest is worth most):
+so the auction only has to pick names. Per placement, nearest the camera first (glasses, cups and bowls on the
+table: in focus and the most legible), then the rest in order of size (the biggest is worth most):
 
   eligible   the brand has artwork for this placement, can run on this surface, its exclusions don't match the
              scene, and it hasn't already won another placement in this video (one placement per brand). A
@@ -20,6 +21,7 @@ import random
 import time
 
 RESERVE_CPM = 1.0
+NEAR = {"glass", "cup", "mug", "bowl"}   # sold first: in focus, near the camera, where a viewer reads a brand
 
 
 def relevance(campaign, preferences, context_tags):
@@ -36,7 +38,7 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
     scene = set(context_tags)
     known = {x for c in campaigns.values() for x in c.get("eligible_surfaces", [])}   # surfaces campaigns name
     taken, assignment, detail = set(), {}, {}
-    order = sorted(placements, key=lambda p: -p.get("area", 0.0))
+    order = sorted(placements, key=lambda p: (p.get("surface") not in NEAR, -p.get("area", 0.0)))
     for p in order + order:   # second pass: placements left empty, brands already in the video may bid again
         if p["id"] in assignment:
             continue

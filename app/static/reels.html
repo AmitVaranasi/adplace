@@ -109,9 +109,26 @@
   }
   .phone .who small { display: block; font-weight: 400; color: #dfe3ea; }
   .phone .off-note {
-    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px); bottom: calc(var(--pad) + 52px);
+    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px); bottom: calc(var(--pad) + 86px);
     font-size: 11px; background: #000a; border-radius: 6px; padding: 6px 8px; pointer-events: none;
   }
+  /* what a short-video feed puts round a landscape video: the creator, the caption (with the sponsors this viewer
+     sees, disclosed), the actions */
+  .phone .feed {
+    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 44px); bottom: calc(var(--pad) + 14px);
+    font-size: 11px; pointer-events: none; color: #e9ecf1;
+  }
+  .phone .feed .row { display: flex; align-items: center; gap: 7px; font-weight: 600; margin-bottom: 5px; }
+  .phone .feed .avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #6bd6b2, #3a7bd5); }
+  .phone .feed .follow { border: 1px solid #ffffff66; border-radius: 6px; padding: 1px 6px; font-weight: 500; font-size: 10px; }
+  .phone .feed p { margin: 0; color: #c9ced8; line-height: 1.35; }
+  .phone .feed .sponsors { color: #fff; }
+  .phone .acts {
+    position: absolute; right: calc(var(--pad) + 10px); bottom: calc(var(--pad) + 18px); display: flex;
+    flex-direction: column; gap: 14px; align-items: center; font-size: 17px; color: #e9ecf1; pointer-events: none;
+  }
+  .phone .acts span { display: flex; flex-direction: column; align-items: center; font-size: 9px; gap: 2px; }
+  .phone .acts b { font-size: 18px; font-weight: 400; line-height: 1; }
   .lots { font-size: 12px; min-height: 92px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
   .lots small { grid-column: 1 / -1; }
   .lots div { padding: 6px 0; border-top: 1px solid #262a33; }
@@ -125,13 +142,14 @@
     border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px;
     margin-bottom: 16px; overflow-wrap: anywhere;
   }
+  .jump { display: none; font-size: 13px; color: #6bd6b2; margin-top: 8px; }
   @media (max-width: 1000px) {
+    .jump { display: inline-block; }   /* the settings sit below the phones here: a way down to them */
     main { padding: 16px; }
     .layout { grid-template-columns: 1fr; }
     aside { order: 2; }   /* the phones first: on a small screen the preview is what you came for */
-    .jump { display: inline-block; }   /* ...and a way down to the settings below them */
   }
-  .jump { display: none; font-size: 13px; color: #6bd6b2; margin-top: 8px; }
+
   @media (max-width: 700px) {
     body { --phone-w: min(330px, calc(100vw - 32px)) !important; }
     .controls { justify-content: flex-start; }
@@ -211,13 +229,19 @@
         <div class="viewer" data-side="a">
           <select aria-label="Left viewer"></select>
           <div class="phone"><iframe title="Left viewer's video"></iframe>
-            <div class="who"></div><div class="off-note" hidden></div></div>
+            <div class="who"></div><div class="off-note" hidden></div>
+            <div class="feed" aria-hidden="true"><div class="row"><span class="avatar"></span><span class="handle"></span>
+              <span class="follow">Follow</span></div><p class="caption"></p></div>
+            <div class="acts" aria-hidden="true"><span><b>&#9825;</b>2.4k</span><span><b>&#9675;</b>86</span><span><b>&#10148;</b>Share</span></div></div>
           <div class="lots" aria-live="polite"></div>
         </div>
         <div class="viewer" data-side="b">
           <select aria-label="Right viewer"></select>
           <div class="phone"><iframe title="Right viewer's video"></iframe>
-            <div class="who"></div><div class="off-note" hidden></div></div>
+            <div class="who"></div><div class="off-note" hidden></div>
+            <div class="feed" aria-hidden="true"><div class="row"><span class="avatar"></span><span class="handle"></span>
+              <span class="follow">Follow</span></div><p class="caption"></p></div>
+            <div class="acts" aria-hidden="true"><span><b>&#9825;</b>2.4k</span><span><b>&#9675;</b>86</span><span><b>&#10148;</b>Share</span></div></div>
           <div class="lots" aria-live="polite"></div>
         </div>
       </div>
@@ -243,7 +267,11 @@
   const sides = [...document.querySelectorAll(".viewer")].map(el => ({
     el, select: el.querySelector("select"), frame: el.querySelector("iframe"), who: el.querySelector(".who"),
     offNote: el.querySelector(".off-note"), lots: el.querySelector(".lots"), api: null, last: null,
+    handle: el.querySelector(".handle"), caption: el.querySelector(".caption"),
   }));
+  // the feed furniture's words: a stand-in creator, and a caption from the video's own scene tags
+  const creatorHandle = "your.channel";
+  let captionText = "";
   const surfaceOf = id => (settings && settings.places.find(p => p.id === id) || {}).surface || id;
 
   // --- the two phones ---------------------------------------------------------------------------------------------
@@ -254,6 +282,11 @@
     const p = api.profiles()[api.viewer()] || {};
     side.who.replaceChildren(document.createTextNode(p.label || api.viewer()),
       make("small", {textContent: (p.preferences || []).join(" · ")}));
+    side.handle.textContent = "@" + creatorHandle;
+    const sponsors = r ? [...new Set(Object.values(r.assignment))].map(title) : [];
+    side.caption.replaceChildren(document.createTextNode(captionText + " "),
+      sponsors.length ? make("span", {className: "sponsors", textContent: "AI product placement: " + sponsors.join(", ")})
+        : make("span", {textContent: "No sponsors for this viewer."}));
     if (!r) { side.lots.textContent = side.failed ? "Auction unavailable: this viewer sees the original." : "Bidding…"; return; }
     side.offNote.hidden = r.creator_enabled !== false;
     side.offNote.textContent = "The creator hasn't turned on product placement, so this viewer sees the original.";
@@ -384,7 +417,7 @@
           make("small", {textContent: p.on_screen_s != null ? "On screen " + p.on_screen_s.toFixed(1) + " s" : ""}))))));
     $("brands").replaceChildren(...s.brands.map(b => make("label", null,
       make("input", {type: "checkbox", value: b.id, checked: b.allowed, onchange: save}),
-      title(b.id), b.category ? make("small", {textContent: b.category}) : "")));
+      title(b.id), b.category ? make("small", {textContent: b.category.replaceAll("_", " ")}) : "")));
     $("declined-title").textContent = "Places we didn't use (" + s.declined.length + ")";
     $("declined-box").hidden = !s.declined.length && !s.not_supported.length;
     $("declined").replaceChildren(...s.declined.map(d => make("li", null,
@@ -400,6 +433,8 @@
     const s = await r.json();
     if (!r.ok) throw new Error(s.detail || r.status);
     renderSettings(s);
+    const tags = (s.scene && s.scene.context_tags) || [];
+    captionText = tags.length ? tags.slice(0, 3).map(t => "#" + t.replaceAll("_", "")).join(" ") : "";
     await load(sides[0], params.get("a") || "viewer-a");
     await load(sides[1], params.get("b") || "viewer-b");
     for (const id of ["play", "restart", "rebid"]) $(id).disabled = false;

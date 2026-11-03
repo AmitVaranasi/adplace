@@ -54,13 +54,10 @@
     "poster",
     "screen",
     "sign",
-    "mug",
-    "cup",
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print",
-    "glass"
+    "print"
    ],
    "contextual_exclusions": [
     "funeral",
@@ -92,8 +89,7 @@
     "cup",
     "table_card",
     "sidewalk_sign",
-    "print",
-    "glass"
+    "print"
    ],
    "contextual_exclusions": [
     "safety_signage"
@@ -265,9 +261,7 @@
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print",
-    "cup",
-    "glass"
+    "print"
    ],
    "contextual_exclusions": [
     "hospital",

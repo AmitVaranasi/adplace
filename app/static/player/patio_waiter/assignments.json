@@ -7,7 +7,6 @@
   ],
   "assignment": {
    "patio_wall": "brewlark",
-   "patio_napkin": "slicedash",
    "patio_tent": "nimbus",
    "patio_shirt": "brewlark",
    "patio_glass": "brewlark"
@@ -23,7 +22,6 @@
   ],
   "assignment": {
    "patio_wall": "paperwhale",
-   "patio_napkin": "slicedash",
    "patio_tent": "voltway",
    "patio_glass": "fizzwell",
    "patio_shirt": "brewlark"
@@ -39,7 +37,6 @@
   ],
   "assignment": {
    "patio_wall": "paperwhale",
-   "patio_napkin": "slicedash",
    "patio_glass": "brewlark",
    "patio_shirt": "brewlark",
    "patio_tent": "nimbus"
@@ -56,7 +53,6 @@
   ],
   "assignment": {
    "patio_wall": "nimbus",
-   "patio_napkin": "slicedash",
    "patio_tent": "paperwhale",
    "patio_glass": "fizzwell",
    "patio_shirt": "brewlark"
@@ -73,7 +69,6 @@
   ],
   "assignment": {
    "patio_wall": "nimbus",
-   "patio_napkin": "slicedash",
    "patio_tent": "voltway",
    "patio_glass": "fizzwell",
    "patio_shirt": "brewlark"
@@ -90,7 +85,6 @@
   ],
   "assignment": {
    "patio_wall": "voltway",
-   "patio_napkin": "slicedash",
    "patio_tent": "nimbus",
    "patio_glass": "fernleaf",
    "patio_shirt": "brewlark"

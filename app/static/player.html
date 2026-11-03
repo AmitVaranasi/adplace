@@ -466,6 +466,7 @@ void main() {
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   const assetKey = (slot, brand) => slot + "/" + brand;
   const title = s => s.replaceAll("_", " ");
+  const nice = s => { const t = title(String(s)); return t.charAt(0).toUpperCase() + t.slice(1); };   // "table_card" -> "Table card"
   const FS_HEADER = "#version 300 es\nprecision highp float;\nprecision highp int;\nout vec4 outColor;\n";
   const imageCache = new Map(), clipCache = new Map();
 
@@ -1157,7 +1158,6 @@ void main() {
     if (!session) return;
     $("auction").textContent="Bidding…";
     const t0=performance.now(),seq=session.bidSeq=(session.bidSeq || 0)+1;
-    session.lastBid=t0;
     try {
       const r=await fetch("/api/auction",{method:"POST",headers:{"content-type":"application/json"},
         body:JSON.stringify({clip:session.data.name,profile_id:id})});
@@ -1183,14 +1183,17 @@ void main() {
     try { paint(false); } catch (error) { showError(error); }
   }
 
+  // An open player follows the creator's current settings, wherever they were changed: every 3 s it compares what it
+  // shows with them. Placement off: the ads go at once. A place or brand on screen the creator no longer allows, or
+  // placement switched back on: a new bid. Acting on the state, not on change events, leaves no window for a race.
   function watchCreator(session) {
-    let rev=null;
     const tick=async()=>{
       if (live!==session || session.closed) return;
       try {
         const r=await fetch("/api/creator/"+encodeURIComponent(session.data.name)+"/rev",{cache:"no-store"});
         const b=await r.json();
         if (live!==session) return;
+        const id=profileId,a=session.auction[id],shown=a ? Object.entries(a.assignment) : [];
         if (b.removed) {   // the creator took the video down: no more ads, and say why
           session.auction={}; session.removed=true;
           profileUI(); paint(false);
@@ -1198,13 +1201,19 @@ void main() {
           $("download").disabled=true;
           return;
         }
-        // the page that changed them (reels.html) bids at once; this catches a change made anywhere else
-        if (rev!==null && b.rev!==rev && performance.now()-(session.lastBid || 0)>2500) bid(profileId);
-        rev=b.rev;
+        if (!b.enabled && shown.length) {
+          const off={assignment:{},placements:{},creator_enabled:false,ms:0,roundTrip:0};
+          session.auction[id]=off; session.bidSeq=(session.bidSeq || 0)+1;   // an answer still on its way is stale
+          if (embedApi.onAuction) embedApi.onAuction(id,off);
+          profileUI(); paint(false);
+        } else if (b.enabled && a && (a.creator_enabled===false ||
+            shown.some(([place,brand])=>b.places[place]===false || b.brands[brand]===false))) {
+          bid(id);
+        }
       } catch (error) { /* offline for a moment: try again on the next tick */ }
       session.watch=setTimeout(tick,3000);
     };
-    tick();
+    session.watch=setTimeout(tick,3000);
   }
 
   function profileUI() {
@@ -1220,15 +1229,15 @@ void main() {
     for (const slot of [...data.track.slots,...(data.track.objects || [])]) {
       const item=document.createElement("div");
       const name=document.createElement("span"),brand=document.createElement("strong");
-      name.textContent=title(slot.id)+(slot.surface ? " · "+slot.surface : "");
-      brand.textContent=a ? a.assignment[slot.id] || "No ad" : live.bidFailed || live.removed ? "No ad" :
+      name.textContent=nice(slot.surface || slot.id);
+      brand.textContent=a ? nice(a.assignment[slot.id] || "No ad") : live.bidFailed || live.removed ? "No ad" :
         "Waiting for the auction";
       item.append(name,brand); list.append(item);
       const lot=a && a.placements[slot.id];
       if (lot && lot.winner) {
         const price=document.createElement("p"),second=lot.bidders[1];
         price.textContent=second ? "Won at $"+lot.price_cpm.toFixed(2)+" CPM against "+(lot.bidders.length-1)+
-          " other bid"+(lot.bidders.length===2 ? "" : "s")+" (next: "+second.brand+")"
+          " other bid"+(lot.bidders.length===2 ? "" : "s")+" (next: "+nice(second.brand)+")"
           : "Won at the $"+lot.price_cpm.toFixed(2)+" reserve: the other brands that fit here are in this video "+
             "already (one place per brand)";
         item.append(price);
@@ -1270,6 +1279,11 @@ void main() {
       renderer.setData(data);
       live=opened; live.auction={};
       $("sound").disabled=$("sound").hidden=!opened.audio; setMuted(true);
+      if (!profileId && askedViewer && !EMBED && !Object.hasOwn(data.profiles,askedViewer)) {
+        $("error").hidden=false;   // say so, rather than quietly showing someone else
+        $("error").textContent="There's no viewer called \u201c"+askedViewer+"\u201d for this video; showing "+
+          (Object.values(data.profiles)[0].label || "the first viewer")+".";
+      }
       if (!profileId && Object.hasOwn(data.profiles,askedViewer)) profileId=askedViewer;
       profileId=Object.hasOwn(data.profiles,profileId)
         ? profileId : Object.keys(data.profiles)[0];

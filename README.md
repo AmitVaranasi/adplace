@@ -6,8 +6,9 @@ A prototype of an opt-in ad format for short videos: creators approve placements
 and different viewers see different labelled sponsors, with nothing re-rendered to switch brands. Built as a standalone prototype; a
 short-video feed such as Reels is where it would ship.
 
-Upload a video once. AdPlace finds what in it can carry an ad (posters, picture frames, signs, menu boards, screens,
-and glasses, cups and mugs that stay still), tracks each one against the room, and declines anything it can't place
+Upload a video once. AdPlace looks for places in its longest shot that could carry an ad (it measures posters,
+pictures, signs and screens, and glasses, cups and bowls that stay still; on real uploads so far, wall posters and
+still glasses have passed), tracks each one against the room, and declines anything it can't place
 well, saying why. When a viewer presses play, a second-price auction picks a brand for every placement in well under a
 millisecond, and the browser composites the winners into the footage live: matched to its perspective, light, focus
 and grain, behind the people and hands in front, wrapped round glasses and cups, and on a blank patch of a cup that has
@@ -57,11 +58,11 @@ an upload (which spends Meta API credit), so don't expose it to the internet as 
 | Model | How | Where in the code | What for |
 |---|---|---|---|
 | SAM 3.1 | Meta Model API (`sam-3.1`), responses decoded with `meta-sam-parser` | `pipeline/sam_api.py`, `pipeline/fast_mask_codec.py`, `scripts/ingest.py` | text-prompted video segmentation of every place Muse lists (posters, frames, signs, menus, screens), of cups, glasses and bowls, of cup handles (to keep logos off them) and of people in front |
-| Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads each scene (every place an ad could go and its kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
+| Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads sampled frames of each scene (the places an ad could go and their kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
 | Muse Image 1.0 | Meta Model API (`muse-image-1.0`) | `scripts/gen_creatives.py` | the fictional brands' artwork (posters, prints, labels) |
-| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file; found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264] |
+| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file; found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that or after cropping |
 
-No other models run in the product. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
+The upload and playback path uses only these. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
 weights locally through `transformers` (`--backend local`, not in requirements.txt); everything an upload does goes
 through the API.
 
@@ -84,7 +85,7 @@ through the API.
 | 2 (Oct 27, evening) | Second surface (daylight roadside sign; road-safety signs excluded from placement); synthetic occluder test clip with ground truth; occlusion-aware tracking that fits the board's visible edges (GPT); occluder-mask gap filling; slot discovery and per-viewer choice (GLM); exposure matching for printed surfaces (GLM); segmented SAM runs; demo web app v0 |
 | 2 (Oct 27) | Spec agreed over 3 review rounds (Claude, GPT-6.1 Sol, GLM-5.3). SAM 3 surface masks with on-disk cache; quad tracking with re-acquisition (GPT); compositing with blur/grain matching, bleed and emissive mode (GPT); Video Seal embed/verify; three fictional brands; render pipeline. Kill test on a handheld night billboard: 95% of frames tracked, 1.6 px median corner error, watermark verified on every exported variant. |
 
-## Pipeline
+## Early pipeline for the hand-made clips (developer notes)
 
 ```bash
 python3 -m venv --system-site-packages .venv && .venv/bin/pip install --no-deps videoseal==1.0.1 \

@@ -102,7 +102,7 @@
     <p class="muted">Every copy a viewer downloads carries an invisible Meta Video Seal watermark naming the campaigns
       in it. Drop a video to check whether it carries one.</p>
     <p class="muted">The mark survives moderate re-compression, so a copy that has been compressed again still answers
-      (tested down to 854 px wide at CRF 28, or 640 px at CRF 23).</p>
+      (tested down to 854 px wide at CRF 28, or 640 px at CRF 23). Cropping the picture removes it.</p>
   </header>
 
   <section class="panel" aria-labelledby="pick-title">
@@ -149,7 +149,7 @@
   const pct = x => (100 * Number(x || 0)).toFixed(1) + "%";
   const mb = n => (n / (1024 * 1024)).toFixed(1) + " MB";
 
-  let file = null, checking = false, ticker = 0;
+  let file = null, sent = null, checking = false, ticker = 0;
 
   function showError(message) {
     $("error").textContent = message;
@@ -169,6 +169,10 @@
 
   function take(chosen) {
     if (!chosen) return;
+    if (checking) {   // one file at a time: a result must belong to the file it names
+      showError("Still checking " + sent.name + ". Choose another file when it's done.");
+      return;
+    }
     clearError();
     $("result").hidden = true;
     setStatus("");
@@ -194,6 +198,7 @@
   }
 
   function reset() {
+    if (checking) return;   // the file being checked stays until its answer is in
     file = null;
     $("file").value = "";
     $("picked").hidden = true;
@@ -256,6 +261,8 @@
   async function check() {
     if (!file || checking) return;
     checking = true;
+    sent = file;   // the result is reported against this file, whatever is picked meanwhile
+    $("drop").setAttribute("aria-disabled", "true");
     clearError();
     $("result").hidden = true;
     $("check").disabled = true;
@@ -268,14 +275,14 @@
     ticker = setInterval(tick, 1000);
 
     const body = new FormData();
-    body.append("file", file, file.name);
+    body.append("file", sent, sent.name);
     try {
       const r = await fetch("/api/verify", {method: "POST", body: body});
       let data = null;
       try { data = await r.json(); } catch (_) { data = null; }
       if (!r.ok) throw new Error((data && data.detail) || ("the server said " + r.status));
       if (data.campaign) found(data); else notFound(data);
-      setStatus("Checked " + file.name + " in " + Math.round((Date.now() - started) / 1000) + " s.");
+      setStatus("Checked " + sent.name + " in " + Math.round((Date.now() - started) / 1000) + " s.");
       $("result").hidden = false;
       $("result").focus();
     } catch (error) {
@@ -284,6 +291,7 @@
     } finally {
       clearInterval(ticker);
       checking = false;
+      $("drop").removeAttribute("aria-disabled");
       $("check").disabled = !file;
     }
   }

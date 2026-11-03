@@ -314,7 +314,7 @@
     </p>
     <p id="live" class="muted" role="status" aria-live="polite" style="font-size:12px;margin:10px 0 0"></p>
     <ol id="steps" class="steps"></ol>
-    <p class="foot muted">This takes about ten minutes for a 10-second video. You can close the tab and come back to this address: the run id is
+    <p class="foot muted">A 10-second video with places to measure takes 10 to 15 minutes; one with nothing we can place on, under a minute. You can close the tab and come back to this address: the run id is
       in the web address.</p>
   </section>
 
@@ -338,7 +338,7 @@
       </div>
     </div>
 
-    <div class="panel" aria-labelledby="cards-title">
+    <div id="cards-panel" class="panel" aria-labelledby="cards-title">
       <h2 id="cards-title">Every surface we looked at</h2>
       <p class="muted" style="font-size:12px;margin:0">Placed first. For the declined ones, the reason is the
         measurement that fell short.</p>
@@ -392,7 +392,11 @@
   async function readJSON(response) {
     let body = null;
     try { body = await response.json(); } catch (error) { body = null; }
-    if (!response.ok) throw new Error((body && body.detail) || "the server said " + response.status);
+    if (!response.ok) {
+      const error = new Error((body && body.detail) || "the server said " + response.status);
+      error.status = response.status;
+      throw error;
+    }
     return body;
   }
 
@@ -744,6 +748,7 @@
     stopPolling();
     stopClock();
     state.finished = true;
+    show("");   // the error says what happened: no progress bar still spinning beside it
     showError(message, retryActions());
   }
 
@@ -762,7 +767,9 @@
       }
     } catch (error) {
       state.misses += 1;
-      if (state.misses >= 3) fail("We lost touch with the run: " + (error.message || error) + ".");
+      if (error.status === 404) fail("There's no upload with that address. It may have been removed; upload the "
+        + "video again, or open it from My videos.");   // nothing will ever answer: say so at once
+      else if (state.misses >= 3) fail("We lost touch with the run: " + (error.message || error) + ".");
     } finally {
       state.polling = false;
     }
@@ -862,12 +869,20 @@
     const items = placed ? placedReasons(p)
       : (p.reasons && p.reasons.length ? p.reasons : ["It did not meet one of the checks."]);
     const list = make("ul", {className: "reasons"});
-    for (const item of items) list.append(make("li", {textContent: item}));
+    const SHOWN = 2;   // the first reasons are the ones that decided it; the rest wait behind a toggle
+    for (const item of items.slice(0, SHOWN)) list.append(make("li", {textContent: item}));
+    let more = null;
+    if (items.length > SHOWN) {
+      const rest = make("ul", {className: "reasons"});
+      for (const item of items.slice(SHOWN)) rest.append(make("li", {textContent: item}));
+      more = make("details", null, make("summary", {className: "reasons-title",
+        textContent: (items.length - SHOWN) + " more " + (placed ? "checks" : "reasons")}), rest);
+    }
 
     return make("article", {className: "card"}, picture,
       make("div", {className: "card-body"}, head, facts,
         make("p", {className: "reasons-title", textContent: placed ? "Checks it passed" : "Why we declined it"}),
-        list));
+        list, more));
   }
 
   function renderReport(report) {
@@ -909,8 +924,11 @@
       player.hidden = true;
       $("no-player").hidden = false;
       $("no-player").textContent = placements.length ? "Nothing was placed, so there is no player to open. " +
-        "The cards below say why." : report.note || "Nothing was found to place an ad on.";
+        "The cards below say why." : named.length ? "Muse Spark saw " + named.join(", ") + " in this video. None of "
+        + "those is a kind we can place an ad on yet (we place on posters, pictures, signs and screens, and on glasses, "
+        + "cups and bowls that stay still), so nothing was measured." : report.note || "Nothing was found to place an ad on.";
     }
+    $("cards-panel").hidden = !placements.length;   // nothing measured: the sentence above says what was seen
 
     $("cards").replaceChildren(...placements.map(card));
     show("report");

@@ -18,25 +18,25 @@ sees different labelled sponsors in the scene itself, with nothing re-rendered t
 
 ## What it does
 
-A creator uploads a video once. Muse Spark reads the scene: every place an ad could go (a poster, a picture frame, a
-menu, a glass on the counter, a bowl on the table), whether the scene is safe for ads, and what it's about. SAM 3.1
+A creator uploads a video once. Muse Spark reads sampled frames of its longest shot and proposes the places an ad
+could go (a poster, a picture frame, a menu, a glass on the counter, a bowl on the table), whether the scene is safe for ads, and what it's about. SAM 3.1
 outlines each place through the whole shot, along with the people in front of it and the handles of cups. AdPlace
-tracks every place against the room and measures it: how long it's on screen, how steady it is, how much people cover
+tracks each candidate against the room and measures it: how long it's on screen, how steady it is, how much people cover
 it, whether someone picks it up. Only places that stay still and in view carry ads; every other one is declined with a
 plain reason ("Someone picks it up or moves it", "No blank patch on the mug's own design").
 
 Placement is off until the creator turns it on. They approve each place and each brand from their library, and every
 auction respects that. When a viewer presses play, a second-price auction picks a brand for each place in about a
-tenth of a millisecond, and the browser composites the winner into the footage live: in the scene's perspective,
-light, focus and grain, wrapped round glasses and mugs, behind the hands and people in front. Two phones side by side
+tenth of a millisecond on the server, and the browser composites the winner into the footage live: in the scene's perspective,
+light, focus and grain, wrapped round glasses (and cups, on test clips), behind the hands and people in front. Two phones side by side
 show the same video to two viewers with two different sponsors.
 
 Every frame with an ad carries a visible "AI product placement" label, and the file a viewer downloads carries an
-invisible Meta Video Seal watermark naming the campaign: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264].
+invisible Meta Video Seal watermark naming the campaign: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264]. Cropping removes it: a 9:16 re-crop of a landscape download, as a repost to a vertical feed would do, is not found.
 
 ## How we used Meta's AI tools
 
-- SAM 3.1 (Meta Model API): text-prompted video segmentation of every place Muse lists, of cups, glasses and bowls,
+- SAM 3.1 (Meta Model API): text-prompted video segmentation of each candidate place Muse proposes, of cups, glasses and bowls,
   of cup handles (so a logo never lands on one) and of the people in front of a placement.
 - Muse Spark 1.3 (Meta Model API): reads each scene (an open-ended list of places and their kinds, brand safety,
   context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is a natural
@@ -44,7 +44,8 @@ invisible Meta Video Seal watermark naming the campaign: found after re-encoding
 - Muse Image 1.0 (Meta Model API): the fictional brands' artwork.
 - Video Seal 1.0 (Meta open weights): the invisible watermark in every downloaded copy.
 
-No other models run in the product.
+The upload and playback path uses only these. (The early hand-made clips could also rank brands with Llama 3.3
+70B, another Meta model, when a W&B key is set; uploads don't use it.)
 
 ## How we built it
 
@@ -53,7 +54,7 @@ result as the server's renderer (within about 1.5 grey levels on the logo, a con
 [7 frames of the bar clip]) at the video's frame rate [23–24 fps on 24 fps clips, M3 Pro, Chrome]. Whether a
 placement looks real was judged by eye. Everything that depends on the video (geometry, light, mattes, the
 glass's own shading) is worked out once at upload and is the same for every brand, so playback only has to pick
-names. About 500 automated tests, passing on a fresh clone.
+names. 280 test functions (about 500 cases with their parameters), passing on a fresh clone.
 
 ## Challenges
 
@@ -84,8 +85,9 @@ before the Nov 3 gates), all in cafés and restaurants, so the first market is f
   43 places, 19 of them kinds we can measure; 6 were placed before the gates and 3 after (a bar's wall poster and
   two glasses) [`runs/r_eval_*`, `runs/r_v2_m44025`, `runs/r_v4_m43999`].
 - Only still objects carry ads. Objects people pick up are declined.
-- Processing takes about ten minutes for a 10-second upload, once, offline [10.2 s bar clip: 12.1 min; 5.7 s clip:
-  8.2 min; 5 s clip with nothing to place: 57 s]. Picking brands at playback takes about 0.1 ms.
+- Processing takes 10 to 15 minutes for a 10-second upload with places to measure, once, offline (under a minute when
+  nothing in it can carry an ad) [10.2 s bar clip: 12.1 min alone, 15.7 min with two other uploads running; 5.7 s
+  clip: 8.2 min; 5 s clip with nothing to place: 40–57 s]. Picking brands at playback takes about 0.1 ms on the server (5–15 ms round trip).
 - The bids are test bids from a demo inventory of fictional brands. It's a standalone prototype, not connected to a
   real ad auction, with no accounts: it runs locally.
 - The five placements on the patio clip were set up by hand (its rendered 3D can and bottle were dropped on Nov 3:

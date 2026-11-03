@@ -35,6 +35,7 @@
   .primary:hover, a.button.primary:hover { background: #2a4a42; }
   .card .actions .remove { margin-left: auto; background: none; border-color: transparent; color: #a2a9b8;
                            font-size: 12px; padding: 6px 4px; }
+  .card .actions .remove.armed { color: #ffb4b4; border-color: #9c5555; }
   .card .actions .remove:hover { color: #f0b4b4; }
   a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #6bd6b2; outline-offset: 3px; }
 
@@ -181,7 +182,15 @@
       textContent: "Report"}));
     const remove = make("button", {type: "button", className: "remove", textContent: "Remove"});
     remove.onclick = async () => {
-      if (!confirm("Remove " + v.name + " from your videos? Brands stop appearing in it.")) return;
+      // ask in place (a browser dialog can be blocked): the first click asks, a second within 5 s removes
+      if (!remove.dataset.armed) {
+        remove.dataset.armed = "1";
+        remove.textContent = v.has_player ? "Remove it? Viewers stop seeing it" : "Remove it from your videos?";
+        remove.classList.add("armed");
+        setTimeout(() => { delete remove.dataset.armed; remove.textContent = "Remove"; remove.classList.remove("armed"); },
+          5000);
+        return;
+      }
       remove.disabled = true;
       try {
         const r = await fetch("/api/videos/" + encodeURIComponent(v.clip), {method: "DELETE"});

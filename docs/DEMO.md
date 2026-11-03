@@ -7,7 +7,9 @@ where it came from is in brackets. Raw screen footage for each part is in `outpu
 ## 0:00–0:20 Two phones, one video, different sponsors
 
 Screen: `/reels?clip=upload_m43248`, placement already on, both phones playing in sync. Left: Morning commuter
-(Brewlark on the wall poster), right: Weekend runner (Kestrel). Raw footage: `outputs/demo/reels.mp4`.
+(Brewlark on the glass), right: Weekend runner (Fizzwell on the glass, Kestrel on the poster). The glass is
+auctioned first (it's in focus and nearest the camera), so it's what differs most. Pause where no hand is in front
+of the glass. Raw footage: `outputs/demo/reels.mp4`.
 
 Say: "This is a prototype of an opt-in ad format for short videos. One video, two viewers, two different sponsors in
 the scene itself, labelled as AI product placement. Switching brands re-rendered nothing for either of them."
@@ -16,9 +18,10 @@ the scene itself, labelled as AI product placement. Switching brands re-rendered
 
 Screen: `/` (My videos): the creator's library, each video with its places for ads and its placement switch. Click
 "Upload a video", drop `assets/clips/raw3/m43248.mp4`; back in the library it shows as processing; skip past the wait
-("about ten minutes, once"). Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
+("10 to 15 minutes, once") and open the report of the same clip processed earlier, saying so: "this is that clip,
+processed earlier". Don't upload an unseen clip on camera: most find nothing to place on. Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
 original, "The creator hasn't turned on product placement"), turn on "Allow product placement"; both phones' ads
-appear. Untick Brewlark: the commuter's poster re-bids to another brand.
+appear. Untick Brewlark: the commuter's glass re-bids to another brand.
 
 Say: "Placement is off until the creator turns it on. They approve each place we found and each brand they're happy
 to carry, and every viewer's auction respects that."
@@ -29,7 +32,7 @@ Screen: the upload report (`/upload?run=r_eval_m43248`) or the "Places we didn't
 and the matcha glass placed; read two declines aloud (the Fizzwell glass she picks up; the dark wall gap her head
 covers).
 
-Say: "Muse Spark reads the scene, lists every place an ad could go and checks it's safe for ads. SAM 3.1 outlines each
+Say: "Muse Spark reads the scene, proposes the places an ad could go and checks it's safe for ads. SAM 3.1 outlines each
 one through the shot. We track them against the room and keep only what stays still and in view, and we say in plain
 words why we turned the rest down."
 
@@ -42,26 +45,24 @@ version" for a viewer whose copy was rendered before recording (a new one takes 
 
 Say: "The ad takes the scene's perspective, light, focus and grain, and hands stay in front of it. Every ad carries a
 visible label, and the file you take away carries an invisible Meta Video Seal watermark naming the campaign, still
-there after the file is compressed again."
+there after the file is compressed again, though not after it's cropped."
 
 ## 2:15–2:40 The bid at playback
 
 Screen: back on `/reels`, "Run both bids again": prices, runner-up and "decided in 0.1 ms" under each phone.
 
 Say: "Everything that depends on the video was worked out once, at upload, and is the same for every brand. So when
-someone presses play, a second-price auction only picks names, in about a tenth of a millisecond, and the browser
+someone presses play, a second-price auction only picks names, in about a tenth of a millisecond on the server, and the browser
 draws the winner in live. That's choosing the brand, not processing the video. These are test bids."
 
 ## 2:40–3:00 Honest numbers and what's next
 
-Say, with the figures below, the two test sets kept separate:
+Say (about 40 words; put the figures on screen as text instead of reading them):
 
-- "On 23 videos it had never seen, today's code places one ad and turns everything else down, each with a reason
-  we checked by hand. On four clips where Muse listed every place it could see, we measured 19 and placed 3. It
-  would rather place nothing than place badly."
-- "Processing takes about ten minutes per 10-second clip, once, offline. Only still objects carry ads so far, which limits
-  how much inventory a video has today."
-- "Next: objects people pick up, and shipping this as an opt-in setting in a short-video feed."
+"It's strict: on 23 videos it had never seen, it placed one ad and explained every decline. Next: objects people
+pick up, more kinds of surface, and shipping it as an opt-in setting in a short-video feed."
+
+On screen: "1 of 23 unseen videos placed · 3 of 19 measured places · 10–15 min per 10 s clip, once · test bids".
 
 End on the two phones playing.
 
