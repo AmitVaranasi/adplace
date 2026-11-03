@@ -1,0 +1,57 @@
+{
+ "run_id": "r_eval_m44010",
+ "clip_stem": "upload_m44010",
+ "clip": "assets/clips/uploads/upload_m44010.mp4",
+ "source_name": "m44010.mp4",
+ "duration_s": 8.38,
+ "status": "done",
+ "elapsed_s": 83,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Casual dining scene of pizza being picked up and eaten, no children as focus, medical, accident, violence, or grief visible.; Casual dining scene of hands sharing pizza on a table, no children as focus, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "pizza",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 1,
+  "placed": 0,
+  "declined": 1
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44010/thumbs/c01.jpg",
+   "on_screen_s": 1.25,
+   "reasons": [
+    "It isn't on screen long enough to register.",
+    "It's never visible long enough in one go.",
+    "We couldn't track it through the shot.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "An ad would vanish while the surface is still in view.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "on screen 1.3 s, needs 2.0 s",
+    "longest run 0.5 s, needs 1.5 s",
+    "could not track: the glass's shape fitted in 17% of frames, needs 80%",
+    "track residual: logo well inside the glass in 10% of frames, needs 90%",
+    "visible but not covered for 6.4 s",
+    "moves: travels 1.1 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

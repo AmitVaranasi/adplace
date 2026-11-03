@@ -1,0 +1,31 @@
+{
+ "run_id": "r_eval_m134",
+ "clip_stem": "upload_m134",
+ "clip": "assets/clips/uploads/upload_m134.mp4",
+ "source_name": "m134.mp4",
+ "duration_s": 25.02,
+ "status": "done",
+ "elapsed_s": 21,
+ "note": "",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Adult man walking in urban street, no children as focus, medical, accident, violence, or grief visible.; Adult man seen from behind walking in a city street in daylight; no children, violence, medical, accident or grief visible.",
+  "context_tags": [
+   "city",
+   "daytime",
+   "outdoor",
+   "street",
+   "urban",
+   "walking"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

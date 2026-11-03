@@ -1,0 +1,90 @@
+{
+ "run_id": "r_eval_m44012",
+ "clip_stem": "upload_m44012",
+ "clip": "assets/clips/uploads/upload_m44012.mp4",
+ "source_name": "m44012.mp4",
+ "duration_s": 12.68,
+ "status": "done",
+ "elapsed_s": 135,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult enjoying pizza and a drink outdoors in a friendly setting with no children, medical, accident, violence or grief content; Adults enjoying pizza and drinks outdoors with smiling, relaxed interaction; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "friends",
+   "outdoor",
+   "pizza"
+  ]
+ },
+ "summary": {
+  "candidates": 4,
+  "placed": 0,
+  "declined": 4
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44012/thumbs/c01.jpg",
+   "on_screen_s": 11.8,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: One real short tumbler drinking glass, but the thick base shows faint embossed text/mark and the front is heavily occluded by fingers, so not a clean plain unbranded surface; possible brand text must "
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44012/thumbs/c02.jpg",
+   "on_screen_s": 1.84,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Outlined object is a small black sauce ramekin/dipping bowl, not a drinking glass and not a coffee cup/teacup/mug."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44012/thumbs/c03.jpg",
+   "on_screen_s": 1.42,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Bottom-left green outline captures only a cropped edge of a small dark sauce ramekin/bowl, not one drinking glass or coffee/teacup/mug; visible surface is solid black with no print or brand logo."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We couldn't track it through the shot."
+   ],
+   "details": [
+    "could not track: Muse Spark gave no usable answer"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

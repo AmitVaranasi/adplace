@@ -124,16 +124,34 @@
     opacity: .001;
     pointer-events: none;
   }
+  /* ?embed=1: just the picture, cropped to a phone's 9:16 round the placements (reels.html shows two) */
+  body.embed main { padding: 0; max-width: none; }
+  body.embed header, body.embed aside, body.embed .controls, body.embed .toolbar, body.embed .help { display: none; }
+  body.embed .layout { display: block; }
+  body.embed .stage { border: 0; border-radius: 0; width: 100vw; height: 100vh; background: #000;
+                      display: grid; place-items: center; }
+  body.embed canvas#screen { width: 100%; height: auto; object-fit: cover; }
   @media (max-width: 900px) {
     main { padding: 14px; }
     .layout { grid-template-columns: 1fr; }
     #viewers { grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); }
     #frame { min-width: 108px; }
   }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
+  body.embed nav.site { display: none; }
 </style>
 </head>
 <body>
 <main>
+  <nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/">My videos</a>
+    <a href="/upload">Upload</a>
+    <a href="/verify">Check a file</a>
+  </nav>
   <header>
     <div>
       <h1>Live product placement</h1>
@@ -437,11 +455,15 @@ void main() {
 <script>
 "use strict";
 (() => {
-  const CLIPS = ["patio_waiter", "pizzeria_counter", "pizzeria_box"];
+  // the pizzeria clips are YouTube footage for experiments only (configs/clips.json): not listed, not published
+  const CLIPS = ["patio_waiter"];
   // an uploaded clip (scripts/ingest.py) is opened by name from the upload page
   const asked = new URLSearchParams(location.search).get("clip");
   if (asked && /^[\w-]+$/.test(asked) && !CLIPS.includes(asked)) CLIPS.unshift(asked);
   const $ = id => document.getElementById(id);
+  const EMBED = new URLSearchParams(location.search).get("embed") === "1";
+  const askedViewer = new URLSearchParams(location.search).get("viewer");
+  if (EMBED) document.body.classList.add("embed");
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   const assetKey = (slot, brand) => slot + "/" + brand;
   const title = s => s.replaceAll("_", " ");
@@ -488,9 +510,6 @@ void main() {
         throw new Error("Invalid track.json for " + name);
       }
       const profiles = await json(new URL("assignments.json", entry.base));
-      // 3D products' atlases are large (one image per brand): load only brands some viewer is assigned
-      const used = new Set(Object.values(profiles).flatMap(p => Object.entries(p.assignment || {})
-        .map(([slot, brand]) => assetKey(slot, brand))));
       const assets = await Promise.all([
         ...t.slots.flatMap(s => Object.entries(s.brands).map(async ([brand, spec]) => ({
           key: assetKey(s.id, brand), spec,
@@ -498,9 +517,9 @@ void main() {
         }))),
         // per-frame sprite atlases: colour + coverage per brand, and the table shadow. A glass: one atlas of its
         // light for all brands, plus each brand's small logo, wrapped live
+        // (every brand: the playback auction can pick any of them, not only the ones in the saved assignments)
         ...(t.objects || []).flatMap(o => (o.kind === "glass" ? [["glass", {art: o.atlas}],
-          ...Object.entries(o.brands)] : [["shadow", {art: o.shadow}], ...Object.entries(o.brands)
-          .filter(([brand]) => used.has(assetKey(o.id, brand)))])
+          ...Object.entries(o.brands)] : [["shadow", {art: o.shadow}], ...Object.entries(o.brands)])
           .map(async ([brand, spec]) => ({
             key: assetKey(o.id, brand), spec,
             image: await image(new URL(spec.art, entry.base).href)
@@ -601,8 +620,8 @@ void main() {
     return {weights,offsets,pairs};
   }
 
-  function labelBitmap(height) {
-    const scale=height/900, font=Math.max(11,Math.round(20*scale));
+  function labelBitmap(height,size=1) {   // size: bigger on a phone, where the frame is shown small
+    const scale=height/900*size, font=Math.max(11,Math.round(20*scale));
     const canvas=document.createElement("canvas"), c=canvas.getContext("2d");
     c.font=font+"px system-ui, sans-serif";
     canvas.width=Math.ceil(c.measureText("AI product placement").width)+20;
@@ -723,6 +742,14 @@ void main() {
         w:a.image.naturalWidth,h:a.image.naturalHeight,spec:a.spec
       });
       this.label=labelBitmap(t.height);
+      this.labelTex=this.texture(
+        this.label.canvas.width,this.label.canvas.height,false,this.label.canvas);
+    }
+
+    relabel(size,x=null) {   // the disclosure label redrawn bigger (and moved into a cropped window)
+      const t=this.data.track;
+      this.label=labelBitmap(t.height,size);
+      if (x!==null) this.label.x=x;
       this.labelTex=this.texture(
         this.label.canvas.width,this.label.canvas.height,false,this.label.canvas);
     }
@@ -925,7 +952,7 @@ void main() {
     const video=document.createElement("video");
     if (!video.requestVideoFrameCallback)
       throw new Error("requestVideoFrameCallback is required.");
-    video.muted=true; video.playsInline=true; video.preload="auto";
+    video.muted=true; video.playsInline=true; video.preload="auto"; video.loop=EMBED;
     video.className="decoder"; video.setAttribute("aria-hidden","true");
     document.body.append(video);
     const s={
@@ -1009,6 +1036,7 @@ void main() {
   let live=null,renderer=null,profileId=null,withAds=true,generation=0,drawCount=0;
 
   function showError(error) {
+    if (EMBED) { console.error(error); return; }   // a phone in reels.html keeps playing; the page has no room for it
     $("error").hidden=false;
     $("error").textContent=error.message || String(error);
     if (live) live.video.pause();
@@ -1016,7 +1044,10 @@ void main() {
 
   function paint(upload=true) {
     if (!live || !renderer) return;
-    renderer.render(live.video,live.index,profileId,{ads:withAds,upload,assignment:won()});
+    if (upload && live.video.readyState<2) return;   // mid-seek (reels.html keeping two phones in step): next frame
+    const chosen=won();   // the label marks ads: none shown (Original, or the creator has placement off), no label
+    renderer.render(live.video,live.index,profileId,{ads:withAds,upload,assignment:chosen,
+      label:withAds && !(chosen && !Object.keys(chosen).length)});
     $("scrub").value=live.index;
     $("frame").textContent="Frame "+(live.index+1)+" / "+live.data.track.frames;
     drawCount++;
@@ -1025,10 +1056,50 @@ void main() {
   // the auction's result for the current viewer in this session, if it has come back
   function won() {
     const r=live && live.auction[profileId];
-    return r ? r.assignment : null;
+    return r ? r.assignment : {};   // no ad before this viewer's own auction answers: the creator may be off
   }
 
   // the bid when a viewer starts watching (pipeline/auction.py); the export's choice stays until it returns
+  // A phone shows a 9:16 column of the frame: centred on the placements when they fit in one, else the middle.
+  // The disclosure label moves into that column so it is always seen.
+  // A phone shows a landscape video the way a vertical feed does: a 4:5 window across the full height, placed to keep
+  // every placement in view (with a margin) and otherwise as near the middle of the frame as it can be, where the
+  // people usually are. Placements too far apart for one window: the whole frame, letterboxed. Never an ad cut off.
+  // The disclosure label moves into the window so it is always seen.
+  function phoneCrop(t) {
+    const w=Math.round(t.height*4/5),margin=Math.round(t.width*0.03),canvas=$("screen");
+    const xs=[];
+    for (const s of t.slots) for (const q of s.quads) if (q) for (const pt of q) xs.push(pt[0]);
+    for (const o of t.objects || []) for (const b of o.boxes) if (b) xs.push(b[0],b[0]+b[2]);
+    const lo=xs.length ? Math.min(...xs)-margin : 0,hi=xs.length ? Math.max(...xs)+margin : t.width;
+    if (w>=t.width || hi-lo>w) {
+      canvas.style.aspectRatio=t.width+" / "+t.height; canvas.style.objectPosition="50% 50%";
+      renderer.relabel(2.6);
+      return;
+    }
+    const x0=clamp(Math.round(clamp((t.width-w)/2,hi-w,lo)),0,t.width-w);
+    canvas.style.aspectRatio="4 / 5";
+    canvas.style.objectPosition=(100*x0/(t.width-w)).toFixed(2)+"% 50%";
+    renderer.relabel(1.5,x0+Math.round(t.height*0.03));
+  }
+
+  // reels.html drives two embedded players (same origin) through this.
+  const embedApi={
+    onAuction:null,onReady:null,
+    video:()=>live && live.video,
+    profiles:()=>live ? live.data.profiles : {},
+    track:()=>live ? live.data.track : null,
+    viewer:()=>profileId,
+    auction:()=>live && live.auction[profileId] || null,   // one that finished before the host was listening
+    setViewer(id) {
+      if (!live || !Object.hasOwn(live.data.profiles,id)) return;
+      profileId=id; profileUI(); bid(id);
+    },
+    rebid() { if (live) bid(profileId); },
+    setAds(on) { withAds=!!on; try { paint(false); } catch (error) { showError(error); } },
+  };
+  window.embedApi=embedApi;
+
   async function bid(id) {
     const session=live;
     if (!session) return;
@@ -1041,8 +1112,9 @@ void main() {
       if (!r.ok) throw new Error(body.detail || r.status);
       body.roundTrip=Math.round(performance.now()-t0);
       session.auction[id]=body;
+      if (embedApi.onAuction) embedApi.onAuction(id,body);
     } catch (error) {
-      if (live===session && profileId===id) $("auction").textContent="Auction unavailable ("+(error.message || error)+"); showing the saved choice.";
+      if (live===session && profileId===id) $("auction").textContent="Auction unavailable ("+(error.message || error)+"); showing the original video.";
       return;
     }
     if (live!==session || profileId!==id) return;
@@ -1064,7 +1136,7 @@ void main() {
       const item=document.createElement("div");
       const name=document.createElement("span"),brand=document.createElement("strong");
       name.textContent=title(slot.id)+(slot.surface ? " · "+slot.surface : "");
-      brand.textContent=(a ? a.assignment : p.assignment)[slot.id] || "No placement";
+      brand.textContent=a ? a.assignment[slot.id] || "No ad" : "Waiting for the auction";
       item.append(name,brand); list.append(item);
       const lot=a && a.placements[slot.id];
       if (lot && lot.winner) {
@@ -1080,7 +1152,8 @@ void main() {
     }
     $("rationale").textContent=!a && typeof p.rationale==="string" ? p.rationale : "";
     $("chooser").textContent=a ? "" : p.chooser || "Muse";
-    $("auction").textContent=a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
+    $("auction").textContent=a && a.creator_enabled===false ? "The creator hasn't turned on product placement for "+
+      "this video, so every viewer sees the original." : a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
       a.roundTrip+" ms round trip). Placements were prepared at upload, so no rendering was needed." : "";
   }
 
@@ -1104,8 +1177,10 @@ void main() {
 
       renderer.setData(data);
       live=opened; live.auction={};
+      if (EMBED && Object.hasOwn(data.profiles,askedViewer)) profileId=askedViewer;
       profileId=Object.hasOwn(data.profiles,profileId)
         ? profileId : Object.keys(data.profiles)[0];
+      if (EMBED) phoneCrop(data.track);
 
       for (const [id,p] of Object.entries(data.profiles)) {
         const button=document.createElement("button");
@@ -1131,6 +1206,7 @@ void main() {
       profileUI(); paint();
       $("placeholder").hidden=true;
       bid(profileId);
+      if (embedApi.onReady) embedApi.onReady();
 
       opened.video.addEventListener("play",()=>{
         if (live===opened) $("play").textContent="Pause";
@@ -1247,7 +1323,8 @@ void main() {
   let statsTime=performance.now();
   setInterval(()=>{
     const now=performance.now();
-    $("fps").textContent=(drawCount*1000/(now-statsTime)).toFixed(1)+" compositor fps";
+    $("fps").textContent=!live || live.video.paused ? "paused" :   // a count while paused is meaningless
+      (drawCount*1000/(now-statsTime)).toFixed(1)+" compositor fps";
     statsTime=now; drawCount=0;
   },1000);
 

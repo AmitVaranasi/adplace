@@ -1,0 +1,268 @@
+{
+ "run_id": "r_eval_m43248",
+ "clip_stem": "upload_m43248",
+ "clip": "assets/clips/uploads/upload_m43248.mp4",
+ "source_name": "m43248.mp4",
+ "duration_s": 10.18,
+ "status": "done",
+ "elapsed_s": 339,
+ "note": "",
+ "scene": {
+  "places": [
+   {
+    "name": "painting",
+    "kind": "display",
+    "where": "on wooden wall in center background"
+   },
+   {
+    "name": "glass",
+    "kind": "vessel",
+    "where": "held by red-haired woman in center containing iced drink"
+   },
+   {
+    "name": "plate",
+    "kind": "other",
+    "where": "on counter in center holding pastry"
+   },
+   {
+    "name": "counter",
+    "kind": "other",
+    "where": "black countertop in foreground under drinks and plate"
+   },
+   {
+    "name": "shirt",
+    "kind": "other",
+    "where": "light blue shirt worn by woman in foreground on left"
+   },
+   {
+    "name": "bottle",
+    "kind": "other",
+    "where": "small labeled bottle on counter in background behind plate"
+   },
+   {
+    "name": "refrigerator",
+    "kind": "other",
+    "where": "glass-door cooler in background right"
+   },
+   {
+    "name": "wall",
+    "kind": "other",
+    "where": "wood-paneled wall in background center behind women"
+   }
+  ],
+  "scene_safe": true,
+  "safety_reason": "two adult women chatting and drinking in a cafe, friendly social moment with no children, medical, accident, violence or grief; two adult women socializing in a cafe drinking and eating, no children, medical, accident, violence or grief",
+  "context_tags": [
+   "cafe",
+   "drink",
+   "food",
+   "friends",
+   "indoor"
+  ],
+  "surfaces": [
+   "bottle",
+   "counter",
+   "glass",
+   "painting",
+   "plate",
+   "refrigerator",
+   "shirt",
+   "wall"
+  ]
+ },
+ "summary": {
+  "candidates": 10,
+  "placed": 2,
+  "declined": 8
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "poster",
+   "decision": "placed",
+   "thumb": "/runs/r_eval_m43248/thumbs/c01.jpg",
+   "on_screen_s": 10.18,
+   "reasons": [],
+   "details": [],
+   "qa": {
+    "id": "c01",
+    "pass": true,
+    "checks": {
+     "stability": {
+      "value": 0.9938433445814646,
+      "limit": 1.5,
+      "pass": true
+     }
+    },
+    "reasons": []
+   }
+  },
+  {
+   "id": "c03",
+   "surface": "glass",
+   "decision": "placed",
+   "thumb": "/runs/r_eval_m43248/thumbs/c03.jpg",
+   "on_screen_s": 10.18,
+   "reasons": [],
+   "details": [],
+   "qa": {
+    "id": "c03",
+    "pass": true,
+    "checks": {},
+    "reasons": []
+   }
+  },
+  {
+   "id": "c02",
+   "surface": "poster",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m43248/thumbs/c02.jpg",
+   "on_screen_s": 2.75,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "People or things cover too much of it at some point.",
+    "People or things cover too much of it most of the time.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 7.659 px, needs at most 2.5 px",
+    "p90 track residual 9.404 px, needs at most 5.0 px",
+    "p95 corner jitter 8.729 px, needs at most 3.0 px",
+    "minimum side 45.15 px, needs at least 48.0 px",
+    "maximum occlusion 0.6077, needs at most 0.6",
+    "mean occlusion 0.3866, needs at most 0.35",
+    "time the surface is visible but not covered 7.424 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m43248/thumbs/c04.jpg",
+   "on_screen_s": 10.18,
+   "reasons": [
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "moves: travels 5.2 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "plate",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a plate yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "counter",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a counter yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c07",
+   "surface": "shirt",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a shirt yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c08",
+   "surface": "bottle",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a bottle yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c09",
+   "surface": "refrigerator",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a refrigerator yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c10",
+   "surface": "wall",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a wall yet"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": "/player?clip=upload_m43248",
+ "viewers": [
+  {
+   "profile_id": "viewer-a",
+   "label": "Morning commuter"
+  },
+  {
+   "profile_id": "viewer-b",
+   "label": "Weekend runner"
+  },
+  {
+   "profile_id": "viewer-c",
+   "label": "Book lover"
+  },
+  {
+   "profile_id": "viewer-d",
+   "label": "Weekend traveller"
+  },
+  {
+   "profile_id": "viewer-e",
+   "label": "Home cook"
+  },
+  {
+   "profile_id": "viewer-f",
+   "label": "Tech commuter"
+  }
+ ]
+}

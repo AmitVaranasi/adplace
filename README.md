@@ -2,6 +2,10 @@
 
 Same scene, a different brand for each viewer, always disclosed.
 
+A prototype of an opt-in ad format for short videos: creators approve placements in videos they've already filmed,
+and different viewers see different labelled sponsors, with nothing re-rendered to switch brands. Built as a standalone prototype; a
+short-video feed such as Reels is where it would ship.
+
 Upload a video once. AdPlace finds what in it can carry an ad (posters, picture frames, signs, menu boards, screens,
 and glasses, cups and mugs that stay still), tracks each one against the room, and declines anything it can't place
 well, saying why. When a viewer presses play, a second-price auction picks a brand for every placement in well under a
@@ -17,18 +21,56 @@ Demo script: `docs/DEMO.md`. Write-up: `docs/SUBMISSION.md`.
 ## Quick start
 
 ```bash
-eval "$(grep '^export MODEL_API_KEY=' ~/.zshrc)"; export MODEL_API_KEY     # Meta Model API key
+git clone https://github.com/AmitVaranasi/adplace && cd adplace
+python3.12 -m venv .venv
+.venv/bin/pip install --no-deps videoseal==1.0.1 && .venv/bin/pip install -r requirements.txt
+export MODEL_API_KEY=...            # Meta Model API key: needed to process uploads, not to watch the demo
 .venv/bin/python -m uvicorn app.main:app --port 8411
-# http://127.0.0.1:8411/upload               upload a clip; live progress, then a report of what was placed and why not
-# http://127.0.0.1:8411/player?clip=<stem>   the live per-viewer player with the playback auction
-.venv/bin/python scripts/ingest.py <video>   # the same upload pipeline from the command line
+```
+
+Then open:
+
+| Page | What it is |
+|---|---|
+| `http://127.0.0.1:8411/` | My videos: the creator's library (uploads in progress, places for ads, placement on/off, remove) |
+| `/upload` | upload a clip; live progress, then a report of what was placed and why the rest was declined |
+| `/reels?clip=upload_m43248` | creator settings (opt in, approve places and brands) beside two viewers' phones, each with its own auction |
+| `/player?clip=upload_m43248` | the full live player: any viewer, the auction's prices, Original / With ads, download |
+| `/verify` | the first demo page: render a viewer's copy, check any file for the Video Seal watermark |
+
+The repo carries the demo data so a fresh clone plays straight away: the live players (`app/static/player/*`, with
+their `stack.mp4`), and the latest report, thumbnails and poster for each video in the library (`runs/*`). Without a
+key you can browse the library, reports, players and `/reels`, and run the playback auction; uploading a new video
+calls SAM 3.1 and Muse Spark and needs `MODEL_API_KEY`. Rendering a watermarked download needs the source clip and
+the upload's mask cache, which stay local (`assets/clips/`, `cache/`); on a fresh clone, upload a video first.
+
+It is a local prototype with no accounts: anyone who can reach the server can change a video's settings or start
+an upload (which spends Meta API credit), so don't expose it to the internet as is.
+
+```bash
+.venv/bin/python scripts/ingest.py <video>   # the upload pipeline from the command line
 .venv/bin/python -m pytest -q                # tests
 ```
+
+## Meta models: what runs where
+
+| Model | How | Where in the code | What for |
+|---|---|---|---|
+| SAM 3.1 | Meta Model API (`sam-3.1`), responses decoded with `meta-sam-parser` | `pipeline/sam_api.py`, `pipeline/fast_mask_codec.py`, `scripts/ingest.py` | text-prompted video segmentation of every place Muse lists (posters, frames, signs, menus, screens), of cups, glasses and bowls, of cup handles (to keep logos off them) and of people in front |
+| Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads each scene (every place an ad could go and its kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
+| Muse Image 1.0 | Meta Model API (`muse-image-1.0`) | `scripts/gen_creatives.py` | the fictional brands' artwork (posters, prints, labels) |
+| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file, checked after re-encoding |
+
+No other models run in the product. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
+weights locally through `transformers` (`--backend local`, not in requirements.txt); everything an upload does goes
+through the API.
 
 ## Built during the hackathon
 
 | Day | Added |
 |---|---|
+| 10 (Nov 3) | Two critical reviews (GPT-6.1 Sol and Cursor, `outputs/judge/`) and fixes: the phone view keeps every ad in frame (a 4:5 window, else the whole frame letterboxed) with a readable label; three more vessel logos (Muse Image) so cups and glasses carry six brands and two viewers differ; consent fails closed (no file or no auction answer: no ads); "Check a file" now recognises a viewer's download (scene manifests) after re-encoding; reports count measured places apart from kinds we can't place on yet; honest QA wording for glasses and cups; path, size and cleanup fixes in the server; locked upload config; a fresh clone runs (requirements.txt, demo data, MIT license) |
+| 9 (Nov 2–3) | The application: an opt-in placement setting for short videos (`/reels`). Uploads start with placement off (`pipeline/creator.py`, `creator.json` beside the export); the creator turns it on and approves each place and brand, and every auction and download respects it. Two phones play the same video in sync for two viewers, each with its own auction (prices, runner-up, time). My videos (`/`): the creator's library with uploads in progress, places for ads, the placement switch and Remove; shared navigation across pages. Open-ended discovery merged: Muse lists every place with its kind, bowls carry logos, logos at least a fifth of the vessel's height |
 | 8 (Nov 2) | Still glasses behind bowls pinned by their outline, upright; logos moved onto the part of a glass that stays in view; each vessel measured once per upload (cached), player export 2.8 min -> 25 s. 23 unseen videos: 3 ads placed |
 | 7 (Nov 1–2) | Glass and cup logos composited live in the browser from a brand-independent atlas, so any brand can win at playback with nothing rendered (matches the server within ~1.5–2 grey levels). Second-price playback auction (`pipeline/auction.py`, `/api/auction`, < 0.2 ms) shown in the player, also driving the watermarked download. Cups and mugs: Muse Spark classifies every SAM "cup" object (glass, cup, other; branded or not), SAM outlines handles to cut out, ink dark on light cups and white on dark, and the logo goes on a blank patch of the cup's own design with clear space round it. Only still objects carry ads; a still object keeps its logo while someone walks in front (camera-carried pose). 13 unseen stock videos: 36 candidates, 1 placed, every decline checked by eye. Demo kit: `docs/DEMO.md`, `docs/SUBMISSION.md`, `scripts/record_demo.py` |
 | 6 (Oct 31) | Logos printed on drinking glasses in any uploaded clip (`scripts/glass_decal.py`): wrapped round the glass, its light, focus and grain, behind the fingers holding it; rigid shape fit per frame, resting glasses pinned to the camera. Gates for glasses; glasses occlude posters behind them. The blind Muse judge removed from the final checks (a person judges the look) |
@@ -63,12 +105,6 @@ Video Seal's pip package has two packaging issues on macOS: `decord` has no Appl
 its model card and attenuation config are resolved relative to the working directory. `pipeline/videoseal_cfg/`
 vendors the config and `pipeline/watermark.py` loads it by absolute path.
 
-## Demo app
-
-```bash
-.venv/bin/python -m uvicorn app.main:app --port 8411    # open http://127.0.0.1:8411
-```
-
 ## Results on uploads (Nov 2)
 
 | Check | Result |
@@ -99,4 +135,4 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 | Llama 3.3 70B choice, 3 viewers on the night billboard | matching brand for each (brewlark / kestrel / paperwhale) | matches interests |
 | Road-safety sign | no placement, no model call | refused |
 
-Footage is openly licensed; see `assets/ATTRIBUTION.md`. Brands are fictional.
+Footage is openly licensed; see `assets/ATTRIBUTION.md`. Brands are fictional. Code: MIT (`LICENSE`).

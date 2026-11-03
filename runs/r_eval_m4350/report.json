@@ -1,0 +1,279 @@
+{
+ "run_id": "r_eval_m4350",
+ "clip_stem": "upload_m4350",
+ "clip": "assets/clips/uploads/upload_m4350.mp4",
+ "source_name": "m4350.mp4",
+ "duration_s": 21.33,
+ "status": "done",
+ "elapsed_s": 323,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "sign"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Outdoor cafe terrace at night with adults dining and pedestrians walking; no violence, medical, accident, grief, or children as focus observed.; Nighttime outdoor cafe terrace with adults dining and socializing; no violence, medical emergency, accident, or grief visible. Children appear in background but are not the focus.",
+  "context_tags": [
+   "cafe",
+   "night",
+   "outdoor dining",
+   "restaurant",
+   "socializing",
+   "street"
+  ]
+ },
+ "summary": {
+  "candidates": 10,
+  "placed": 0,
+  "declined": 10
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c01.jpg",
+   "on_screen_s": 6.67,
+   "reasons": [
+    "It's never visible long enough in one go.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "People or things cover too much of it at some point.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "longest run 1.467 s, needs at least 1.5 s",
+    "median track residual 282.2 px, needs at most 2.5 px",
+    "p90 track residual 284.4 px, needs at most 5.0 px",
+    "maximum occlusion 0.8418, needs at most 0.6",
+    "time the surface is visible but not covered 14.67 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c02.jpg",
+   "on_screen_s": 6.3,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "It's never visible long enough in one go.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "People or things cover too much of it at some point.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "longest run 1.0 s, needs at least 1.5 s",
+    "median track residual 645.5 px, needs at most 2.5 px",
+    "p90 track residual 646.8 px, needs at most 5.0 px",
+    "p95 corner jitter 5.154 px, needs at most 3.0 px",
+    "minimum side 14.22 px, needs at least 48.0 px",
+    "maximum occlusion 0.8885, needs at most 0.6",
+    "time the surface is visible but not covered 15.03 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c03.jpg",
+   "on_screen_s": 21.33,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 913.2 px, needs at most 2.5 px",
+    "p90 track residual 914.6 px, needs at most 5.0 px"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c04.jpg",
+   "on_screen_s": 19.77,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 638.6 px, needs at most 2.5 px",
+    "p90 track residual 645.0 px, needs at most 5.0 px",
+    "minimum side 29.5 px, needs at least 48.0 px",
+    "mean area fraction 0.002576, needs at least 0.004",
+    "time the surface is visible but not covered 0.2667 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c05.jpg",
+   "on_screen_s": 21.27,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's too small in the picture."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 18.58 px, needs at most 2.5 px",
+    "p90 track residual 20.98 px, needs at most 5.0 px",
+    "mean area fraction 0.003682, needs at least 0.004"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c06.jpg",
+   "on_screen_s": 16.37,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "People or things cover too much of it at some point.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 273.2 px, needs at most 2.5 px",
+    "p90 track residual 275.8 px, needs at most 5.0 px",
+    "p95 corner jitter 3.183 px, needs at most 3.0 px",
+    "minimum side 19.58 px, needs at least 48.0 px",
+    "maximum occlusion 0.7503, needs at most 0.6",
+    "time the surface is visible but not covered 4.967 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c07",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c07.jpg",
+   "on_screen_s": 16.33,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 698.3 px, needs at most 2.5 px",
+    "p90 track residual 704.2 px, needs at most 5.0 px",
+    "minimum side 33.1 px, needs at least 48.0 px",
+    "mean area fraction 0.002335, needs at least 0.004",
+    "time the surface is visible but not covered 5.0 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c08",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c08.jpg",
+   "on_screen_s": 21.33,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 506.9 px, needs at most 2.5 px",
+    "p90 track residual 512.5 px, needs at most 5.0 px",
+    "minimum side 32.61 px, needs at least 48.0 px",
+    "mean area fraction 0.003585, needs at least 0.004"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c09",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c09.jpg",
+   "on_screen_s": 4.33,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "median track residual 216.9 px, needs at most 2.5 px",
+    "p90 track residual 217.6 px, needs at most 5.0 px",
+    "time the surface is visible but not covered 17.0 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c10",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4350/thumbs/c10.jpg",
+   "on_screen_s": 7.47,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture.",
+    "It's mostly cut off by the edge of the frame.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 489.6 px, needs at most 2.5 px",
+    "p90 track residual 511.1 px, needs at most 5.0 px",
+    "p95 corner jitter 3.695 px, needs at most 3.0 px",
+    "minimum side 23.38 px, needs at least 48.0 px",
+    "mean area fraction 0.003059, needs at least 0.004",
+    "edge-clipped fraction 1.0, needs at most 0.3",
+    "time the surface is visible but not covered 8.133 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": [
+  {
+   "profile_id": "viewer-a",
+   "label": "Morning commuter"
+  },
+  {
+   "profile_id": "viewer-b",
+   "label": "Weekend runner"
+  },
+  {
+   "profile_id": "viewer-c",
+   "label": "Book lover"
+  },
+  {
+   "profile_id": "viewer-d",
+   "label": "Weekend traveller"
+  },
+  {
+   "profile_id": "viewer-e",
+   "label": "Home cook"
+  },
+  {
+   "profile_id": "viewer-f",
+   "label": "Tech commuter"
+  }
+ ]
+}

@@ -14,3 +14,5 @@ eval/stage/
 eval/rating/
 .DS_Store
 configs/uploads.json
+configs/uploads.lock
+configs/uploads.tmp

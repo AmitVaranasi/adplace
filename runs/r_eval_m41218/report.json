@@ -1,0 +1,69 @@
+{
+ "run_id": "r_eval_m41218",
+ "clip_stem": "upload_m41218",
+ "clip": "assets/clips/uploads/upload_m41218.mp4",
+ "source_name": "m41218.mp4",
+ "duration_s": 7.21,
+ "status": "done",
+ "elapsed_s": 146,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adults socializing at outdoor cafe with drinks, no children, violence, medical, accident or grief visible.; Two adult women being served drinks and dessert at an outdoor cafe; no children, medical, accident, violence, or grief present.",
+  "context_tags": [
+   "cafe",
+   "drink",
+   "drinks",
+   "food",
+   "friends",
+   "outdoor",
+   "social"
+  ]
+ },
+ "summary": {
+  "candidates": 2,
+  "placed": 0,
+  "declined": 2
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41218/thumbs/c01.jpg",
+   "on_screen_s": 5.33,
+   "reasons": [
+    "We couldn't track it through the shot.",
+    "An ad would vanish while the surface is still in view.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "could not track: the glass's shape fitted in 13% of frames, needs 80%",
+    "visible but not covered for 0.8 s",
+    "moves: travels 4.6 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41218/thumbs/c02.jpg",
+   "on_screen_s": 7.21,
+   "reasons": [
+    "We couldn't track it through the shot.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "could not track: the glass's shape fitted in 18% of frames, needs 80%",
+    "moves: travels 1.8 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

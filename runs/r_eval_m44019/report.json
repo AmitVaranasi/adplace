@@ -1,0 +1,69 @@
+{
+ "run_id": "r_eval_m44019",
+ "clip_stem": "upload_m44019",
+ "clip": "assets/clips/uploads/upload_m44019.mp4",
+ "source_name": "m44019.mp4",
+ "duration_s": 6.55,
+ "status": "done",
+ "elapsed_s": 95,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adults enjoying pizza at outdoor restaurant, positive social interaction with no children as focus, violence, medical, accident, or grief visible.; Adults dining happily at outdoor restaurant with pizza and drinks; no children as focus, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "dining",
+   "food",
+   "outdoor",
+   "outdoor dining",
+   "pizza",
+   "restaurant",
+   "social gathering"
+  ]
+ },
+ "summary": {
+  "candidates": 2,
+  "placed": 0,
+  "declined": 2
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44019/thumbs/c01.jpg",
+   "on_screen_s": 2.79,
+   "reasons": [
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "moves: travels 1.3 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44019/thumbs/c02.jpg",
+   "on_screen_s": 1.25,
+   "reasons": [
+    "It isn't on screen long enough to register.",
+    "It's never visible long enough in one go.",
+    "An ad would vanish while the surface is still in view.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "on screen 1.3 s, needs 2.0 s",
+    "longest run 1.3 s, needs 1.5 s",
+    "visible but not covered for 1.5 s",
+    "moves: travels 2.0 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

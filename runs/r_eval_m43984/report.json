@@ -1,0 +1,63 @@
+{
+ "run_id": "r_eval_m43984",
+ "clip_stem": "upload_m43984",
+ "clip": "assets/clips/uploads/upload_m43984.mp4",
+ "source_name": "m43984.mp4",
+ "duration_s": 9.43,
+ "status": "done",
+ "elapsed_s": 42,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adults socializing at a bar, no children, medical, accident, violence, or grief visible.; Adults socializing at a bar with cocktails, no children, medical, accident, violence or grief visible.",
+  "context_tags": [
+   "alcohol",
+   "bar",
+   "bartender",
+   "cocktails",
+   "drinks",
+   "indoor",
+   "nightlife"
+  ]
+ },
+ "summary": {
+  "candidates": 2,
+  "placed": 0,
+  "declined": 2
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m43984/thumbs/c01.jpg",
+   "on_screen_s": 9.22,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: The green outline encloses a stainless-steel cocktail shaker tin on the bar, not a single drinking glass or ceramic/paper coffee cup/mug."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m43984/thumbs/c02.jpg",
+   "on_screen_s": 8.84,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: One short tumbler drinking glass in hand, but surface has all-over raised hobnail/textured pattern so not plain smooth; no brand name or logo visible, texture is decorative only."
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

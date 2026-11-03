@@ -1,0 +1,31 @@
+{
+ "run_id": "r_eval_m40701",
+ "clip_stem": "upload_m40701",
+ "clip": "assets/clips/uploads/upload_m40701.mp4",
+ "source_name": "m40701.mp4",
+ "duration_s": 10.14,
+ "status": "done",
+ "elapsed_s": 16,
+ "note": "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, screens, and plain glasses, cups and mugs that stay still, and found none.",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Only a glass office building exterior against sky, no people, children, medical, accident, violence, or grief visible.; Exterior view of glass office tower with no people, medical, accident, violence, or grief content.",
+  "context_tags": [
+   "architecture",
+   "building",
+   "city",
+   "exterior",
+   "office",
+   "sky"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

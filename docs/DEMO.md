@@ -4,65 +4,70 @@ Judging: impact 30, Meta tooling 25, execution 20, demo 25. Every number said al
 where it came from is in brackets. Raw screen footage for each part is in `outputs/demo/` (recorded by
 `scripts/record_demo.py` from the running app; re-record with `python scripts/record_demo.py`).
 
-## 0:00–0:20 Same scene, a different brand for each viewer
+## 0:00–0:20 Two phones, one video, different sponsors
 
-Screen: the live player on the bar clip (`/player?clip=upload_m43248`). Click Morning commuter, Book lover, Weekend
-runner: the poster on the wall and the logo on the matcha glass change with each click. "AI product placement" label
-bottom left.
+Screen: `/reels?clip=upload_m43248`, placement already on, both phones playing in sync. Left: Morning commuter
+(Brewlark on the wall poster), right: Weekend runner (Kestrel). Raw footage: `outputs/demo/reels.mp4`.
 
-Say: "This is one video. Every viewer sees different brands in it, placed after filming, always labelled. Nothing was
-re-rendered when I clicked: the brands were chosen by an auction the moment each viewer started watching."
+Say: "This is a prototype of an opt-in ad format for short videos. One video, two viewers, two different sponsors in
+the scene itself, labelled as AI product placement. Switching brands re-rendered nothing for either of them."
 
-## 0:20–1:00 Upload: one pass, no hand work
+## 0:20–0:50 The creator opts in
 
-Screen: `/upload`, drop `assets/clips/raw3/m43248.mp4`, the stages tick through (Muse Spark reads the scene, SAM 3.1
-segments, tracking, deciding, building the live player, final checks). Cut the waiting; show the report.
+Screen: `/` (My videos): the creator's library, each video with its places for ads and its placement switch. Click
+"Upload a video", drop `assets/clips/raw3/m43248.mp4`; back in the library it shows as processing; skip past the wait
+("a few minutes, once"). Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
+original, "The creator hasn't turned on product placement"), turn on "Allow product placement"; both phones' ads
+appear. Untick Brewlark: the commuter's poster re-bids to another brand.
 
-Say: "A creator uploads once. Muse Spark reads the scene and checks it's safe for ads. SAM 3.1, through the Meta Model
-API, outlines every surface and glass through the shot. We track each one against the room and keep only what stays
-still: the poster, and the matcha glass on the counter. We decline the rest and say why, in plain words: the menu
-board drifts, and her Fizzwell glass gets picked up, so it can't carry an ad yet."
+Say: "Placement is off until the creator turns it on. They approve each place we found and each brand they're happy
+to carry, and every viewer's auction respects that."
 
-Point at: the Fizzwell card ("Someone picks it up or moves it…"), the menu board card.
+## 0:50–1:30 What Meta's models found, and what they turned down
 
-## 1:00–1:40 The bid at playback
+Screen: the upload report (`/upload?run=r_eval_m43248`) or the "Places we didn't use" list on `/reels`. Show the poster
+and the matcha glass placed; read two declines aloud (the Fizzwell glass she picks up; the dark wall gap her head
+covers).
 
-Screen: back in the player. The panel "This viewer's ads": winner, clearing price, runner-up per placement; "decided in
-0.07 ms". Click "Run the bid again" a couple of times; prices move. Toggle Original / With ads. Play at full speed.
+Say: "Muse Spark reads the scene, lists every place an ad could go and checks it's safe for ads. SAM 3.1 outlines each
+one through the shot. We track them against the room and keep only what stays still and in view, and we say in plain
+words why we turned the rest down."
 
-Say: "Everything that depends on the video, the geometry, light, focus, grain and what's in front, was worked out at
-upload and doesn't depend on the brand. So the auction only picks names: a second-price auction weighted by how well
-each brand fits the viewer and the scene, in under a tenth of a millisecond. The browser then lays the winning artwork
-on live, wrapped round the glass, as soft and grainy as the footage, behind her fingers."
+## 1:30–2:15 Why it looks filmed, and why it's always findable
 
-## 1:40–2:10 How far it goes: the patio
+Screen: full player `/player?clip=upload_m43248`, play at full speed; pause on the hand passing the glass, the logo
+wrapped round the matcha glass, the poster's perspective and grain. Toggle Original / With ads. Then "Download my
+version": "watermark verified".
 
-Screen: `/player?clip=patio_waiter`, switch viewers. Nine placements: wall poster, menu print, a 3D can, bottle,
-table-tent card, a logo on a real glass, a print on the waiter's T-shirt, an A-frame sign.
+Say: "The ad takes the scene's perspective, light, focus and grain, and hands stay in front of it. Every ad carries a
+visible label, and the file you take away carries an invisible Meta Video Seal watermark naming the campaign, still
+there after re-encoding."
 
-Say: "This is how far the placements go on a clip we set up by hand: 3D products ray-traced onto the table, lit like
-the footage, and people walking in front of them."
+## 2:15–2:40 The bid at playback
 
-## 2:10–2:35 Always disclosed, always detectable
+Screen: back on `/reels`, "Run both bids again": prices, runner-up and "decided in 0.1 ms" under each phone.
 
-Screen: "Download my version" in the player; the file comes back with "watermark verified" and a manifest id. Optional:
-`/` → verify an exported file, token recovered; an unwatermarked file is not detected.
+Say: "Everything that depends on the video was worked out once, at upload, and is the same for every brand. So when
+someone presses play, a second-price auction only picks names, in about a tenth of a millisecond, and the browser
+draws the winner in live. That's choosing the brand, not processing the video. These are test bids."
 
-Say: "The file you take away carries a visible label and an invisible Meta Video Seal watermark naming the campaign, so a
-placement can always be found, even after re-encoding."
+## 2:40–3:00 Honest numbers and what's next
 
-## 2:35–3:00 Honest limits and what's next
+Say, with the figures below, the two test sets kept separate:
 
-Say, with the numbers from the test set (below):
+- "On 23 videos it had never seen, it placed 3 ads out of 56 candidates. With open-ended discovery on four clips, it
+  measured 19 places and placed 6. It turns down what it can't place well, and says why."
+- "Processing takes a few minutes per 10-second clip, once, offline. Only still objects carry ads so far, which limits
+  how much inventory a video has today."
+- "Next: objects people pick up, and shipping this as an opt-in setting in a short-video feed."
 
-- "On 23 videos it had never seen, it placed three ads and declined 53 candidates, explaining why each time. Most
-  declines are scenes with nothing still to print on."
-- "A 10-second upload takes a few minutes, once. Picking brands at playback takes a tenth of a millisecond."
-- "Meta tooling: SAM 3.1 and Muse Spark through the Meta Model API, Muse Image for the brand artwork, Video Seal for
-  the watermark."
-- "Next: objects people pick up, and 3D products on any upload."
+End on the two phones playing.
 
 ## Test-set figures
+
+Open-ended discovery (Nov 2, 4 clips, `runs/r_eval_*`): Muse named 43 places; 24 were kinds we have no way to place on yet (plates, tables, shirts, walls) and were not measured; of the 19 measured, 6 were placed (m43999: a ramekin and a bread
+bowl; m44025 and m44007: orange-juice glasses; m43248: the wall poster and the matcha glass). Reported separately from
+the 23-video set below, which ran on the code before discovery.
 
 23 stock videos never used in development, final code (`runs/testset_all23.txt`): 56 candidates found, 3 placed,
 all on still glasses on restaurant tables (m44025: kept on while a shoulder passes in front; m43999: moved onto the
@@ -70,6 +75,3 @@ part a bowl doesn't hide; m44007: an orange juice). Declines, all checked by eye
 fast blurred bar sweep, a night terrace's signs (one a parking sign), branded glasses, sauce ramekins, glasses and
 teacups picked up or carried in. Say: "On 23 videos it had never seen, it placed three ads and declined 53
 candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
-
-Optional extra shot: `/player?clip=upload_pair` (two mugs with drawings on them; each logo goes on a blank patch,
-dark ink on the light mug, white on the black one).

@@ -1986,3 +1986,64 @@
 {"t": "2026-11-01T22:52:57", "kind": "muse", "usd": 0.004089, "purpose": "rank", "prompt_tokens": 1085, "completion_tokens": 643}
 {"t": "2026-11-01T22:53:01", "kind": "muse", "usd": 0.00436, "purpose": "rank", "prompt_tokens": 1084, "completion_tokens": 707}
 {"t": "2026-11-01T22:53:04", "kind": "muse", "usd": 0.003561, "purpose": "rank", "prompt_tokens": 1085, "completion_tokens": 548}
+{"t": "2026-11-02T15:52:03", "kind": "muse", "usd": 0.010828, "purpose": "rank", "prompt_tokens": 4429, "completion_tokens": 1245}
+{"t": "2026-11-02T15:52:15", "kind": "muse", "usd": 0.01124, "purpose": "rank", "prompt_tokens": 4429, "completion_tokens": 1342}
+{"t": "2026-11-02T15:52:23", "kind": "sam", "usd": 0.024, "purpose": "person", "frames": 120}
+{"t": "2026-11-02T15:52:28", "kind": "sam", "usd": 0.024, "purpose": "cup handle", "frames": 120}
+{"t": "2026-11-02T15:52:38", "kind": "sam", "usd": 0.024, "purpose": "cup", "frames": 120}
+{"t": "2026-11-02T15:52:47", "kind": "muse", "usd": 0.004233, "purpose": "rank", "prompt_tokens": 1567, "completion_tokens": 535}
+{"t": "2026-11-02T15:54:13", "kind": "muse", "usd": 0.014455, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2621}
+{"t": "2026-11-02T15:54:37", "kind": "muse", "usd": 0.010581, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2368}
+{"t": "2026-11-02T15:55:00", "kind": "muse", "usd": 0.013049, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2290}
+{"t": "2026-11-02T15:55:11", "kind": "sam", "usd": 0.0272, "purpose": "cup handle", "frames": 136}
+{"t": "2026-11-02T15:55:16", "kind": "sam", "usd": 0.0272, "purpose": "napkin", "frames": 136}
+{"t": "2026-11-02T15:55:16", "kind": "sam", "usd": 0.0272, "purpose": "bowl", "frames": 136}
+{"t": "2026-11-02T15:55:17", "kind": "sam", "usd": 0.0272, "purpose": "cup", "frames": 136}
+{"t": "2026-11-02T15:55:32", "kind": "sam", "usd": 0.0272, "purpose": "person", "frames": 136}
+{"t": "2026-11-02T15:56:14", "kind": "muse", "usd": 0.009626, "purpose": "rank", "prompt_tokens": 901, "completion_tokens": 2000}
+{"t": "2026-11-02T15:56:35", "kind": "muse", "usd": 0.007484, "purpose": "rank", "prompt_tokens": 901, "completion_tokens": 1496}
+{"t": "2026-11-02T15:57:06", "kind": "muse", "usd": 0.007768, "purpose": "rank", "prompt_tokens": 901, "completion_tokens": 1592}
+{"t": "2026-11-02T15:57:31", "kind": "muse", "usd": 0.009594, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 2000}
+{"t": "2026-11-02T15:57:55", "kind": "muse", "usd": 0.00801, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 1826}
+{"t": "2026-11-02T15:58:02", "kind": "muse", "usd": 0.004142, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 717}
+{"t": "2026-11-02T15:58:44", "kind": "muse", "usd": 0.003712, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 616}
+{"t": "2026-11-02T15:59:29", "kind": "muse", "usd": 0.00367, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 606}
+{"t": "2026-11-02T16:00:23", "kind": "muse", "usd": 0.003815, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 611}
+{"t": "2026-11-02T16:01:15", "kind": "muse", "usd": 0.002244, "purpose": "rank", "prompt_tokens": 602, "completion_tokens": 351}
+{"t": "2026-11-02T16:01:18", "kind": "muse", "usd": 0.002319, "purpose": "rank", "prompt_tokens": 601, "completion_tokens": 369}
+{"t": "2026-11-02T16:01:31", "kind": "muse", "usd": 0.002574, "purpose": "rank", "prompt_tokens": 601, "completion_tokens": 429}
+{"t": "2026-11-02T16:01:38", "kind": "muse", "usd": 0.002557, "purpose": "rank", "prompt_tokens": 607, "completion_tokens": 423}
+{"t": "2026-11-02T16:01:41", "kind": "muse", "usd": 0.002347, "purpose": "rank", "prompt_tokens": 606, "completion_tokens": 374}
+{"t": "2026-11-02T16:01:48", "kind": "muse", "usd": 0.002501, "purpose": "rank", "prompt_tokens": 607, "completion_tokens": 410}
+{"t": "2026-11-02T21:58:25", "kind": "image", "usd": 0.01, "images": 1, "purpose": "creative kestrel glass_print"}
+{"t": "2026-11-02T21:58:31", "kind": "muse", "usd": 0.003142, "purpose": "rank", "prompt_tokens": 518, "completion_tokens": 587}
+{"t": "2026-11-02T21:58:43", "kind": "image", "usd": 0.01, "images": 1, "purpose": "creative paperwhale glass_print"}
+{"t": "2026-11-02T21:58:47", "kind": "muse", "usd": 0.002615, "purpose": "rank", "prompt_tokens": 518, "completion_tokens": 463}
+{"t": "2026-11-02T21:58:54", "kind": "image", "usd": 0.01, "images": 1, "purpose": "creative slicedash glass_print"}
+{"t": "2026-11-02T21:58:58", "kind": "muse", "usd": 0.003032, "purpose": "rank", "prompt_tokens": 518, "completion_tokens": 561}
+{"t": "2026-11-02T21:59:25", "kind": "image", "usd": 0.01, "images": 1, "purpose": "creative kestrel glass_print"}
+{"t": "2026-11-02T21:59:29", "kind": "muse", "usd": 0.002806, "purpose": "rank", "prompt_tokens": 518, "completion_tokens": 508}
+{"t": "2026-11-02T22:01:30", "kind": "muse", "usd": 0.004861, "purpose": "rank", "prompt_tokens": 1104, "completion_tokens": 819}
+{"t": "2026-11-02T22:01:34", "kind": "muse", "usd": 0.003695, "purpose": "rank", "prompt_tokens": 1103, "completion_tokens": 545}
+{"t": "2026-11-02T22:01:38", "kind": "muse", "usd": 0.003266, "purpose": "rank", "prompt_tokens": 1103, "completion_tokens": 444}
+{"t": "2026-11-02T22:01:42", "kind": "muse", "usd": 0.003609, "purpose": "rank", "prompt_tokens": 1109, "completion_tokens": 523}
+{"t": "2026-11-02T22:01:46", "kind": "muse", "usd": 0.003237, "purpose": "rank", "prompt_tokens": 1108, "completion_tokens": 465}
+{"t": "2026-11-02T22:01:49", "kind": "muse", "usd": 0.003252, "purpose": "rank", "prompt_tokens": 1109, "completion_tokens": 439}
+{"t": "2026-11-02T22:05:30", "kind": "muse", "usd": 0.00367, "purpose": "rank", "prompt_tokens": 940, "completion_tokens": 587}
+{"t": "2026-11-02T22:05:35", "kind": "muse", "usd": 0.003626, "purpose": "rank", "prompt_tokens": 939, "completion_tokens": 577}
+{"t": "2026-11-02T22:05:40", "kind": "muse", "usd": 0.003609, "purpose": "rank", "prompt_tokens": 939, "completion_tokens": 573}
+{"t": "2026-11-02T22:05:44", "kind": "muse", "usd": 0.003332, "purpose": "rank", "prompt_tokens": 945, "completion_tokens": 506}
+{"t": "2026-11-02T22:05:51", "kind": "muse", "usd": 0.004163, "purpose": "rank", "prompt_tokens": 944, "completion_tokens": 702}
+{"t": "2026-11-02T22:05:57", "kind": "muse", "usd": 0.003583, "purpose": "rank", "prompt_tokens": 945, "completion_tokens": 565}
+{"t": "2026-11-02T22:06:43", "kind": "muse", "usd": 0.002241, "purpose": "rank", "prompt_tokens": 909, "completion_tokens": 260}
+{"t": "2026-11-02T22:06:47", "kind": "muse", "usd": 0.002967, "purpose": "rank", "prompt_tokens": 908, "completion_tokens": 431}
+{"t": "2026-11-02T22:06:51", "kind": "muse", "usd": 0.003056, "purpose": "rank", "prompt_tokens": 908, "completion_tokens": 452}
+{"t": "2026-11-02T22:06:55", "kind": "muse", "usd": 0.003403, "purpose": "rank", "prompt_tokens": 914, "completion_tokens": 532}
+{"t": "2026-11-02T22:06:58", "kind": "muse", "usd": 0.002595, "purpose": "rank", "prompt_tokens": 913, "completion_tokens": 342}
+{"t": "2026-11-02T22:07:01", "kind": "muse", "usd": 0.002549, "purpose": "rank", "prompt_tokens": 914, "completion_tokens": 331}
+{"t": "2026-11-02T22:08:56", "kind": "muse", "usd": 0.002576, "purpose": "rank", "prompt_tokens": 905, "completion_tokens": 340}
+{"t": "2026-11-02T22:08:59", "kind": "muse", "usd": 0.002562, "purpose": "rank", "prompt_tokens": 904, "completion_tokens": 337}
+{"t": "2026-11-02T22:09:01", "kind": "muse", "usd": 0.002295, "purpose": "rank", "prompt_tokens": 904, "completion_tokens": 274}
+{"t": "2026-11-02T22:09:06", "kind": "muse", "usd": 0.00305, "purpose": "rank", "prompt_tokens": 910, "completion_tokens": 450}
+{"t": "2026-11-02T22:09:09", "kind": "muse", "usd": 0.002457, "purpose": "rank", "prompt_tokens": 909, "completion_tokens": 340}
+{"t": "2026-11-02T22:09:11", "kind": "muse", "usd": 0.002765, "purpose": "rank", "prompt_tokens": 910, "completion_tokens": 383}

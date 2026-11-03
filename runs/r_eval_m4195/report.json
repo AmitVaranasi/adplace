@@ -1,0 +1,96 @@
+{
+ "run_id": "r_eval_m4195",
+ "clip_stem": "upload_m4195",
+ "clip": "assets/clips/uploads/upload_m4195.mp4",
+ "source_name": "m4195.mp4",
+ "duration_s": 74.33,
+ "status": "done",
+ "elapsed_s": 207,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass",
+   "painting"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Empty restaurant interior with set tables, no people, children, violence, medical or other unsafe content.; Empty restaurant dining room with set tables, no people, no children, and no medical, accident, violence or grief content.",
+  "context_tags": [
+   "dining",
+   "hospitality",
+   "indoor",
+   "restaurant",
+   "table setting",
+   "tables"
+  ]
+ },
+ "summary": {
+  "candidates": 4,
+  "placed": 0,
+  "declined": 4
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "poster",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4195/thumbs/c01.jpg",
+   "on_screen_s": 41.47,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's mostly cut off by the edge of the frame.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "median track residual 4.598 px, needs at most 2.5 px",
+    "p90 track residual 97.52 px, needs at most 5.0 px",
+    "edge-clipped fraction 0.4928, needs at most 0.3",
+    "time the surface is visible but not covered 4.067 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4195/thumbs/c02.jpg",
+   "on_screen_s": 27.83,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Green outline covers a tiny distant blurry white object behind a folded napkin, partially occluded and low resolution; not verifiable as one real drinking glass or coffee cup/mug, appears to be small "
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4195/thumbs/c03.jpg",
+   "on_screen_s": 24.83,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Green outline is a tiny blurry white opaque shape on distant table. Not a transparent drinking glass and no handle/shape to confirm single coffee cup/mug, looks like indistinct ramekin/condiment/table"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We couldn't track it through the shot."
+   ],
+   "details": [
+    "could not track: Muse Spark gave no usable answer"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

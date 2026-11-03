@@ -28,10 +28,20 @@
   .ok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
   .bad { background: color-mix(in srgb, var(--bad) 20%, transparent); color: var(--bad); }
   #choice { font-size: 16px; margin: 8px 0; }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
 </style>
 </head>
 <body>
 <header>
+<nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/">My videos</a>
+    <a href="/upload">Upload</a>
+    <a href="/verify" aria-current="page">Check a file</a>
+</nav>
   <h1>AdPlace</h1>
   <p>Same scene, a different brand for each viewer, always disclosed. Brands are fictional; footage is openly licensed.</p>
 </header>
@@ -119,9 +129,15 @@ $("verify").onclick = async () => {
   const fd = new FormData(); fd.append("file", f);
   try {
     const r = await fetch("/api/verify", { method: "POST", body: fd }).then((r) => r.json());
-    $("vresult").innerHTML = r.campaign
-      ? `<span class="pill ok">Placement detected</span> campaign ${r.campaign} (${(100 * r.bit_accuracy).toFixed(1)}% bits)`
-      : `<span class="pill bad">No placement watermark</span> best match ${(100 * r.bit_accuracy).toFixed(1)}% bits (chance is 50%)`;
+    if (!r.campaign) {
+      $("vresult").innerHTML = `<span class="pill bad">No placement watermark</span> best match ${(100 * r.bit_accuracy).toFixed(1)}% bits (chance is 50%)`;
+    } else {
+      const what = r.campaigns
+        ? `${r.manifest_id}: ${Object.entries(r.campaigns).map(([slot, c]) => `${slot} ${c}`).join(", ")} (clip ${r.clip})`
+        : `campaign ${r.campaign}`;
+      $("vresult").innerHTML = `<span class="pill ok">Placement detected</span> `;
+      $("vresult").append(`${what} (${(100 * r.bit_accuracy).toFixed(1)}% bits)`);
+    }
   } finally { $("verify").disabled = false; }
 };
 </script>

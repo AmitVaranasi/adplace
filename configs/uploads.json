@@ -1,0 +1,745 @@
+{
+ "assets/clips/uploads/upload_m4385.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m4385.mp4",
+  "occluder_prompts": [
+   "person"
+  ],
+  "context_tags": [
+   "bar",
+   "cafe",
+   "dining",
+   "food",
+   "indoor",
+   "interior",
+   "restaurant"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m41229.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m41229.mp4",
+  "occluder_prompts": [
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "indoor",
+   "coffee shop",
+   "conversation",
+   "friends"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m43248.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m43248.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "drink",
+   "food",
+   "friends",
+   "indoor"
+  ],
+  "dynamic_slots": [
+   {
+    "id": "c01",
+    "prompt": "painting",
+    "object": 0,
+    "surface": "poster",
+    "dynamic_content": false,
+    "wall_light": true
+   }
+  ],
+  "objects3d": [
+   {
+    "id": "c03",
+    "kind": "glass_decal",
+    "surface": "glass",
+    "prompt": "cup",
+    "object": 0
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_m42482.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m42482.mp4",
+  "occluder_prompts": [
+   "person"
+  ],
+  "context_tags": [
+   "food",
+   "hands",
+   "kitchen",
+   "pizza",
+   "restaurant"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m44005.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44005.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "daytime",
+   "eating",
+   "food",
+   "outdoor",
+   "outdoors",
+   "pizza"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m41156.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m41156.mp4",
+  "occluder_prompts": [
+   "person"
+  ],
+  "context_tags": [
+   "food",
+   "neon",
+   "neon sign",
+   "night",
+   "pizza",
+   "restaurant",
+   "street"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m134.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m134.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "city",
+   "daytime",
+   "outdoor",
+   "street",
+   "urban",
+   "walking"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m9211.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m9211.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "cafe",
+   "city",
+   "daytime",
+   "drink",
+   "friends",
+   "outdoor",
+   "outdoors",
+   "street"
+  ],
+  "dynamic_slots": []
+ },
+ "assets/clips/uploads/upload_m24152.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m24152.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "food",
+   "indoor",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m22314.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m22314.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "cafe",
+   "dining",
+   "evening",
+   "indoor",
+   "interior",
+   "restaurant",
+   "warm lighting"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m24278.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m24278.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "dining",
+   "food",
+   "indoor",
+   "phone"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m24406.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m24406.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "cafe",
+   "couple",
+   "indoor",
+   "night",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m40701.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m40701.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "architecture",
+   "building",
+   "city",
+   "exterior",
+   "office",
+   "sky"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m4043.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m4043.mp4",
+  "occluder_prompts": [
+   "person"
+  ],
+  "context_tags": [
+   "bar",
+   "crowd",
+   "dining",
+   "indoor",
+   "nightlife",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m41218.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m41218.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "drink",
+   "drinks",
+   "food",
+   "friends",
+   "outdoor",
+   "social"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m4350.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m4350.mp4",
+  "occluder_prompts": [
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "night",
+   "outdoor dining",
+   "restaurant",
+   "socializing",
+   "street"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m43984.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m43984.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "alcohol",
+   "bar",
+   "bartender",
+   "cocktails",
+   "drinks",
+   "indoor",
+   "nightlife"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44000.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44000.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "outdoor",
+   "outdoor dining",
+   "pizza",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44008.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44008.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "dining",
+   "food",
+   "pizza",
+   "plants",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44015.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44015.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "dining",
+   "eating",
+   "food",
+   "indoor",
+   "person",
+   "pizza"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44025.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44025.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "conversation",
+   "dining",
+   "food",
+   "outdoor",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c03",
+    "kind": "glass_decal",
+    "surface": "glass",
+    "prompt": "cup",
+    "object": 1
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_pair.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "mug_pair.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "countertop",
+   "drinkware",
+   "home",
+   "indoor",
+   "kitchen"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c01",
+    "kind": "cup_decal",
+    "surface": "cup",
+    "prompt": "cup",
+    "object": 0
+   },
+   {
+    "id": "c02",
+    "kind": "cup_decal",
+    "surface": "cup",
+    "prompt": "cup",
+    "object": 1
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_pair2.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "mug_pair.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "drinkware",
+   "indoor",
+   "kitchen",
+   "table",
+   "tabletop"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c01",
+    "kind": "cup_decal",
+    "surface": "cup",
+    "prompt": "cup",
+    "object": 0
+   },
+   {
+    "id": "c02",
+    "kind": "cup_decal",
+    "surface": "cup",
+    "prompt": "cup",
+    "object": 1
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_m24405.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m24405.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "cafe",
+   "dining",
+   "indoor",
+   "people",
+   "phone",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m41222.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m41222.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "conversation",
+   "friends",
+   "indoor",
+   "social"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44003.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44003.mp4",
+  "occluder_prompts": [],
+  "context_tags": [
+   "food",
+   "indoor",
+   "pizza",
+   "restaurant",
+   "serving"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m43999.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m43999.mp4",
+  "occluder_prompts": [
+   "bowl",
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "food",
+   "outdoor",
+   "pizza",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c01",
+    "kind": "cup_decal",
+    "surface": "cup",
+    "prompt": "bowl",
+    "object": 0
+   },
+   {
+    "id": "c03",
+    "kind": "cup_decal",
+    "surface": "cup",
+    "prompt": "bowl",
+    "object": 2
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_m44010.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44010.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "pizza",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44007.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44007.mp4",
+  "occluder_prompts": [
+   "bowl",
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "indoor",
+   "pizza",
+   "restaurant"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c07",
+    "kind": "glass_decal",
+    "surface": "glass",
+    "prompt": "cup",
+    "object": 1
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_m44012.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44012.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "friends",
+   "outdoor",
+   "pizza"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44011.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44011.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "drink",
+   "food",
+   "outdoor",
+   "outdoors",
+   "pizza",
+   "social"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m44019.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m44019.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "food",
+   "outdoor",
+   "outdoor dining",
+   "pizza",
+   "restaurant",
+   "social gathering"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m4195.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m4195.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "hospitality",
+   "indoor",
+   "restaurant",
+   "table setting",
+   "tables"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_f49f.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "source.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "close-up",
+   "countertop",
+   "drink",
+   "drinkware",
+   "indoor",
+   "kitchen"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_faaa.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "source.mp4",
+  "occluder_prompts": [
+   "bowl",
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "dining",
+   "drinks",
+   "food",
+   "pizza",
+   "restaurant",
+   "social"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c07",
+    "kind": "glass_decal",
+    "surface": "glass",
+    "prompt": "cup",
+    "object": 1
+   }
+  ]
+ }
+}

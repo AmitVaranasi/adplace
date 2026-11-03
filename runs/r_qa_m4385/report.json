@@ -1,0 +1,130 @@
+{
+ "run_id": "r_qa_m4385",
+ "clip_stem": "upload_m4385",
+ "clip": "assets/clips/uploads/upload_m4385.mp4",
+ "source_name": "m4385.mp4",
+ "duration_s": 14.96,
+ "status": "done",
+ "elapsed_s": 474,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "painting"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adults dining and socializing in a restaurant interior; no children as focus, medical, accident, violence, or grief visible.; Adults dining calmly in a restaurant with no children as focus, violence, medical, accident, or grief visible.",
+  "context_tags": [
+   "bar",
+   "cafe",
+   "dining",
+   "food",
+   "indoor",
+   "interior",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 3,
+  "placed": 0,
+  "declined": 3
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "poster",
+   "decision": "declined",
+   "thumb": "/runs/r_qa_m4385/thumbs/c01.jpg",
+   "on_screen_s": 14.96,
+   "reasons": [
+    "A blind reviewer spotted it as inserted much more often than the original."
+   ],
+   "details": [
+    "failed final check: judge_vs_original 0.625, needs <= 0.25; check failed"
+   ],
+   "qa": {
+    "id": "c01",
+    "pass": false,
+    "checks": {
+     "judge_vs_original": {
+      "value": 0.625,
+      "limit": 0.25,
+      "pass": false
+     },
+     "stability": {
+      "value": 0.5534820427239832,
+      "limit": 1.5,
+      "pass": true
+     }
+    },
+    "reasons": [
+     "judge_vs_original 0.625, needs <= 0.25; check failed"
+    ]
+   }
+  },
+  {
+   "id": "c02",
+   "surface": "poster",
+   "decision": "declined",
+   "thumb": "/runs/r_qa_m4385/thumbs/c02.jpg",
+   "on_screen_s": 14.96,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake."
+   ],
+   "details": [
+    "median track residual 4.431 px, needs at most 2.5 px",
+    "p90 track residual 9.792 px, needs at most 5.0 px",
+    "p95 corner jitter 4.008 px, needs at most 3.0 px"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "poster",
+   "decision": "declined",
+   "thumb": "/runs/r_qa_m4385/thumbs/c03.jpg",
+   "on_screen_s": 14.38,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 9.957 px, needs at most 2.5 px",
+    "p90 track residual 14.32 px, needs at most 5.0 px",
+    "p95 corner jitter 4.482 px, needs at most 3.0 px",
+    "time the surface is visible but not covered 0.5833 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": [
+  {
+   "profile_id": "viewer-a",
+   "label": "Morning commuter"
+  },
+  {
+   "profile_id": "viewer-b",
+   "label": "Weekend runner"
+  },
+  {
+   "profile_id": "viewer-c",
+   "label": "Book lover"
+  },
+  {
+   "profile_id": "viewer-d",
+   "label": "Weekend traveller"
+  },
+  {
+   "profile_id": "viewer-e",
+   "label": "Home cook"
+  },
+  {
+   "profile_id": "viewer-f",
+   "label": "Tech commuter"
+  }
+ ]
+}

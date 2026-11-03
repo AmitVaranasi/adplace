@@ -1,0 +1,32 @@
+{
+ "run_id": "r_eval_m22314",
+ "clip_stem": "upload_m22314",
+ "clip": "assets/clips/uploads/upload_m22314.mp4",
+ "source_name": "m22314.mp4",
+ "duration_s": 13.92,
+ "status": "done",
+ "elapsed_s": 17,
+ "note": "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, screens, and plain glasses, cups and mugs that stay still, and found none.",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Warm restaurant/cafe interior with adults dining; no children in focus, violence, medical, accident or grief visible.; Warm blurry cafe/restaurant interior with adults dining and socializing; no children as focus, no medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "cafe",
+   "dining",
+   "evening",
+   "indoor",
+   "interior",
+   "restaurant",
+   "warm lighting"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

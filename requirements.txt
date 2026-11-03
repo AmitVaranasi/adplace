@@ -1,0 +1,25 @@
+# Python 3.12 (tested on macOS, Apple Silicon). Install videoseal without its deps (see README), then this file.
+fastapi==0.115.5
+uvicorn==0.32.1
+python-multipart==0.0.20
+pydantic==2.12.5
+requests==2.32.5
+numpy==1.26.4
+scipy==1.15.2
+numba==0.60.0
+opencv-contrib-python==4.11.0.86
+pillow==12.3.0
+torch==2.11.0
+meta-sam-parser==0.1.0       # SAM 3.1 response codecs (Meta Model API)
+# Video Seal's own dependencies (videoseal==1.0.1 is installed with --no-deps)
+omegaconf==2.4.0
+av==19.0.2
+calflops==0.3.2
+einops==0.8.1
+lpips==0.1.4
+pycocotools==2.0.11
+pytorch_msssim==1.0.0
+timm==0.9.16
+# tests and the demo recorder
+pytest==9.0.2
+playwright==1.53.0

@@ -18,3 +18,15 @@ New clips (Oct 27, from Wikimedia Commons; originals in assets/clips/raw2/, see 
 - `mug_print.mp4`: "Thermochromic mug.webm" by The wub, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Thermochromic_mug.webm (27-32 s, 720x720)
 - `mug_pair.mp4`: "Morning Mug.webm" by Manuel Stadelmann, CC BY 3.0, https://commons.wikimedia.org/wiki/File:Morning_Mug.webm (36-41 s)
 - `coffee.mp4` (unused: SAM 3.1 finds no cups in stop-motion clay): "Waking Up to a Cup of Coffee.webm" by Rebecca Meilak, CC BY 3.0
+
+Mixkit clips (Oct 30 – Nov 2; Mixkit Free License, https://mixkit.co/license/#videoFree, free to use, attribution not
+required, credited here anyway). `assets/clips/raw3/m<id>.mp4` is Mixkit video <id>; uploads of them are
+`assets/clips/uploads/upload_m<id>.mp4` and the players and reports under `app/static/player/upload_m<id>/` and
+`runs/`:
+- 134, 4043, 4195, 4350, 4385, 9211, 22314, 24152, 24278, 24405, 24406, 40701, 41156, 41218, 41222, 41229, 42482,
+  43248 (the bar clip in the demo), 43984, 43999, 44000, 44003, 44005, 44007, 44008, 44010, 44011, 44012, 44015,
+  44019 (also `assets/clips/patio_waiter.mp4`, "A table being served pizza by a waiter"), 44025.
+
+Not published: `assets/clips/pizzeria_counter.mp4` and `pizzeria_box.mp4` are cut from a YouTube video for
+experiments only. Their videos are not in this repository (only tracking data and the fictional brands' artwork), and
+the player does not list them.

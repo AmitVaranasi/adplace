@@ -320,6 +320,12 @@ def fallback_decide(cands):
     return out
 
 
+def source_name(src):
+    """The name the creator's file had: the web upload saves it as source.<ext> and keeps the name in name.txt."""
+    named = Path(src).parent / "name.txt"
+    return named.read_text().strip() if named.exists() else Path(src).name
+
+
 def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
     """eval/qa.py on a server render of one viewer's version: stability of each flat ad against the real wall
     around it. (Muse's blind judge, eval/qa.judge, is switched off for now; a person reviews the look.)"""
@@ -671,6 +677,8 @@ def ingest(src, run_id=None):
         viewers = []
         ap = ROOT / "app" / "static" / "player" / stem / "assignments.json"
         if ap.exists():
+            from pipeline import creator
+            creator.start_off(ap.parent)   # product placement is opt-in: the creator turns it on at /reels
             viewers = [{"profile_id": pid, "label": v["label"]} for pid, v in json.loads(ap.read_text()).items()]
         if not cands:   # say why there is nothing to show, instead of an empty report
             why = ("The scene isn't suitable for advertising, so nothing was placed."
@@ -678,7 +686,7 @@ def ingest(src, run_id=None):
                    "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, "
                    "screens, and plain glasses, cups and mugs that stay still, and found none.")
             note = f"{note}. {why}" if note else why
-        report = {"run_id": run.id, "clip_stem": stem, "clip": clip, "source_name": Path(src).name,
+        report = {"run_id": run.id, "clip_stem": stem, "clip": clip, "source_name": source_name(src),
                   "duration_s": round(frames.n / fps, 2), "status": "done", "elapsed_s": round(time.time() - run.t0),
                   "note": note, "scene": scene,
                   "summary": {"candidates": len(cands), "placed": len(accepted), "declined": len(cands) - len(accepted)},
@@ -690,7 +698,8 @@ def ingest(src, run_id=None):
                        "reasons": plain(d["reasons"]), "details": d["reasons"],
                        "qa": next((q for q in qa if q["id"] == c["id"]), None)}
                       for c, d in zip(cands, decisions)], key=lambda p: p["decision"] != "placed"),
-                  "player_url": f"/player?clip={stem}" if accepted else None, "viewers": viewers}
+                  "player_url": f"/player?clip={stem}" if accepted else None,
+                  "reels_url": f"/reels?clip={stem}" if accepted else None, "viewers": viewers}
         run.write("report.json", report)
         run.progress("done", 100, f"{len(accepted)} placed, {len(cands) - len(accepted)} declined")
     except Exception as e:

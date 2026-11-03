@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two viewers, one video</title>
+<style>
+  :root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    background: #101216;
+    color: #eef0f4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { max-width: 1440px; margin: auto; padding: 24px; }
+  header { margin-bottom: 18px; display: flex; gap: 24px; justify-content: space-between; align-items: flex-start;
+           flex-wrap: wrap; }
+  h1 { font-size: 21px; margin: 0 0 5px; font-weight: 650; }
+  h2 { font-size: 14px; margin: 0 0 10px; }
+  h3 { font-size: 12px; margin: 18px 0 8px; color: #a2a9b8; font-weight: 600; text-transform: uppercase;
+       letter-spacing: .04em; }
+  p { line-height: 1.55; }
+  .muted, small { color: #a2a9b8; }
+  header p { margin: 0; font-size: 13px; max-width: 80ch; }
+  header > div:first-child { flex: 1 1 380px; }
+  [hidden] { display: none !important; }
+  button, select {
+    border: 1px solid #353a46;
+    background: #20242d;
+    color: inherit;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 13px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: #2a303b; }
+  button.selected { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 2px solid #6bd6b2;
+    outline-offset: 3px;
+  }
+
+  .layout { display: grid; grid-template-columns: 340px minmax(0,1fr); gap: 24px; align-items: start; }
+  aside {
+    border: 1px solid #2c3039;
+    border-radius: 12px;
+    background: #171a20;
+    padding: 18px;
+  }
+
+  /* the opt-in switch */
+  .switch { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .track {
+    flex: none; width: 44px; height: 26px; border-radius: 13px; background: #353a46; position: relative;
+    transition: background .15s;
+  }
+  .track::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+    background: #eef0f4; transition: transform .15s;
+  }
+  .switch input:checked + .track { background: #2f9c7b; }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+  .switch input:focus-visible + .track { outline: 2px solid #6bd6b2; outline-offset: 3px; }
+  .switch strong { display: block; font-size: 14px; }
+  .switch small { display: block; font-size: 12px; margin-top: 3px; line-height: 1.45; }
+
+  .place { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
+  .place img { width: 64px; height: 36px; object-fit: cover; border-radius: 4px; background: #08090c; flex: none; }
+  .place label { display: flex; gap: 10px; align-items: center; flex: 1; cursor: pointer; font-size: 13px; }
+  .place small { display: block; font-size: 11px; }
+  input[type=checkbox] { accent-color: #6bd6b2; width: 16px; height: 16px; margin: 0; flex: none; }
+  .brands { display: flex; flex-wrap: wrap; gap: 6px; }
+  .brands label {
+    display: inline-flex; gap: 6px; align-items: center; font-size: 12px; cursor: pointer;
+    border: 1px solid #353a46; border-radius: 999px; padding: 5px 10px 5px 8px; background: #1d2027;
+  }
+  .brands small { font-size: 11px; }
+  details { margin-top: 18px; font-size: 12px; }
+  summary { cursor: pointer; color: #a2a9b8; font-weight: 600; }
+  details ul { padding-left: 18px; margin: 8px 0 0; }
+  details li { margin-bottom: 6px; line-height: 1.45; }
+  details li span { color: #c0c6d2; }
+  .off .controls-when-on { opacity: .45; pointer-events: none; }
+  #saved { display: block; margin-top: 14px; font-size: 11px; min-height: 1.4em; }
+
+  /* the two phones */
+  .phones { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+  .viewer { display: flex; flex-direction: column; gap: 10px; width: var(--phone-w); flex: none; }
+  .viewer select { width: 100%; }
+  .phone {
+    --pad: 10px;
+    width: var(--phone-w);
+    aspect-ratio: 9 / 16;
+    border-radius: 34px;
+    padding: var(--pad);
+    background: #050608;
+    border: 1px solid #3a404c;
+    box-shadow: 0 18px 50px #0008;
+    position: relative;
+  }
+  .phone iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: 25px; background: #08090c; }
+  .phone .who {
+    position: absolute; top: calc(var(--pad) + 12px); left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px);
+    font-size: 12px; font-weight: 600; text-shadow: 0 1px 3px #000c; pointer-events: none;
+  }
+  .phone .who small { display: block; font-weight: 400; color: #dfe3ea; }
+  .phone .off-note {
+    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px); bottom: calc(var(--pad) + 52px);
+    font-size: 11px; background: #000a; border-radius: 6px; padding: 6px 8px; pointer-events: none;
+  }
+  .lots { font-size: 12px; min-height: 92px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .lots small { grid-column: 1 / -1; }
+  .lots div { padding: 6px 0; border-top: 1px solid #262a33; }
+  .lots strong { font-size: 14px; display: block; }
+  .lots span { color: #a2a9b8; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .modes { display: inline-flex; gap: 5px; }
+  #note { text-align: right; font-size: 11px; margin: 8px 0 0; }
+  #error {
+    border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px;
+    margin-bottom: 16px; overflow-wrap: anywhere;
+  }
+  @media (max-width: 1000px) {
+    main { padding: 16px; }
+    .layout { grid-template-columns: 1fr; }
+    aside { order: 2; }   /* the phones first: on a small screen the preview is what you came for */
+  }
+  @media (max-width: 700px) {
+    body { --phone-w: min(330px, calc(100vw - 32px)) !important; }
+    .controls { justify-content: flex-start; }
+    #note { text-align: left; }
+  }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
+</style>
+</head>
+<body style="--phone-w: min(330px, calc((100vh - 370px) * 9 / 16), calc(50vw - 40px))">
+<main>
+  <nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/">My videos</a>
+    <a href="/upload">Upload</a>
+    <a href="/verify">Check a file</a>
+  </nav>
+  <header>
+    <div>
+      <h1>Two viewers, one video</h1>
+      <p class="muted">A prototype of an opt-in ad format for short videos. The creator approves the places and
+        brands; each viewer's own auction picks the brand when they press play. Switching brands re-renders nothing, and every ad
+        is labelled.</p>
+    </div>
+    <div>
+      <div class="controls">
+        <button id="play" type="button" disabled>Play</button>
+        <button id="restart" type="button" disabled>From the start</button>
+        <button id="rebid" type="button" disabled>Run both bids again</button>
+        <span class="modes" aria-label="Placement visibility">
+          <button type="button" data-mode="original" aria-pressed="false">Original</button>
+          <button type="button" data-mode="ads" class="selected" aria-pressed="true">With ads</button>
+        </span>
+      </div>
+      <p id="note" class="muted">Test bids from the demo inventory, second-price CPMs.</p>
+    </div>
+  </header>
+
+  <div id="error" role="alert" hidden></div>
+
+  <div class="layout">
+    <aside id="creator" class="off" aria-labelledby="creator-title">
+      <h2 id="creator-title">Creator settings</h2>
+      <label class="switch">
+        <input id="enabled" type="checkbox">
+        <span class="track" aria-hidden="true"></span>
+        <span><strong>Allow product placement</strong>
+          <small>Brands can appear on the places below, always labelled as AI product placement. Off until you
+            turn it on.</small></span>
+      </label>
+
+      <div class="controls-when-on">
+        <h3>Places you approve</h3>
+        <div id="places"></div>
+        <h3>Brands you allow</h3>
+        <div id="brands" class="brands"></div>
+      </div>
+      <details id="declined-box">
+        <summary id="declined-title">Places we didn't use</summary>
+        <ul id="declined"></ul>
+      </details>
+      <small id="saved" class="muted" role="status"></small>
+    </aside>
+
+    <section aria-label="Two viewers watching">
+      <div class="phones">
+        <div class="viewer" data-side="a">
+          <select aria-label="Left viewer"></select>
+          <div class="phone"><iframe title="Left viewer's video"></iframe>
+            <div class="who"></div><div class="off-note" hidden></div></div>
+          <div class="lots" aria-live="polite"></div>
+        </div>
+        <div class="viewer" data-side="b">
+          <select aria-label="Right viewer"></select>
+          <div class="phone"><iframe title="Right viewer's video"></iframe>
+            <div class="who"></div><div class="off-note" hidden></div></div>
+          <div class="lots" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+(() => {
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const clip = /^[\w-]+$/.test(params.get("clip") || "") ? params.get("clip") : "upload_m43248";
+  const title = s => s ? s.charAt(0).toUpperCase() + s.slice(1).replaceAll("_", " ") : "";
+  const make = (tag, props, ...kids) => {
+    const el = Object.assign(document.createElement(tag), props || {});
+    el.append(...kids);
+    return el;
+  };
+  const showError = e => { $("error").textContent = String(e && e.message || e); $("error").hidden = false; };
+
+  let settings = null, playing = false;
+  const sides = [...document.querySelectorAll(".viewer")].map(el => ({
+    el, select: el.querySelector("select"), frame: el.querySelector("iframe"), who: el.querySelector(".who"),
+    offNote: el.querySelector(".off-note"), lots: el.querySelector(".lots"), api: null, last: null,
+  }));
+  const surfaceOf = id => (settings && settings.places.find(p => p.id === id) || {}).surface || id;
+
+  // --- the two phones ---------------------------------------------------------------------------------------------
+
+  function showLots(side) {
+    const r = side.last, api = side.api;
+    if (!api) return;
+    const p = api.profiles()[api.viewer()] || {};
+    side.who.replaceChildren(document.createTextNode(p.label || api.viewer()),
+      make("small", {textContent: (p.preferences || []).join(" · ")}));
+    if (!r) { side.lots.textContent = "Bidding…"; return; }
+    side.offNote.hidden = r.creator_enabled !== false;
+    side.offNote.textContent = "The creator hasn't turned on product placement, so this viewer sees the original.";
+    const rows = Object.entries(r.placements).map(([id, lot]) => {
+      const next = lot.bidders[1];
+      return make("div", null,
+        make("span", {textContent: title(surfaceOf(id))}),
+        make("strong", {textContent: lot.winner ? title(lot.winner) : "No ad"}),
+        make("span", {textContent: lot.winner ? "Won at $" + lot.price_cpm.toFixed(2) + " CPM" +
+          (next ? ", next " + title(next.brand) : ", only bidder") : "No approved brand bid"}));
+    });
+    side.lots.replaceChildren(...rows, make("small", {textContent: r.creator_enabled === false
+      ? "No auction: placement is off." : "Auction decided in " + r.ms.toFixed(2) + " ms."}));
+  }
+
+  function load(side, viewer) {
+    return new Promise(resolve => {
+      side.api = null; side.last = null;
+      side.frame.onload = () => {
+        const w = side.frame.contentWindow;
+        const wait = () => {
+          const api = w.embedApi;
+          if (!api || !api.track()) { setTimeout(wait, 100); return; }
+          side.api = api;
+          api.onAuction = (id, body) => { side.last = body; showLots(side); };
+          side.last = api.auction();
+          if (!side.select.options.length) {
+            for (const [id, p] of Object.entries(api.profiles()))
+              side.select.append(make("option", {value: id, textContent: p.label || id}));
+          }
+          side.select.value = api.viewer();
+          showLots(side);
+          resolve();
+        };
+        wait();
+      };
+      side.frame.src = "/player?embed=1&clip=" + encodeURIComponent(clip) + "&viewer=" + encodeURIComponent(viewer);
+    });
+  }
+
+  const videos = () => sides.map(s => s.api && s.api.video()).filter(Boolean);
+
+  async function playBoth(fromStart) {
+    const vs = videos();
+    if (vs.length < 2) return;
+    vs.forEach(v => v.pause());
+    const t = fromStart ? 0 : vs[0].currentTime;
+    await Promise.all(vs.map(v => new Promise(res => {
+      if (Math.abs(v.currentTime - t) < 1e-3) return res();
+      v.addEventListener("seeked", res, {once: true});
+      v.currentTime = t;
+    })));
+    await Promise.all(vs.map(v => v.play()));
+    playing = true; $("play").textContent = "Pause";
+  }
+  function pauseBoth() {
+    videos().forEach(v => v.pause());
+    playing = false; $("play").textContent = "Play";
+  }
+  // keep the right phone on the left one's frame (both loop)
+  setInterval(() => {
+    const [a, b] = videos();
+    if (!playing || !a || !b || b.seeking) return;
+    const d = a.duration || 1, drift = ((b.currentTime - a.currentTime) % d + 1.5 * d) % d - d / 2;
+    if (Math.abs(drift) > 0.06) b.currentTime = a.currentTime;
+  }, 500);
+
+  for (const side of sides) side.select.onchange = () => { side.api.setViewer(side.select.value); };
+  $("play").onclick = () => playing ? pauseBoth() : playBoth(false).catch(showError);
+  $("restart").onclick = () => playBoth(true).catch(showError);
+  $("rebid").onclick = () => sides.forEach(s => s.api && s.api.rebid());
+  for (const button of document.querySelectorAll("[data-mode]")) button.onclick = () => {
+    const ads = button.dataset.mode === "ads";
+    for (const b of document.querySelectorAll("[data-mode]")) {
+      b.classList.toggle("selected", (b.dataset.mode === "ads") === ads);
+      b.setAttribute("aria-pressed", String((b.dataset.mode === "ads") === ads));
+    }
+    sides.forEach(s => s.api && s.api.setAds(ads));
+  };
+
+  // --- the creator's settings -------------------------------------------------------------------------------------
+
+  function body() {
+    return {
+      enabled: $("enabled").checked,
+      places: Object.fromEntries([...$("places").querySelectorAll("input")].map(i => [i.value, i.checked])),
+      brands: Object.fromEntries([...$("brands").querySelectorAll("input")].map(i => [i.value, i.checked])),
+    };
+  }
+
+  async function save() {
+    $("creator").classList.toggle("off", !$("enabled").checked);
+    $("saved").textContent = "Saving…";
+    try {
+      const r = await fetch("/api/creator/" + encodeURIComponent(clip), {method: "PUT",
+        headers: {"content-type": "application/json"}, body: JSON.stringify(body())});
+      const out = await r.json();
+      if (!r.ok) throw new Error(out.detail || r.status);
+      $("saved").textContent = out.enabled ? "Saved. Each viewer's next auction uses these settings."
+        : "Saved. Placement is off: viewers see your original video.";
+      sides.forEach(s => s.api && s.api.rebid());
+    } catch (error) {
+      $("saved").textContent = "Couldn't save: " + (error.message || error);
+    }
+  }
+
+  function renderSettings(s) {
+    settings = s;
+    $("enabled").checked = s.enabled;
+    $("creator").classList.toggle("off", !s.enabled);
+    $("places").replaceChildren(...s.places.map(p => make("div", {className: "place"},
+      make("label", null,
+        make("input", {type: "checkbox", value: p.id, checked: p.approved, onchange: save}),
+        p.thumb ? make("img", {src: p.thumb, alt: "", loading: "lazy"}) : "",
+        make("span", null, title(p.surface) + (p.where ? ", " + p.where : ""),
+          make("small", {textContent: p.on_screen_s != null ? "On screen " + p.on_screen_s.toFixed(1) + " s" : ""}))))));
+    $("brands").replaceChildren(...s.brands.map(b => make("label", null,
+      make("input", {type: "checkbox", value: b.id, checked: b.allowed, onchange: save}),
+      title(b.id), b.category ? make("small", {textContent: b.category}) : "")));
+    $("declined-title").textContent = "Places we didn't use (" + s.declined.length + ")";
+    $("declined-box").hidden = !s.declined.length && !s.not_supported.length;
+    $("declined").replaceChildren(...s.declined.map(d => make("li", null,
+      make("strong", {textContent: title(d.surface) + ": "}), make("span", {textContent: d.reason}))),
+      ...(s.not_supported.length ? [make("li", {className: "muted", textContent: "Also in the scene, kinds we can't " +
+        "place an ad on yet: " + s.not_supported.join(", ") + "."})] : []));
+  }
+
+  $("enabled").onchange = save;
+
+  (async () => {
+    const r = await fetch("/api/creator/" + encodeURIComponent(clip), {cache: "no-store"});
+    const s = await r.json();
+    if (!r.ok) throw new Error(s.detail || r.status);
+    renderSettings(s);
+    await load(sides[0], params.get("a") || "viewer-a");
+    await load(sides[1], params.get("b") || "viewer-b");
+    for (const id of ["play", "restart", "rebid"]) $(id).disabled = false;
+  })().catch(showError);
+})();
+</script>
+</body>
+</html>

@@ -23,7 +23,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Kestrel matches viewer running/fitness on poster and Brewlark fits cafe context on glass."
+  "rationale": "Kestrel matches viewer running fitness and Brewlark fits cafe context on eligible surfaces."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -36,7 +36,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Paperwhale matches viewer reading interests on poster and Brewlark matches cafe context on glass."
+  "rationale": "paperwhale matches viewer reading interests and brewlark matches cafe context."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -50,7 +50,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Nimbus matches viewer travel interests on poster while Brewlark fits cafe context on glass."
+  "rationale": "Nimbus matches viewer travel interests on poster and Brewlark fits cafe context on glass."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -64,7 +64,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fernleaf matches all viewer interests and brewlark fits cafe context on eligible surfaces."
+  "rationale": "Picked best viewer-interest matches with eligible surfaces."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -75,9 +75,9 @@
   ],
   "assignment": {
    "c01": "voltway",
-   "c03": "brewlark"
+   "c03": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Voltway matches viewer interests on poster and Brewlark fits cafe context on glass."
+  "rationale": "voltway matches viewer interests and slicedash matches tech plus cafe context on eligible surfaces."
  }
 }

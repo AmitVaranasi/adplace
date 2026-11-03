@@ -1,0 +1,30 @@
+{
+ "run_id": "r_eval_m44003",
+ "clip_stem": "upload_m44003",
+ "clip": "assets/clips/uploads/upload_m44003.mp4",
+ "source_name": "m44003.mp4",
+ "duration_s": 8.51,
+ "status": "done",
+ "elapsed_s": 14,
+ "note": "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, screens, and plain glasses, cups and mugs that stay still, and found none.",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Close-up of pizza being served in restaurant with no children, medical, accident, violence or grief content.; Close-up shots of a pizza being served with no children, medical, accident, violence or grief content.",
+  "context_tags": [
+   "food",
+   "indoor",
+   "pizza",
+   "restaurant",
+   "serving"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

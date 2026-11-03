@@ -1,0 +1,78 @@
+{
+ "run_id": "r_eval_m41222",
+ "clip_stem": "upload_m41222",
+ "clip": "assets/clips/uploads/upload_m41222.mp4",
+ "source_name": "m41222.mp4",
+ "duration_s": 11.08,
+ "status": "done",
+ "elapsed_s": 212,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "coffee cup"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Two adults having a friendly conversation in a cafe, no children, medical, accident, violence or grief visible.; Two adult women having a friendly conversation in a cafe; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "conversation",
+   "friends",
+   "indoor",
+   "social"
+  ]
+ },
+ "summary": {
+  "candidates": 3,
+  "placed": 0,
+  "declined": 3
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41222/thumbs/c01.jpg",
+   "on_screen_s": 11.08,
+   "reasons": [
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
+    "moves: travels 2.6 cup radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We couldn't track it through the shot."
+   ],
+   "details": [
+    "could not track: Muse Spark gave no usable answer"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41222/thumbs/c03.jpg",
+   "on_screen_s": 6.62,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Green box encloses a small dark blurry background object that looks like part of coffee equipment/grinder, not a clearly identifiable standalone drinking glass or ceramic/paper coffee cup/mug. Not a c"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

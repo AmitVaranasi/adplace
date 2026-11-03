@@ -1,0 +1,30 @@
+{
+ "run_id": "r_eval_m24406",
+ "clip_stem": "upload_m24406",
+ "clip": "assets/clips/uploads/upload_m24406.mp4",
+ "source_name": "m24406.mp4",
+ "duration_s": 21.2,
+ "status": "done",
+ "elapsed_s": 20,
+ "note": "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, screens, and plain glasses, cups and mugs that stay still, and found none.",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Two adults socializing happily in a cafe interior; no children, medical, accident, violence, or grief visible.; Adults in cozy cafe interaction smiling with waiter, no children, medical, accident, violence or grief visible.",
+  "context_tags": [
+   "cafe",
+   "couple",
+   "indoor",
+   "night",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

@@ -1,0 +1,54 @@
+{
+ "run_id": "r_eval_m24278",
+ "clip_stem": "upload_m24278",
+ "clip": "assets/clips/uploads/upload_m24278.mp4",
+ "source_name": "m24278.mp4",
+ "duration_s": 14.92,
+ "status": "done",
+ "elapsed_s": 145,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "coffee cup"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult man calmly dining in a cafe with sandwich and coffee, no children, violence, medical, accident or distress visible.; Adult man in a cafe using phone and being served sandwich and coffee; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "dining",
+   "food",
+   "indoor",
+   "phone"
+  ]
+ },
+ "summary": {
+  "candidates": 1,
+  "placed": 0,
+  "declined": 1
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m24278/thumbs/c01.jpg",
+   "on_screen_s": 10.88,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "An ad would vanish while the surface is still in view.",
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "track residual: logo well inside the cup in 78% of frames, needs 90%",
+    "visible but not covered for 0.3 s",
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
+    "moves: travels 4.4 cup radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

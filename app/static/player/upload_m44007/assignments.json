@@ -1,0 +1,77 @@
+{
+ "viewer-a": {
+  "label": "Morning commuter",
+  "preferences": [
+   "coffee",
+   "morning"
+  ],
+  "assignment": {
+   "c07": "brewlark"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "brewlark matches coffee morning interests on eligible glass surface."
+ },
+ "viewer-b": {
+  "label": "Weekend runner",
+  "preferences": [
+   "running",
+   "fitness"
+  ],
+  "assignment": {
+   "c07": "kestrel"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Kestrel matches viewer running and fitness interests on eligible glass surface."
+ },
+ "viewer-c": {
+  "label": "Book lover",
+  "preferences": [
+   "reading",
+   "learning"
+  ],
+  "assignment": {
+   "c07": "paperwhale"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Paperwhale matches viewer interests in reading and learning and is eligible for glass."
+ },
+ "viewer-d": {
+  "label": "Weekend traveller",
+  "preferences": [
+   "travel",
+   "holidays",
+   "deals"
+  ],
+  "assignment": {
+   "c07": "fizzwell"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "Fizzwell is eligible for glass and matches dining food context."
+ },
+ "viewer-e": {
+  "label": "Home cook",
+  "preferences": [
+   "cooking",
+   "food",
+   "health"
+  ],
+  "assignment": {
+   "c07": "fernleaf"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "fernleaf matches all viewer interests and fits the glass surface."
+ },
+ "viewer-f": {
+  "label": "Tech commuter",
+  "preferences": [
+   "tech",
+   "commuting",
+   "cycling"
+  ],
+  "assignment": {
+   "c07": "slicedash"
+  },
+  "chooser": "muse (muse-spark-1.3)",
+  "rationale": "slicedash matches viewer tech interest and dining context on glass."
+ }
+}

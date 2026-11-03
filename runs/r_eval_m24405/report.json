@@ -1,0 +1,31 @@
+{
+ "run_id": "r_eval_m24405",
+ "clip_stem": "upload_m24405",
+ "clip": "assets/clips/uploads/upload_m24405.mp4",
+ "source_name": "m24405.mp4",
+ "duration_s": 27.16,
+ "status": "done",
+ "elapsed_s": 25,
+ "note": "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, screens, and plain glasses, cups and mugs that stay still, and found none.",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Calm adult restaurant dining scene with no children, medical, accident, violence, or grief visible.; calm adult cafe dining scene with no children, medical, accident, violence or grief",
+  "context_tags": [
+   "cafe",
+   "dining",
+   "indoor",
+   "people",
+   "phone",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

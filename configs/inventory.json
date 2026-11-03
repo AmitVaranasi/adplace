@@ -59,7 +59,8 @@
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print"
+    "print",
+    "glass"
    ],
    "contextual_exclusions": [
     "funeral",
@@ -91,7 +92,8 @@
     "cup",
     "table_card",
     "sidewalk_sign",
-    "print"
+    "print",
+    "glass"
    ],
    "contextual_exclusions": [
     "safety_signage"
@@ -156,7 +158,8 @@
     "glass",
     "table_card",
     "sidewalk_sign",
-    "print"
+    "print",
+    "cup"
    ],
    "contextual_exclusions": [
     "children",
@@ -226,7 +229,8 @@
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print"
+    "print",
+    "cup"
    ],
    "contextual_exclusions": [
     "children",
@@ -261,7 +265,9 @@
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print"
+    "print",
+    "cup",
+    "glass"
    ],
    "contextual_exclusions": [
     "hospital",

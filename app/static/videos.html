@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My videos</title>
+<style>
+  :root {
+    color-scheme: dark;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    background: #101216;
+    color: #eef0f4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { max-width: 1200px; margin: auto; padding: 24px; }
+  nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 22px; }
+  nav.site a { color: #a2a9b8; text-decoration: none; }
+  nav.site a:hover, nav.site a[aria-current] { color: #eef0f4; }
+  nav.site .brand { color: #eef0f4; font-weight: 700; margin-right: 6px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+           margin-bottom: 18px; }
+  h1 { font-size: 21px; margin: 0 0 5px; font-weight: 650; }
+  h2 { font-size: 14px; margin: 26px 0 12px; }
+  p { line-height: 1.55; }
+  .muted, small { color: #a2a9b8; }
+  header p { margin: 0; font-size: 13px; max-width: 70ch; }
+  [hidden] { display: none !important; }
+  a.button, button {
+    display: inline-block; border: 1px solid #353a46; background: #20242d; color: inherit; border-radius: 8px;
+    padding: 8px 12px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer;
+  }
+  a.button:hover, button:hover { background: #2a303b; }
+  .primary, a.button.primary { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
+  .primary:hover, a.button.primary:hover { background: #2a4a42; }
+  .card .actions .remove { margin-left: auto; background: none; border-color: transparent; color: #a2a9b8;
+                           font-size: 12px; padding: 6px 4px; }
+  .card .actions .remove:hover { color: #f0b4b4; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #6bd6b2; outline-offset: 3px; }
+
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat { border: 1px solid #2c3039; border-radius: 10px; background: #171a20; padding: 10px 14px; min-width: 120px; }
+  .stat strong { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: #a2a9b8; }
+
+  .filters { display: flex; gap: 6px; margin: 22px 0 14px; flex-wrap: wrap; }
+  .filters button[aria-pressed=true] { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .card { border: 1px solid #2c3039; border-radius: 12px; background: #171a20; overflow: hidden;
+          display: flex; flex-direction: column; }
+  .card .pic { aspect-ratio: 16 / 9; background: #08090c; position: relative; }
+  .card .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .badge { position: absolute; top: 8px; left: 8px; font-size: 11px; font-weight: 600; padding: 3px 8px;
+           border-radius: 999px; background: #000b; }
+  .badge.live { background: #1f5f4c; color: #d4fff0; }
+  .card .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .card h3 { font-size: 14px; margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .card .facts { font-size: 12px; margin: 0; }
+  .card .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+  .card .actions a { font-size: 12px; padding: 6px 10px; }
+
+  .switch { display: flex; gap: 10px; align-items: center; cursor: pointer; font-size: 13px; }
+  .switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .track { flex: none; width: 38px; height: 22px; border-radius: 11px; background: #353a46; position: relative;
+           transition: background .15s; }
+  .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+                  background: #eef0f4; transition: transform .15s; }
+  .switch input:checked + .track { background: #2f9c7b; }
+  .switch input:checked + .track::after { transform: translateX(16px); }
+  .switch input:focus-visible + .track { outline: 2px solid #6bd6b2; outline-offset: 3px; }
+
+  .processing { border: 1px solid #2c3039; border-radius: 12px; background: #171a20; padding: 14px; display: grid;
+                gap: 6px; }
+  .bar { height: 6px; border-radius: 3px; background: #2a2f39; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: #6bd6b2; }
+  .processing.failed { border-color: #9c5555; }
+  .processing > span { font-size: 13px; color: #c0c6d2; }
+  .empty { border: 1px dashed #3a4150; border-radius: 12px; padding: 30px; text-align: center; font-size: 14px; }
+  #error { border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px; }
+  @media (max-width: 600px) { main { padding: 16px; } }
+</style>
+</head>
+<body>
+<main>
+  <nav class="site" aria-label="AdPlace">
+    <a class="brand" href="/">AdPlace</a>
+    <a href="/" aria-current="page">My videos</a>
+    <a href="/upload">Upload</a>
+    <a href="/verify">Check a file</a>
+  </nav>
+
+  <header>
+    <div>
+      <h1>My videos</h1>
+      <p class="muted">Everything you've uploaded. We find the places in each video that can carry an ad; you decide
+        whether brands appear and which ones.</p>
+    </div>
+    <a class="button primary" href="/upload">Upload a video</a>
+  </header>
+
+  <div id="error" role="alert" hidden></div>
+
+  <div class="stats" aria-label="Summary">
+    <span class="stat"><strong id="s-videos">—</strong><span>videos</span></span>
+    <span class="stat"><strong id="s-ready">—</strong><span>with places for ads</span></span>
+    <span class="stat"><strong id="s-live">—</strong><span>placement on</span></span>
+    <span class="stat"><strong id="s-places">—</strong><span>ad places in all</span></span>
+  </div>
+
+  <section id="processing-box" aria-labelledby="processing-title" hidden>
+    <h2 id="processing-title">Processing</h2>
+    <div id="processing" class="grid"></div>
+  </section>
+
+  <div class="filters" role="group" aria-label="Show">
+    <button type="button" data-filter="ads" aria-pressed="true">With places for ads</button>
+    <button type="button" data-filter="all" aria-pressed="false">All</button>
+    <button type="button" data-filter="none" aria-pressed="false">Nothing to place</button>
+  </div>
+  <div id="videos" class="grid" aria-live="polite"></div>
+</main>
+
+<script>
+"use strict";
+(() => {
+  const $ = id => document.getElementById(id);
+  const make = (tag, props, ...kids) => {
+    const el = Object.assign(document.createElement(tag), props || {});
+    el.append(...kids.filter(k => k != null));
+    return el;
+  };
+  const title = s => s ? s.charAt(0).toUpperCase() + s.slice(1).replaceAll("_", " ") : "";
+  const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+  let data = null, filter = "ads", timer = 0;
+
+  function card(v) {
+    const live = v.has_player && v.enabled;
+    const pic = make("div", {className: "pic"},
+      v.poster ? make("img", {src: v.poster, alt: "", loading: "lazy", decoding: "async"}) : null,
+      make("span", {className: "badge" + (live ? " live" : ""), textContent:
+        !v.has_player ? "Nothing to place" : live ? "Placement on" : "Placement off"}));
+    const facts = [
+      v.duration_s ? Number(v.duration_s).toFixed(1) + " s" : null,
+      v.has_player ? plural(v.placed, "place for ads", "places for ads") + " (" + v.places.map(title).join(", ") + ")"
+        : plural(v.found, "place looked at", "places looked at"),
+    ].filter(Boolean).join(" · ");
+    const body = make("div", {className: "body"},
+      make("h3", {textContent: v.name}),
+      make("p", {className: "facts muted", textContent: facts}));
+    if (v.has_player) {
+      const input = make("input", {type: "checkbox", checked: v.enabled});
+      const label = make("span", {textContent: v.enabled ? "Brands can appear" : "Brands can't appear"});
+      input.onchange = async () => {
+        input.disabled = true;
+        try {
+          const r = await fetch("/api/creator/" + encodeURIComponent(v.clip), {method: "PUT",
+            headers: {"content-type": "application/json"}, body: JSON.stringify({enabled: input.checked})});
+          const out = await r.json();
+          if (!r.ok) throw new Error(out.detail || r.status);
+          v.enabled = out.enabled;
+        } catch (error) {
+          input.checked = v.enabled;
+          showError("Couldn't change placement for " + v.name + ": " + (error.message || error));
+        }
+        input.disabled = false;
+        render();
+      };
+      body.append(make("label", {className: "switch"}, input, make("span", {className: "track"}), label));
+    } else if (v.note) {
+      body.append(make("small", {textContent: v.note}));
+    }
+    const actions = make("div", {className: "actions"});
+    if (v.has_player) {
+      actions.append(make("a", {className: "button primary", href: "/reels?clip=" + encodeURIComponent(v.clip),
+        textContent: "Settings & preview"}));
+      actions.append(make("a", {className: "button", href: "/player?clip=" + encodeURIComponent(v.clip),
+        textContent: "Player"}));
+    }
+    actions.append(make("a", {className: "button", href: "/upload?run=" + encodeURIComponent(v.run_id),
+      textContent: "Report"}));
+    const remove = make("button", {type: "button", className: "remove", textContent: "Remove"});
+    remove.onclick = async () => {
+      if (!confirm("Remove " + v.name + " from your videos? Brands stop appearing in it.")) return;
+      remove.disabled = true;
+      try {
+        const r = await fetch("/api/videos/" + encodeURIComponent(v.clip), {method: "DELETE"});
+        const out = await r.json();
+        if (!r.ok) throw new Error(out.detail || r.status);
+        data.videos = data.videos.filter(x => x !== v);
+        render();
+      } catch (error) {
+        remove.disabled = false;
+        showError("Couldn't remove " + v.name + ": " + (error.message || error));
+      }
+    };
+    actions.append(remove);
+    body.append(actions);
+    return make("article", {className: "card"}, pic, body);
+  }
+
+  function processingCard(p) {
+    const failed = p.status === "failed";
+    return make("div", {className: "processing" + (failed ? " failed" : "")},
+      make("strong", {textContent: p.name}),
+      make("span", {textContent: failed ? "Upload failed" : "Processing: " + title(p.stage)}),
+      make("small", {textContent: p.message}),
+      failed ? null : make("div", {className: "bar"}, make("span", {style: "width:" + Math.round(p.pct) + "%"})),
+      make("div", {className: "actions"}, make("a", {className: "button", href: "/upload?run=" +
+        encodeURIComponent(p.run_id), textContent: failed ? "See what happened" : "Watch progress"})));
+  }
+
+  function render() {
+    const vs = data.videos;
+    $("s-videos").textContent = vs.length;
+    $("s-ready").textContent = vs.filter(v => v.has_player).length;
+    $("s-live").textContent = vs.filter(v => v.has_player && v.enabled).length;
+    $("s-places").textContent = vs.reduce((n, v) => n + v.placed, 0);
+    $("processing-box").hidden = !data.processing.length;
+    $("processing").replaceChildren(...data.processing.map(processingCard));
+    const shown = vs.filter(v => filter === "all" || (filter === "ads") === v.has_player);
+    $("videos").replaceChildren(...(shown.length ? shown.map(card) : [make("div", {className: "empty"},
+      make("p", {textContent: vs.length ? "No videos here." : "No videos yet."}),
+      make("a", {className: "button primary", href: "/upload", textContent: "Upload a video"}))]));
+  }
+
+  function showError(message) { $("error").textContent = message; $("error").hidden = false; }
+
+  async function refresh() {
+    clearTimeout(timer);
+    try {
+      const r = await fetch("/api/videos", {cache: "no-store"});
+      if (!r.ok) throw new Error(r.status);
+      data = await r.json();
+      $("error").hidden = true;
+      render();
+    } catch (error) {
+      showError("Couldn't load your videos: " + (error.message || error));
+    }
+    if (!data || data.processing.some(p => p.status === "processing")) timer = setTimeout(refresh, 4000);
+  }
+
+  for (const b of document.querySelectorAll("[data-filter]")) b.onclick = () => {
+    filter = b.dataset.filter;
+    for (const x of document.querySelectorAll("[data-filter]")) x.setAttribute("aria-pressed", String(x === b));
+    if (data) render();
+  };
+  refresh();
+})();
+</script>
+</body>
+</html>

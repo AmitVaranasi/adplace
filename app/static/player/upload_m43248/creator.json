@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "places": {
+    "c01": true,
+    "c03": true
+  },
+  "brands": {
+    "brewlark": true,
+    "kestrel": true,
+    "paperwhale": true,
+    "nimbus": true,
+    "fernleaf": true,
+    "voltway": true,
+    "fizzwell": true,
+    "slicedash": true
+  }
+}
