@@ -13,8 +13,8 @@ def test_off_until_the_creator_turns_it_on(tmp_path):
     assert creator.load(tmp_path)["enabled"] is True
 
 
-def test_no_file_is_opted_in(tmp_path):
-    assert creator.allowed(PS, creator.load(tmp_path)) == PS
+def test_no_file_is_off(tmp_path):
+    assert creator.load(tmp_path)["enabled"] is False and creator.allowed(PS, creator.load(tmp_path)) == []
 
 
 def test_places_and_brands_the_creator_turned_down(tmp_path):

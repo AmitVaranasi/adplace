@@ -210,8 +210,11 @@ class GlassDecal(ShirtPrint):
         self.frames = Frames(ROOT / clip)
         self.store = self.mask_store(object_stores(clip, spec.get("prompt", "cup"), self.frames)[str(spec["object"])])
         # the measuring below takes about a minute and an upload needs it three times (the gates, the player export,
-        # the final check render): keep it per object, keyed by this file's code so any change re-measures
-        cache = scene_dir(clip) / f"vessel_{type(self).__name__}_{spec.get('prompt', 'cup')}_{spec['object']}_{CODE}.pkl"
+        # the final check render): keep it per object, keyed by this file's code and the logos the spot must fit, so
+        # either changing re-measures
+        logos = hashlib.sha1(" ".join(logo_brands()).encode()).hexdigest()[:6]
+        cache = (scene_dir(clip) /
+                 f"vessel_{type(self).__name__}_{spec.get('prompt', 'cup')}_{spec['object']}_{CODE}_{logos}.pkl")
         if cache.exists():
             self.__dict__.update(pickle.loads(cache.read_bytes()))
             return

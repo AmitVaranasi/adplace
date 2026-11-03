@@ -9,7 +9,7 @@
    "c07": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Matches viewer coffee and morning interests on eligible glass."
+  "rationale": "brewlark matches coffee morning interests on eligible glass surface."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -18,10 +18,10 @@
    "fitness"
   ],
   "assignment": {
-   "c07": "fernleaf"
+   "c07": "kestrel"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fernleaf fits glass and its health tag aligns with fitness interest."
+  "rationale": "Kestrel matches viewer running and fitness interests on eligible glass surface."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -30,10 +30,10 @@
    "learning"
   ],
   "assignment": {
-   "c07": "fizzwell"
+   "c07": "paperwhale"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fizzwell matches dining and food context on eligible glass surface."
+  "rationale": "Paperwhale matches viewer interests in reading and learning and is eligible for glass."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -46,7 +46,7 @@
    "c07": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fizzwell matches dining and food context on eligible glass surface."
+  "rationale": "Fizzwell is eligible for glass and matches dining food context."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -59,7 +59,7 @@
    "c07": "fernleaf"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Fernleaf matches all viewer interests and fits glass surface."
+  "rationale": "fernleaf matches all viewer interests and fits the glass surface."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -69,9 +69,9 @@
    "cycling"
   ],
   "assignment": {
-   "c07": "fizzwell"
+   "c07": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "fizzwell matches dining and food context on eligible glass surface."
+  "rationale": "slicedash matches viewer tech interest and dining context on glass."
  }
 }

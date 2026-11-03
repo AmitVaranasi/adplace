@@ -10,7 +10,7 @@ Screen: `/reels?clip=upload_m43248`, placement already on, both phones playing i
 (Brewlark on the wall poster), right: Weekend runner (Kestrel). Raw footage: `outputs/demo/reels.mp4`.
 
 Say: "This is a prototype of an opt-in ad format for short videos. One video, two viewers, two different sponsors in
-the scene itself, labelled as AI product placement. Nothing was re-rendered for either of them."
+the scene itself, labelled as AI product placement. Switching brands re-rendered nothing for either of them."
 
 ## 0:20–0:50 The creator opts in
 
@@ -56,7 +56,7 @@ draws the winner in live. That's choosing the brand, not processing the video. T
 Say, with the figures below, the two test sets kept separate:
 
 - "On 23 videos it had never seen, it placed 3 ads out of 56 candidates. With open-ended discovery on four clips, it
-  found 43 places and placed 6. It turns down what it can't place well, and says why."
+  measured 19 places and placed 6. It turns down what it can't place well, and says why."
 - "Processing takes a few minutes per 10-second clip, once, offline. Only still objects carry ads so far, which limits
   how much inventory a video has today."
 - "Next: objects people pick up, and shipping this as an opt-in setting in a short-video feed."
@@ -65,7 +65,7 @@ End on the two phones playing.
 
 ## Test-set figures
 
-Open-ended discovery (Nov 2, 4 clips, `runs/r_eval_*`): 43 places found, 6 placed (m43999: a ramekin and a bread
+Open-ended discovery (Nov 2, 4 clips, `runs/r_eval_*`): Muse named 43 places; 24 were kinds we have no way to place on yet (plates, tables, shirts, walls) and were not measured; of the 19 measured, 6 were placed (m43999: a ramekin and a bread
 bowl; m44025 and m44007: orange-juice glasses; m43248: the wall poster and the matcha glass). Reported separately from
 the 23-video set below, which ran on the code before discovery.
 
@@ -75,6 +75,3 @@ part a bowl doesn't hide; m44007: an orange juice). Declines, all checked by eye
 fast blurred bar sweep, a night terrace's signs (one a parking sign), branded glasses, sauce ramekins, glasses and
 teacups picked up or carried in. Say: "On 23 videos it had never seen, it placed three ads and declined 53
 candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
-
-Optional extra shot: `/player?clip=upload_pair2` (two mugs with drawings on them; each logo goes on a blank patch,
-dark ink on the light mug, white on the black one).

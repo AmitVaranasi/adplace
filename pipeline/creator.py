@@ -5,8 +5,8 @@ Stored next to the player export as creator.json:
   {"enabled": false, "places": {"c01": true, "c03": false}, "brands": {"kestrel": false}}
 
 A place or brand the file doesn't name is approved (so a re-export that finds a new place doesn't silently drop it
-from an opted-in video), but nothing runs until `enabled` is true. Uploads start with enabled false (ingest writes
-the file); the hand-made demo clips have no file and behave as opted in.
+from an opted-in video), but nothing runs until `enabled` is true. No file means off: uploads start that way (ingest
+writes the file), and a video only carries ads once a creator.json says so.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ NAME = "creator.json"
 
 def load(export_dir: Path) -> dict:
     p = Path(export_dir) / NAME
-    s = json.loads(p.read_text()) if p.exists() else {"enabled": True}
+    s = json.loads(p.read_text()) if p.exists() else {"enabled": False}
     return {"enabled": bool(s.get("enabled")), "places": dict(s.get("places", {})), "brands": dict(s.get("brands", {}))}
 
 

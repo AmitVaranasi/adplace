@@ -6,6 +6,7 @@ cached. Rendering a (clip, brand) pair runs for real the first time and is reuse
 """
 import functools
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -179,18 +180,30 @@ def creator_get(stem: str):
     found = {p["id"]: p for p in report.get("placements", [])}
     campaigns = {c["brand_id"]: c for c in load("inventory.json")["campaigns"]}
     places, brands = [], {}
+    centre = {}   # mean x of each place in the frame: "left", "middle" or "right" tells two cups apart
+    for sl in track.get("slots", []):
+        xs = [pt[0] for q in sl["quads"] if q for pt in q]
+        centre[sl["id"]] = sum(xs) / len(xs) if xs else None
+    for o in track.get("objects", []):
+        xs = [b[0] + b[2] / 2 for b in o["boxes"] if b]
+        centre[o["id"]] = sum(xs) / len(xs) if xs else None
+    where = lambda x: None if x is None else ("left" if x < track["width"] / 3 else  # noqa: E731
+                                               "right" if x > 2 * track["width"] / 3 else "middle")
     for p in auction.placements_of(track):
         r = found.get(p["id"], {})
         places.append({"id": p["id"], "surface": p["surface"], "approved": settings["places"].get(p["id"], True),
-                       "on_screen_s": r.get("on_screen_s"), "thumb": r.get("thumb")})
+                       "on_screen_s": r.get("on_screen_s"), "thumb": r.get("thumb"),
+                       "where": where(centre.get(p["id"]))})
         for b in p["brands"]:
             brands.setdefault(b, {"id": b, "category": campaigns.get(b, {}).get("category"),
                                   "allowed": settings["brands"].get(b, True), "places": []})["places"].append(p["id"])
+    unsupported = lambda p: any(str(d).startswith("not yet:") for d in p.get("details", []))  # noqa: E731
     declined = [{"id": p["id"], "surface": p.get("surface"), "thumb": p.get("thumb"),
                  "reason": (p.get("reasons") or ["It did not meet one of the checks."])[0]}
-                for p in report.get("placements", []) if p.get("decision") != "placed"]
+                for p in report.get("placements", []) if p.get("decision") != "placed" and not unsupported(p)]
     return {"clip": stem, "enabled": settings["enabled"], "places": places, "brands": list(brands.values()),
-            "declined": declined, "scene": report.get("scene")}
+            "declined": declined, "not_supported": [p.get("surface") for p in report.get("placements", [])
+                                                     if unsupported(p)], "scene": report.get("scene")}
 
 
 @app.delete("/api/videos/{stem}")
@@ -238,13 +251,9 @@ def viewer_render(req: ViewerRenderRequest):
     the disclosure label and a Video Seal watermark naming the campaigns (the browser cannot embed the watermark).
     Cached per (clip, assignment). Rendered in a child process: in this process (torch + the app's imports) MKL
     segfaults inside the render, which would take the whole demo server down."""
-    d = Path(__file__).parent / "static" / "player" / req.clip
-    if not (d / "assignments.json").exists():
-        raise HTTPException(404, f"no player export for {req.clip}")
-    viewers = json.loads((d / "assignments.json").read_text())
+    d, track, viewers = player_export(req.clip)   # checks the name: it becomes part of the output path
     if req.profile_id not in viewers:
         raise HTTPException(404, f"unknown profile {req.profile_id}")
-    track = json.loads((d / "track.json").read_text())
     clip = track["clip"]
     assignment = viewers[req.profile_id]["assignment"]
     if req.assignment is not None:   # from /api/auction: only brands this export has artwork for
@@ -418,12 +427,35 @@ def render(req: RenderRequest):
 
 @app.post("/api/verify")
 async def verify(file: UploadFile):
+    # candidates: every campaign token (a single-ad render) and every scene manifest this server issued (a viewer's
+    # download names all its placements at once, scripts/render_scene.py manifest_id)
     tokens = [c["campaign_token"] for c in load("inventory.json")["campaigns"]]
-    with tempfile.NamedTemporaryFile(suffix=Path(file.filename or "x.mp4").suffix) as tmp:
-        tmp.write(await file.read())
+    manifests = {}
+    for m in (ROOT / "outputs").glob("**/*.json"):
+        try:
+            r = json.loads(m.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(r, dict) and str(r.get("manifest_id", "")).startswith("scene-"):
+            manifests[r["manifest_id"]] = r.get("manifest")
+    suffix = Path(file.filename or "x.mp4").suffix.lower()
+    if suffix not in (".mp4", ".mov", ".m4v", ".webm"):
+        raise HTTPException(400, "please check an mp4, mov or webm video")
+    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+        size = 0
+        while chunk := await file.read(1 << 20):
+            size += len(chunk)
+            if size > 200 << 20:
+                raise HTTPException(413, "videos up to 200 MB")
+            tmp.write(chunk)
         tmp.flush()
         frames, _ = read_frames(tmp.name)
-    return watermark.verify(frames, tokens)
+    r = watermark.verify(frames, tokens + list(manifests))
+    if r["campaign"] in manifests:   # "clip|c01=brewlark-2026-q4|c03=..." -> which campaign is in which place
+        clip, *placed = (manifests[r["campaign"]] or "").split("|")
+        r.update(manifest_id=r["campaign"], clip=clip, campaigns=dict(x.split("=", 1) for x in placed))
+    r.pop("scores", None)
+    return r
 
 
 # --- uploads (scripts/ingest.py; contract in INGEST.md) ------------------------------------------------------------
@@ -440,7 +472,7 @@ async def ingest(file: UploadFile):
     from datetime import datetime
     if not (file.filename or "").lower().endswith((".mp4", ".mov", ".m4v", ".webm")):
         raise HTTPException(400, "please upload an mp4, mov or webm video")
-    run_id = f"r_{datetime.now():%Y%m%d_%H%M}_{uuid.uuid4().hex[:4]}"
+    run_id = f"r_{datetime.now():%Y%m%d_%H%M}_{uuid.uuid4().hex[:8]}"
     run_dir = ROOT / "runs" / run_id
     run_dir.mkdir(parents=True)
     src = run_dir / ("source" + Path(file.filename).suffix.lower())
@@ -449,6 +481,8 @@ async def ingest(file: UploadFile):
         while chunk := await file.read(1 << 20):
             size += len(chunk)
             if size > 200 << 20:
+                f.close()
+                shutil.rmtree(run_dir, ignore_errors=True)   # no half-uploaded run left behind
                 raise HTTPException(413, "videos up to 200 MB")
             f.write(chunk)
     (run_dir / "name.txt").write_text(Path(file.filename).name)   # for the library while it processes

@@ -127,6 +127,12 @@
   @media (max-width: 1000px) {
     main { padding: 16px; }
     .layout { grid-template-columns: 1fr; }
+    aside { order: 2; }   /* the phones first: on a small screen the preview is what you came for */
+  }
+  @media (max-width: 700px) {
+    body { --phone-w: min(330px, calc(100vw - 32px)) !important; }
+    .controls { justify-content: flex-start; }
+    #note { text-align: left; }
   }
   nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
   nav.site a { color: #a2a9b8; text-decoration: none; }
@@ -146,7 +152,7 @@
     <div>
       <h1>Two viewers, one video</h1>
       <p class="muted">A prototype of an opt-in ad format for short videos. The creator approves the places and
-        brands; each viewer's own auction picks the brand when they press play. Nothing is re-rendered, and every ad
+        brands; each viewer's own auction picks the brand when they press play. Switching brands re-renders nothing, and every ad
         is labelled.</p>
     </div>
     <div>
@@ -351,15 +357,17 @@
       make("label", null,
         make("input", {type: "checkbox", value: p.id, checked: p.approved, onchange: save}),
         p.thumb ? make("img", {src: p.thumb, alt: "", loading: "lazy"}) : "",
-        make("span", null, title(p.surface),
+        make("span", null, title(p.surface) + (p.where ? ", " + p.where : ""),
           make("small", {textContent: p.on_screen_s != null ? "On screen " + p.on_screen_s.toFixed(1) + " s" : ""}))))));
     $("brands").replaceChildren(...s.brands.map(b => make("label", null,
       make("input", {type: "checkbox", value: b.id, checked: b.allowed, onchange: save}),
       title(b.id), b.category ? make("small", {textContent: b.category}) : "")));
     $("declined-title").textContent = "Places we didn't use (" + s.declined.length + ")";
-    $("declined-box").hidden = !s.declined.length;
+    $("declined-box").hidden = !s.declined.length && !s.not_supported.length;
     $("declined").replaceChildren(...s.declined.map(d => make("li", null,
-      make("strong", {textContent: title(d.surface) + ": "}), make("span", {textContent: d.reason}))));
+      make("strong", {textContent: title(d.surface) + ": "}), make("span", {textContent: d.reason}))),
+      ...(s.not_supported.length ? [make("li", {className: "muted", textContent: "Also in the scene, kinds we can't " +
+        "place an ad on yet: " + s.not_supported.join(", ") + "."})] : []));
   }
 
   $("enabled").onchange = save;

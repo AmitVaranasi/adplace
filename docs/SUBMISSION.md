@@ -14,7 +14,7 @@ AdPlace
 ## Tagline (one line)
 
 An opt-in ad format for short videos: creators approve placements in videos they've already filmed, and each viewer
-sees different labelled sponsors in the scene itself, with nothing re-rendered.
+sees different labelled sponsors in the scene itself, with nothing re-rendered to switch brands.
 
 ## What it does
 
@@ -48,16 +48,17 @@ No other models run in the product.
 
 ## How we built it
 
-Python (FastAPI, OpenCV, NumPy) for the upload pipeline and server; WebGL 2 for the live player, which reproduces the
-server's compositing within about 1.5 grey levels on the logo [7 frames of the bar clip] at the video's frame rate
-[23–24 fps on 24 fps clips, M3 Pro, Chrome]. Everything that depends on the video (geometry, light, mattes, the
+Python (FastAPI, OpenCV, NumPy) for the upload pipeline and server; WebGL 2 for the live player, which draws the same
+result as the server's renderer (within about 1.5 grey levels on the logo, a consistency check, not a realism score
+[7 frames of the bar clip]) at the video's frame rate [23–24 fps on 24 fps clips, M3 Pro, Chrome]. Whether a
+placement looks real was judged by eye. Everything that depends on the video (geometry, light, mattes, the
 glass's own shading) is worked out once at upload and is the same for every brand, so playback only has to pick
-names. 499 tests.
+names. About 500 automated tests, passing on a fresh clone.
 
 ## Challenges
 
 - Logos sliding on moving glasses. A logo re-fitted to a glass every frame drifted visibly while someone drank from
-  it. Rigid shape fitting and camera-motion pinning got a still glass to within 0.000 px median motion per frame, but
+  it. Rigid shape fitting and pinning a resting glass to the camera's motion stopped the slide on still glasses, but
   a glass swung to the mouth still slid, so objects that move are declined for now.
 - Knowing what not to place on. Most real footage has nothing suitable, and a bad placement is worse than none. The
   gates decline rather than guess, and say why.
@@ -67,13 +68,15 @@ names. 499 tests.
 ## Honest limits
 
 - Yield is low. On 23 stock videos it had never seen, it placed 3 ads from 56 candidates, and every decline was
-  checked by eye [`runs/testset_all23.txt`]. With open-ended discovery on 4 clips it found 43 places and placed 6
+  checked by eye [`runs/testset_all23.txt`]. With open-ended discovery on 4 clips Muse named 43 places, 19 of them kinds we can measure, and 6 were placed
   [`runs/r_eval_*`]; the two sets ran on different code and aren't comparable.
 - Only still objects carry ads. Objects people pick up are declined.
 - Processing a 10-second upload takes a few minutes, once, offline [5.7 s clip: 8.6 min; 5 s clip with nothing to
   place: 57 s]. Picking brands at playback takes about 0.1 ms.
 - The bids are test bids from a demo inventory of fictional brands. It's a standalone prototype, not connected to a
-  real ad auction.
+  real ad auction, with no accounts: it runs locally.
+- The 3D products and the nine placements on the patio clip were set up by hand; uploads get flat surfaces and
+  vessels only. Uploads use one shot (the longest) and play without sound.
 
 ## What's next
 

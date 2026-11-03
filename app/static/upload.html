@@ -211,21 +211,6 @@
   }
   .reasons li { margin-bottom: 3px; overflow-wrap: anywhere; }
 
-  .viewer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    border-top: 1px solid #303540;
-    padding: 12px 0 0;
-    margin-top: 12px;
-  }
-  .viewer:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
-  .viewer strong { display: block; font-size: 13px; }
-  .viewer small { display: block; font-size: 11px; }
-  .vstatus { display: block; font-size: 11px; margin-top: 6px; line-height: 1.5; max-width: 46ch; }
-  .vstatus a { color: #6bd6b2; }
 
   #error {
     border: 1px solid #9c5555;
@@ -250,8 +235,6 @@
   @media (max-width: 700px) {
     main { padding: 14px; }
     .cards { grid-template-columns: 1fr; }
-    .viewer { align-items: stretch; }
-    .viewer button { width: 100%; }
   }
   nav.site { display: flex; gap: 18px; align-items: center; font-size: 13px; margin-bottom: 18px; flex-wrap: wrap; }
   nav.site a { color: #a2a9b8; text-decoration: none; }
@@ -291,7 +274,7 @@
       <label for="file" class="muted">Or pick one from your computer:</label><br>
       <input id="file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v,.webm"
              aria-describedby="file-hint">
-      <small id="file-hint" class="muted">An mp4 or mov file, up to 200 MB. One scene works best.</small>
+      <small id="file-hint" class="muted">An mp4, mov or webm file, up to 200 MB. For now we use one shot: if the video cuts between shots we keep the longest, and the players play it without sound.</small>
     </div>
 
     <div id="chosen" hidden>
@@ -341,7 +324,7 @@
       <h2 id="report-title">What we found in <span id="report-source">your clip</span></h2>
       <p id="report-meta" class="muted" style="font-size:12px;margin:0 0 14px"></p>
       <div class="stats">
-        <span class="stat"><strong id="stat-candidates">—</strong><span>surfaces found</span></span>
+        <span class="stat"><strong id="stat-candidates">—</strong><span>places measured</span></span>
         <span class="stat"><strong id="stat-placed">—</strong><span>ads placed</span></span>
         <span class="stat"><strong id="stat-declined">—</strong><span>declined</span></span>
       </div>
@@ -355,18 +338,12 @@
       </div>
     </div>
 
-    <div class="panel" id="viewers-panel" aria-labelledby="viewers-title">
-      <h2 id="viewers-title">Keep a copy</h2>
-      <p class="muted" style="font-size:12px;margin:0 0 14px">Each viewer sees different brands. A copy is rendered on
-        the server with the disclosure label and a watermark, so it can take a few minutes.</p>
-      <div id="viewers"></div>
-    </div>
-
     <div class="panel" aria-labelledby="cards-title">
       <h2 id="cards-title">Every surface we looked at</h2>
       <p class="muted" style="font-size:12px;margin:0">Placed first. For the declined ones, the reason is the
         measurement that fell short.</p>
       <div id="cards" class="cards"></div>
+      <p id="unsupported" class="muted" style="font-size:12px;margin:14px 0 0" hidden></p>
     </div>
   </section>
 </main>
@@ -441,10 +418,6 @@
     },
     progress: runId => fetch("/api/runs/" + encodeURIComponent(runId) + "/progress", {cache: "no-store"}).then(readJSON),
     report: runId => fetch("/api/runs/" + encodeURIComponent(runId) + "/report", {cache: "no-store"}).then(readJSON),
-    viewerRender: (clip, profileId) => fetch("/api/viewer_render", {
-      method: "POST", headers: {"content-type": "application/json"},
-      body: JSON.stringify({clip, profile_id: profileId})
-    }).then(readJSON),
   };
 
   // --- ?mock=1: the same shapes, no backend ------------------------------------------------------------------------
@@ -557,11 +530,6 @@
     async report() {
       await sleep(200);
       return {...FIXTURE, run_id: state.runId || FIXTURE.run_id};
-    },
-    async viewerRender(clip, profileId) {
-      await sleep(2800);
-      return {video_url: "#", assignment: {}, verified: true, manifest_id: "demo-7f3a9c", cached: false,
-        seconds: 164, demo: true};
     },
   };
 
@@ -862,9 +830,14 @@
     }
     for (const reason of (qa && qa.reasons) || []) out.push(reason);
     for (const reason of p.reasons || []) out.push(reason);
-    if (!out.length) {
-      out.push(qa && qa.pass ? "Every check passed."
-        : "The measurements hold up. The final checks were not recorded for this run.");
+    if (!out.length && ["glass", "cup", "mug", "bowl"].includes(p.surface)) {
+      // vessels have no automated check on the rendered result: say what was measured, and that a person judges the look
+      out.push("Passed the upload gates: on screen long enough, a steady outline, rarely covered, big enough for a "
+        + "logo a fifth of its height, a blank patch for it, never moved, and Muse judged it a natural place.");
+      out.push("No automated check of the finished look for glasses and cups: a person judges that.");
+    } else if (!out.length) {
+      out.push(qa && qa.pass ? "Passed the upload gates and the final check of the rendered result."
+        : "Passed the upload gates. The final checks were not recorded for this run.");
     }
     return out.slice(0, 5);
   }
@@ -897,36 +870,6 @@
         list));
   }
 
-  function viewerRow(report, viewer) {
-    const status = make("small", {className: "vstatus muted", role: "status"});
-    const button = make("button", {type: "button", textContent: "Download this viewer's version"});
-    button.onclick = async () => {
-      button.disabled = true;
-      status.replaceChildren(make("span", {className: "spin inline"}),
-        document.createTextNode("Making this viewer's video, with the disclosure label and a watermark. It is "
-          + "rendered on the server, so it can take a few minutes. You can leave this page open."));
-      try {
-        const body = await API.viewerRender(report.clip_stem, viewer.profile_id);
-        const link = make("a", {href: body.video_url, download: "",
-          textContent: body.demo ? "Save the video (demo, no file)" : "Save the video"});
-        const extras = [
-          "watermark " + (body.verified ? "checked and found" : "NOT found"),
-          body.cached ? "ready from an earlier run" : "took " + clock(Math.round(body.seconds || 0)),
-          body.manifest_id,
-        ].filter(Boolean);
-        status.replaceChildren(link, document.createTextNode(" · " + extras.join(" · ")));
-      } catch (error) {
-        status.textContent = "That did not work: " + (error.message || error) + ". You can try again.";
-        button.disabled = false;
-      }
-    };
-    return make("div", {className: "viewer"},
-      make("div", null,
-        make("strong", {textContent: viewer.label || viewer.profile_id}),
-        make("small", {className: "muted", textContent: viewer.profile_id})),
-      make("div", null, button, status));
-  }
-
   function renderReport(report) {
     stopPolling();
     stopClock();
@@ -941,12 +884,18 @@
       (report.placements || []).length ? report.note : null,   // with no placements it explains that, below
     ].filter(Boolean).join(" · ");
 
-    const summary = report.summary || {};
-    const placements = [...(report.placements || [])]
+    // kinds Muse named that we have no way to place on yet were never measured: listed apart, not counted
+    const unsupported = p => (p.details || []).some(d => String(d).startsWith("not yet:"));
+    const all = report.placements || [];
+    const placements = all.filter(p => !unsupported(p))
       .sort((a, b) => (a.decision !== "placed") - (b.decision !== "placed"));
-    $("stat-candidates").textContent = summary.candidates ?? placements.length;
-    $("stat-placed").textContent = summary.placed ?? placements.filter(p => p.decision === "placed").length;
-    $("stat-declined").textContent = summary.declined ?? placements.filter(p => p.decision !== "placed").length;
+    const named = all.filter(unsupported).map(p => p.surface || "surface");
+    $("stat-candidates").textContent = placements.length;
+    $("stat-placed").textContent = placements.filter(p => p.decision === "placed").length;
+    $("stat-declined").textContent = placements.filter(p => p.decision !== "placed").length;
+    $("unsupported").hidden = !named.length;
+    $("unsupported").textContent = "Also in the scene, kinds we can't place an ad on yet (not measured): " +
+      named.join(", ") + ".";
 
     const reels = $("open-reels");
     reels.hidden = !report.player_url;
@@ -962,10 +911,6 @@
       $("no-player").textContent = placements.length ? "Nothing was placed, so there is no player to open. " +
         "The cards below say why." : report.note || "Nothing was found to place an ad on.";
     }
-
-    const viewers = report.viewers || [];
-    $("viewers-panel").hidden = !(viewers.length && report.clip_stem);
-    $("viewers").replaceChildren(...viewers.map(v => viewerRow(report, v)));
 
     $("cards").replaceChildren(...placements.map(card));
     show("report");

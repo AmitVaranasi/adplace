@@ -7,10 +7,10 @@
   ],
   "assignment": {
    "c01": "brewlark",
-   "c03": "brewlark"
+   "c03": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Brewlark matches viewer coffee-morning interests on eligible cup."
+  "rationale": "brewlark matches viewer coffee-morning interests and slicedash matches dining-food context on eligible cup surfaces."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -19,11 +19,11 @@
    "fitness"
   ],
   "assignment": {
-   "c01": "brewlark",
-   "c03": "brewlark"
+   "c01": "kestrel",
+   "c03": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "cup is eligible and food tag matches dining context."
+  "rationale": "Kestrel matches viewer running fitness and slicedash matches dining food context."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -32,11 +32,11 @@
    "learning"
   ],
   "assignment": {
-   "c01": "brewlark",
-   "c03": "brewlark"
+   "c01": "paperwhale",
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "cup is eligible and food tag matches dining context."
+  "rationale": "paperwhale matches viewer reading interests and fizzwell matches dining context, both eligible for cups."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -46,11 +46,11 @@
    "deals"
   ],
   "assignment": {
-   "c01": "brewlark",
-   "c03": "brewlark"
+   "c01": "fizzwell",
+   "c03": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Cup eligible and food tag matches dining context."
+  "rationale": "Both match dining and food context on eligible cups with distinct categories."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -60,11 +60,11 @@
    "health"
   ],
   "assignment": {
-   "c01": "brewlark",
-   "c03": "brewlark"
+   "c01": "fernleaf",
+   "c03": "slicedash"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Brewlark matches food interest and fits cup surface."
+  "rationale": "Fernleaf matches all viewer interests and food context, slicedash adds food and dining relevance."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -74,10 +74,10 @@
    "cycling"
   ],
   "assignment": {
-   "c01": "brewlark",
-   "c03": "brewlark"
+   "c01": "slicedash",
+   "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Brewlark fits cup surface and matches food context."
+  "rationale": "Slicedash matches tech interest plus dining context and fizzwell matches dining food context on eligible cups."
  }
 }
