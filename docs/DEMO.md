@@ -66,13 +66,13 @@ End on the two phones playing.
 ## Test-set figures
 
 Open-ended discovery (Nov 2, 4 clips, `runs/r_eval_*`): Muse named 43 places; 24 were kinds we have no way to place on yet (plates, tables, shirts, walls) and were not measured; of the 19 measured, 6 were placed (m43999: a ramekin and a bread
-bowl; m44025 and m44007: orange-juice glasses; m43248: the wall poster and the matcha glass). Since Nov 3 a logo must come out at least 28 px tall on screen, and the m44025 glass (18 px) is declined: 5 placed. Reported separately from
+bowl; m44025 and m44007: orange-juice glasses; m43248: the wall poster and the matcha glass). Since Nov 3 a logo must come out at least 28 px tall on screen and sharp enough to read: the m44025 glass (18 px) and m43999's ramekin and bread bowl (out of focus) are declined: 3 placed. Reported separately from
 the 23-video set below, which ran on the code before discovery.
 
 23 stock videos never used in development, final code (`runs/testset_all23.txt`): 56 candidates found, 3 placed,
 all on still glasses on restaurant tables (m44025: kept on while a shoulder passes in front; m43999: moved onto the
 part a bowl doesn't hide; m44007: an orange juice). Declines, all checked by eye: nothing to place on (8 videos), a
 fast blurred bar sweep, a night terrace's signs (one a parking sign), branded glasses, sauce ramekins, glasses and
-teacups picked up or carried in. With the readability gate added on Nov 3 (a logo at least 28 px tall on screen),
-the m44025 glass is declined too: 2 placed. Say: "On 23 videos it had never seen, it placed three ads and declined 53
-candidates, each with a reason we checked by hand. It would rather place nothing than place badly."
+teacups picked up or carried in. With the readability gates added on Nov 3 (a logo at least 28 px tall on screen, and sharp enough to read), the
+m44025 glass is declined (18 px), and on today's code m43999's glass is too (no clear space for the logo): 1 placed. Say: "On 23 videos it had never seen, it placed one ad and
+declined the rest, each with a reason we checked by hand. It would rather place nothing than place badly."

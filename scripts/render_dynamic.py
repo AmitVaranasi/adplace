@@ -1138,6 +1138,18 @@ def render(clip, entry, assignment, out, chunk=48, label=True, retrack=False, st
     if enc.wait():
         raise SystemExit(f"ffmpeg failed writing {out}")
 
+    audio = (ROOT / clip).with_suffix(".m4a")
+    if audio.is_file():
+        muxed = out.with_suffix(".audio.mp4")
+        try:
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(out),
+                            "-ss", str(start / frames.fps), "-i", str(audio), "-map", "0:v:0", "-map", "1:a:0",
+                            "-c:v", "copy", "-c:a", "aac", "-af", "apad", "-shortest",
+                            "-movflags", "+faststart", str(muxed)], check=True)
+            muxed.replace(out)
+        finally:
+            muxed.unlink(missing_ok=True)
+
     exported = Frames(out)
     picks = [i for s in (0, exported.n // 2 - 24, exported.n - 48) for i in range(max(s, 0), min(s + 48, exported.n))]
     result = watermark.verify([exported[i] for i in picks[::2]], [mid])

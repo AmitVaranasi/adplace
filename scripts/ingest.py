@@ -122,6 +122,18 @@ def trim(src, dst, a, b, fps):
                     "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", "-an", str(dst)], check=True)
 
 
+def extract_audio(src, dst, a, b, fps):
+    """The chosen shot's sound, on the same timeline as trim()."""
+    dst.unlink(missing_ok=True)
+    probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=index",
+                            "-of", "csv=p=0", str(src)], check=True, capture_output=True, text=True)
+    if not probe.stdout.strip():
+        return
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-ss", str(a / fps),
+                    "-t", str((b - a) / fps), "-map", "0:a:0", "-vn", "-af", "apad", "-c:a", "aac",
+                    "-movflags", "+faststart", str(dst)], check=True)
+
+
 # --- segment -----------------------------------------------------------------------------------------------------
 
 def jpeg_url(img, width=1024):
@@ -541,8 +553,14 @@ def ingest(src, run_id=None):
         run.progress("shots", 0, "looking for cuts")
         sh = shots(raw)
         a, b = max(sh, key=lambda s: s[1] - s[0])
+        if len(sh) == 1:   # the single-shot path keeps the whole video
+            a, b = 0, n
         note = "" if len(sh) == 1 else f"{len(sh)} shots; using the longest ({(b - a) / fps:.1f} s)"
         trim(raw, ROOT / clip, a, b, fps) if len(sh) > 1 else normalise(raw, ROOT / clip)
+        try:
+            extract_audio(src, (ROOT / clip).with_suffix(".m4a"), a, b, fps)
+        except subprocess.CalledProcessError:   # sound is a bonus: a stream ffmpeg can't read leaves the clip silent
+            (ROOT / clip).with_suffix(".m4a").unlink(missing_ok=True)
         run.progress("shots", 100, note or "one continuous shot")
 
         from scripts.render_dynamic import Frames, object_stores, occluders, track_slot, area

@@ -239,6 +239,7 @@ class GlassDecal(ShirtPrint):
         self.place, self.clipped = {}, {i for i in seen if self.store.box(i)[3] >= h - 2}
         # fit() replaces these; a vessel never fully in view skips it and is declined on the measures, not a crash
         self.valid, self.poses, self.base, self.tex = [], {}, np.array([0.0, 0.0, 5.0]), {}
+        self.rel, self.camera, self.fit_cost, self.pinned = {}, {}, {}, set()
         self.ratio = 2.6
         if good:
             ratio = self.ratio = float(np.median([g[4] / g[2] for g in good.values()]))

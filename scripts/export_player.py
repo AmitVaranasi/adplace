@@ -21,6 +21,7 @@ downloadable, watermarked file for a viewer still comes from render_dynamic (Vid
 """
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -323,6 +324,18 @@ def main(clip, skip_video=False):
     for old in (d / "art").glob("*_glass.png"):  # a glass placed by an earlier export and declined since
         if old.name[:-len("_glass.png")] not in placed:
             old.unlink()
+    audio = (ROOT / clip).with_suffix(".m4a")
+    audio_out = d / "audio.m4a"
+    if audio.is_file():
+        if start:
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(audio), "-ss", str(start / frames.fps),
+                            "-t", str((frames.n - start) / frames.fps), "-vn", "-c:a", "aac",
+                            "-movflags", "+faststart", str(audio_out)], check=True)
+        else:
+            shutil.copyfile(audio, audio_out)
+        track["audio"] = "audio.m4a"
+    else:
+        audio_out.unlink(missing_ok=True)
     (d / "track.json").write_text(json.dumps(track))
 
     if not skip_video:
