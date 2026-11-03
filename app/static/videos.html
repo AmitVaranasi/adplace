@@ -143,7 +143,7 @@
     const facts = [
       v.duration_s ? Number(v.duration_s).toFixed(1) + " s" : null,
       v.has_player ? plural(v.placed, "place for ads", "places for ads") + " (" + v.places.map(title).join(", ") + ")"
-        : plural(v.found, "place looked at", "places looked at"),
+        : plural(v.found, "place measured", "places measured"),
     ].filter(Boolean).join(" · ");
     const body = make("div", {className: "body"},
       make("h3", {textContent: v.name}),
@@ -207,7 +207,25 @@
       make("small", {textContent: p.message}),
       failed ? null : make("div", {className: "bar"}, make("span", {style: "width:" + Math.round(p.pct) + "%"})),
       make("div", {className: "actions"}, make("a", {className: "button", href: "/upload?run=" +
-        encodeURIComponent(p.run_id), textContent: failed ? "See what happened" : "Watch progress"})));
+        encodeURIComponent(p.run_id), textContent: failed ? "See what happened" : "Watch progress"}),
+        failed ? dismiss(p) : null));
+  }
+
+  function dismiss(p) {   // a failed upload has no video to remove: clear its card
+    const b = make("button", {type: "button", className: "remove", textContent: "Remove"});
+    b.onclick = async () => {
+      b.disabled = true;
+      try {
+        const r = await fetch("/api/runs/" + encodeURIComponent(p.run_id), {method: "DELETE"});
+        if (!r.ok) throw new Error((await r.json()).detail || r.status);
+        data.processing = data.processing.filter(x => x !== p);
+        render();
+      } catch (error) {
+        b.disabled = false;
+        showError("Couldn't remove that upload: " + (error.message || error));
+      }
+    };
+    return b;
   }
 
   function render() {

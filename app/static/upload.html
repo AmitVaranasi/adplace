@@ -314,7 +314,7 @@
     </p>
     <p id="live" class="muted" role="status" aria-live="polite" style="font-size:12px;margin:10px 0 0"></p>
     <ol id="steps" class="steps"></ol>
-    <p class="foot muted">This takes a few minutes. You can close the tab and come back to this address: the run id is
+    <p class="foot muted">This takes about ten minutes for a 10-second video. You can close the tab and come back to this address: the run id is
       in the web address.</p>
   </section>
 
@@ -641,7 +641,7 @@
         resetPick();
         return;
       }
-      showError("We could not send the clip: " + (error.message || error) + ".", [
+      showError("We could not send the clip: " + String(error.message || error).replace(/\.?$/, "."), [
         make("button", {type: "button", className: "primary", textContent: "Try again", onclick: startUpload}),
         make("button", {type: "button", textContent: "Choose a different file", onclick: resetPick}),
       ]);

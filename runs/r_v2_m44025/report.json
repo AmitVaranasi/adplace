@@ -124,7 +124,7 @@
    "thumb": "/runs/r_v2_m44025/thumbs/c03.jpg",
    "on_screen_s": 10.43,
    "reasons": [
-    "It isn't on screen long enough to register."
+    "It's too small on screen for a readable logo."
    ],
    "details": [
     "logo too small: the logo would be 18 px tall on screen, needs 28 px to be readable"

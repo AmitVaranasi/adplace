@@ -456,11 +456,9 @@ void main() {
 <script>
 "use strict";
 (() => {
-  // the pizzeria clips are YouTube footage for experiments only (configs/clips.json): not listed, not published
-  const CLIPS = ["patio_waiter"];
-  // an uploaded clip (scripts/ingest.py) is opened by name from the upload page
+  // the videos a viewer can open come from the server (/api/players): exports with a placement, not removed by their
+  // creator, and publishable (the pizzeria clips are YouTube footage for experiments only)
   const asked = new URLSearchParams(location.search).get("clip");
-  if (asked && /^[\w-]+$/.test(asked) && !CLIPS.includes(asked)) CLIPS.unshift(asked);
   const $ = id => document.getElementById(id);
   const EMBED = new URLSearchParams(location.search).get("embed") === "1";
   const askedViewer = new URLSearchParams(location.search).get("viewer");
@@ -487,17 +485,17 @@ void main() {
     return imageCache.get(url);
   }
 
-  const catalogPromise = Promise.all(CLIPS.map(async name => {
+  const catalogPromise = json("/api/players").then(list => Promise.all(list.map(async ({name, label}) => {
     const base = new URL("/static/player/" + name + "/", location.href);
     try {
       const r = await fetch(new URL("track.json", base), {cache: "no-cache"});
       if (r.status === 404) return null;
       if (!r.ok) throw new Error(r.status + " loading " + name);
-      return {name, base, track: await r.json()};
+      return {name, label, base, track: await r.json()};
     } catch (error) {
-      return {name, base, error};
+      return {name, label, base, error};
     }
-  })).then(entries => entries.filter(Boolean));
+  }))).then(entries => entries.filter(Boolean));
 
   function loadClip(name) {
     if (!clipCache.has(name)) clipCache.set(name, (async () => {
@@ -1010,6 +1008,7 @@ void main() {
     if (!s) return;
     s.closed=true;
     if (s.abortSeek) s.abortSeek();
+    clearTimeout(s.watch);
     if (s.callback) s.video.cancelVideoFrameCallback(s.callback);
     if (s.audio) {
       s.audio.pause(); s.audio.removeAttribute("src"); s.audio.load(); s.audio.remove();
@@ -1103,6 +1102,21 @@ void main() {
   // every placement in view (with a margin) and otherwise as near the middle of the frame as it can be, where the
   // people usually are. Placements too far apart for one window: the whole frame, letterboxed. Never an ad cut off.
   // The disclosure label moves into the window so it is always seen.
+  // The disclosure label is drawn into the frame, so its size on screen depends on how big the frame is shown: keep
+  // its text at least 13 CSS px tall whatever the window (a phone, a narrow browser), and inside a cropped window.
+  let labelX=null,labelSize=0;
+  function fitLabel(force=false) {
+    if (!live || !renderer) return;
+    const t=live.data.track,k=$("screen").clientHeight/t.height;
+    if (!(k>0)) return;
+    const size=Math.max(1,13*900/(20*t.height*k));
+    if (!force && Math.abs(size-labelSize)<0.05) return;
+    labelSize=size;
+    renderer.relabel(size,labelX);
+    try { paint(false); } catch (error) { showError(error); }
+  }
+  new ResizeObserver(()=>fitLabel()).observe($("screen"));
+
   function phoneCrop(t) {
     const w=Math.round(t.height*4/5),margin=Math.round(t.width*0.03),canvas=$("screen");
     const xs=[];
@@ -1111,13 +1125,13 @@ void main() {
     const lo=xs.length ? Math.min(...xs)-margin : 0,hi=xs.length ? Math.max(...xs)+margin : t.width;
     if (w>=t.width || hi-lo>w) {
       canvas.style.aspectRatio=t.width+" / "+t.height; canvas.style.objectPosition="50% 50%";
-      renderer.relabel(2.6);
+      labelX=null; fitLabel(true);
       return;
     }
     const x0=clamp(Math.round(clamp((t.width-w)/2,hi-w,lo)),0,t.width-w);
     canvas.style.aspectRatio="4 / 5";
     canvas.style.objectPosition=(100*x0/(t.width-w)).toFixed(2)+"% 50%";
-    renderer.relabel(1.5,x0+Math.round(t.height*0.03));
+    labelX=x0+Math.round(t.height*0.03); fitLabel(true);
   }
 
   // reels.html drives two embedded players (same origin) through this.
@@ -1142,22 +1156,55 @@ void main() {
     const session=live;
     if (!session) return;
     $("auction").textContent="Bidding…";
-    const t0=performance.now();
+    const t0=performance.now(),seq=session.bidSeq=(session.bidSeq || 0)+1;
+    session.lastBid=t0;
     try {
       const r=await fetch("/api/auction",{method:"POST",headers:{"content-type":"application/json"},
         body:JSON.stringify({clip:session.data.name,profile_id:id})});
       const body=await r.json();
       if (!r.ok) throw new Error(body.detail || r.status);
       body.roundTrip=Math.round(performance.now()-t0);
-      session.auction[id]=body;
+      if (session.bidSeq!==seq) return;   // a newer bid is on its way
+      session.auction[id]=body; session.bidFailed=false;
       if (embedApi.onAuction) embedApi.onAuction(id,body);
     } catch (error) {
-      if (live===session && profileId===id) $("auction").textContent="Auction unavailable ("+(error.message || error)+"); showing the original video.";
+      if (session.bidSeq!==seq) return;
+      delete session.auction[id]; session.bidFailed=true;   // no answer, no ads: never keep an earlier assignment on screen
+      if (embedApi.onAuction) embedApi.onAuction(id,null);
+      if (live===session && profileId===id) {
+        profileUI();
+        try { paint(false); } catch (paintError) { showError(paintError); }
+        $("auction").textContent="Auction unavailable ("+(error.message || error)+"); showing the original video.";
+      }
       return;
     }
     if (live!==session || profileId!==id) return;
     profileUI();
     try { paint(false); } catch (error) { showError(error); }
+  }
+
+  function watchCreator(session) {
+    let rev=null;
+    const tick=async()=>{
+      if (live!==session || session.closed) return;
+      try {
+        const r=await fetch("/api/creator/"+encodeURIComponent(session.data.name)+"/rev",{cache:"no-store"});
+        const b=await r.json();
+        if (live!==session) return;
+        if (b.removed) {   // the creator took the video down: no more ads, and say why
+          session.auction={}; session.removed=true;
+          profileUI(); paint(false);
+          $("auction").textContent="The creator removed this video, so it plays without ads.";
+          $("download").disabled=true;
+          return;
+        }
+        // the page that changed them (reels.html) bids at once; this catches a change made anywhere else
+        if (rev!==null && b.rev!==rev && performance.now()-(session.lastBid || 0)>2500) bid(profileId);
+        rev=b.rev;
+      } catch (error) { /* offline for a moment: try again on the next tick */ }
+      session.watch=setTimeout(tick,3000);
+    };
+    tick();
   }
 
   function profileUI() {
@@ -1174,13 +1221,16 @@ void main() {
       const item=document.createElement("div");
       const name=document.createElement("span"),brand=document.createElement("strong");
       name.textContent=title(slot.id)+(slot.surface ? " · "+slot.surface : "");
-      brand.textContent=a ? a.assignment[slot.id] || "No ad" : "Waiting for the auction";
+      brand.textContent=a ? a.assignment[slot.id] || "No ad" : live.bidFailed || live.removed ? "No ad" :
+        "Waiting for the auction";
       item.append(name,brand); list.append(item);
       const lot=a && a.placements[slot.id];
       if (lot && lot.winner) {
         const price=document.createElement("p"),second=lot.bidders[1];
-        price.textContent="Won at $"+lot.price_cpm.toFixed(2)+" CPM against "+(lot.bidders.length-1)+" other bid"+
-          (lot.bidders.length===2 ? "" : "s")+(second ? " (next: "+second.brand+")" : "");
+        price.textContent=second ? "Won at $"+lot.price_cpm.toFixed(2)+" CPM against "+(lot.bidders.length-1)+
+          " other bid"+(lot.bidders.length===2 ? "" : "s")+" (next: "+second.brand+")"
+          : "Won at the $"+lot.price_cpm.toFixed(2)+" reserve: the other brands that fit here are in this video "+
+            "already (one place per brand)";
         item.append(price);
       } else if (!a && p.rationale && typeof p.rationale==="object" && p.rationale[slot.id]) {
         const reason=document.createElement("p");
@@ -1190,6 +1240,9 @@ void main() {
     }
     $("rationale").textContent=!a && typeof p.rationale==="string" ? p.rationale : "";
     $("chooser").textContent=a ? "" : p.chooser || "Muse";
+    const ads=!!a && Object.keys(a.assignment).length>0;
+    $("download").disabled=!ads || !!live.removed;
+    $("download").title=ads ? "" : "No ad won for this viewer, so the original plays: nothing to download.";
     $("auction").textContent=a && a.creator_enabled===false ? "The creator hasn't turned on product placement for "+
       "this video, so every viewer sees the original." : a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
       a.roundTrip+" ms round trip). Placements were prepared at upload, so no rendering was needed." : "";
@@ -1217,10 +1270,11 @@ void main() {
       renderer.setData(data);
       live=opened; live.auction={};
       $("sound").disabled=$("sound").hidden=!opened.audio; setMuted(true);
-      if (EMBED && Object.hasOwn(data.profiles,askedViewer)) profileId=askedViewer;
+      if (!profileId && Object.hasOwn(data.profiles,askedViewer)) profileId=askedViewer;
       profileId=Object.hasOwn(data.profiles,profileId)
         ? profileId : Object.keys(data.profiles)[0];
       if (EMBED) phoneCrop(data.track);
+      else { labelX=null; fitLabel(true); }
 
       for (const [id,p] of Object.entries(data.profiles)) {
         const button=document.createElement("button");
@@ -1232,7 +1286,7 @@ void main() {
         button.onclick=()=>{
           if (!live) return;
           profileId=id; profileUI();
-          downloadToken++; $("download-status").textContent=""; $("download").disabled=false;
+          downloadToken++; $("download-status").textContent="";
           try { paint(false); } catch (error) { showError(error); }
           bid(id);
         };
@@ -1240,12 +1294,13 @@ void main() {
       }
 
       $("scrub").max=data.track.frames-1;
-      $("scrub").disabled=false; $("play").disabled=false; $("download").disabled=false;
+      $("scrub").disabled=false; $("play").disabled=false;
       downloadToken++; $("download-status").textContent="";
       $("play").textContent="Play";
       profileUI(); paint();
       $("placeholder").hidden=true;
       bid(profileId);
+      watchCreator(opened);
       if (embedApi.onReady) embedApi.onReady();
 
       opened.video.addEventListener("play",()=>{
@@ -1317,7 +1372,8 @@ void main() {
     const token=++downloadToken,clip=live.data.name,viewer=profileId;
     $("download").disabled=true;
     $("download-status").textContent=
-      "Rendering with a Video Seal watermark… a new version takes 1–10 minutes.";
+      "Rendering this viewer's version with a Video Seal watermark… about a minute for a new one.";
+    $("download-status").scrollIntoView({block:"nearest"});
     try {
       const r=await fetch("/api/viewer_render",{method:"POST",
         headers:{"content-type":"application/json"},body:JSON.stringify({clip,profile_id:viewer,assignment:won()})});
@@ -1325,13 +1381,14 @@ void main() {
       if (!r.ok) throw new Error(body.detail || r.status);
       if (token!==downloadToken) return;
       const link=document.createElement("a");
-      link.href=body.video_url; link.download=""; link.textContent="Save video";
-      $("download-status").replaceChildren(link,
-        " · watermark "+(body.verified ? "verified" : "NOT verified")+" · "+body.manifest_id);
+      link.href=body.video_url; link.download=""; link.textContent="Save again";
+      $("download-status").replaceChildren("Downloaded · watermark "+(body.verified ? "verified" : "NOT verified")+
+        " · "+body.manifest_id+" · ",link);
+      link.click();   // the file saves itself; the link stays for a second copy
     } catch (error) {
       if (token===downloadToken) $("download-status").textContent="Render failed: "+(error.message || error);
     } finally {
-      if (token===downloadToken) $("download").disabled=!live;
+      if (token===downloadToken) $("download").disabled=!live || !Object.keys(won()).length;
     }
   };
 
@@ -1410,15 +1467,20 @@ void main() {
     for (const entry of catalog) {
       const option=document.createElement("option");
       option.value=entry.name;
-      option.textContent=title(entry.name)+(entry.error ? " (unavailable)" : "");
+      option.textContent=(entry.label || title(entry.name))+(entry.error ? " (unavailable)" : "");
       option.disabled=!!entry.error;
       $("clip").append(option);
     }
 
     renderer=new Renderer($("screen"));
     renderer.onError=showError;
-    const requested=new URLSearchParams(location.search).get("clip");
-    const initial=available.some(e=>e.name===requested) ? requested : available[0].name;
+    if (asked && !available.some(e=>e.name===asked)) {   // say so, rather than quietly playing another video
+      $("clip").value="";
+      $("placeholder").textContent="We don't have a player for \u201c"+asked+"\u201d. Pick a video above.";
+      if (EMBED) throw new Error("no player for "+asked);
+      return;
+    }
+    const initial=asked || available[0].name;
     $("clip").value=initial;
     await activateClip(initial);
   })().catch(showError);

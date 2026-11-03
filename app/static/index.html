@@ -101,8 +101,8 @@
     <h1>Check a file</h1>
     <p class="muted">Every copy a viewer downloads carries an invisible Meta Video Seal watermark naming the campaigns
       in it. Drop a video to check whether it carries one.</p>
-    <p class="muted">The mark survives re-encoding, so a copy that has been compressed again or re-uploaded by another
-      app still answers.</p>
+    <p class="muted">The mark survives moderate re-compression, so a copy that has been compressed again still answers
+      (tested down to 854 px wide at CRF 28, or 640 px at CRF 23).</p>
   </header>
 
   <section class="panel" aria-labelledby="pick-title">
@@ -246,9 +246,11 @@
         make("strong", {textContent: "No AdPlace watermark found."})),
       make("p", {className: "muted",
         textContent: "Best match " + pct(data.bit_accuracy) + " of the bits, and chance is 50%, so this file "
-          + "carries no mark this server issued."}),
+          + "matches none of the campaigns this server issued. Heavier compression than we tested can also erase a "
+          + "mark, so this is not proof the file never had one."}),
       make("p", {className: "muted",
-        textContent: "A viewer's download from /player or /reels always carries one, even after re-encoding."}));
+        textContent: "A viewer's download from /player or /reels carries one; it is still found after moderate "
+          + "re-compression (tested down to 854 px at CRF 28)."}));
   }
 
   async function check() {

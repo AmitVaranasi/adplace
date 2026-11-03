@@ -32,7 +32,7 @@ light, focus and grain, wrapped round glasses and mugs, behind the hands and peo
 show the same video to two viewers with two different sponsors.
 
 Every frame with an ad carries a visible "AI product placement" label, and the file a viewer downloads carries an
-invisible Meta Video Seal watermark naming the campaign, still found after re-encoding.
+invisible Meta Video Seal watermark naming the campaign: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264].
 
 ## How we used Meta's AI tools
 
@@ -84,19 +84,19 @@ before the Nov 3 gates), all in cafés and restaurants, so the first market is f
   43 places, 19 of them kinds we can measure; 6 were placed before the gates and 3 after (a bar's wall poster and
   two glasses) [`runs/r_eval_*`, `runs/r_v2_m44025`, `runs/r_v4_m43999`].
 - Only still objects carry ads. Objects people pick up are declined.
-- Processing a 10-second upload takes a few minutes, once, offline [5.7 s clip: 8.6 min; 5 s clip with nothing to
-  place: 57 s]. Picking brands at playback takes about 0.1 ms.
+- Processing takes about ten minutes for a 10-second upload, once, offline [10.2 s bar clip: 12.1 min; 5.7 s clip:
+  8.2 min; 5 s clip with nothing to place: 57 s]. Picking brands at playback takes about 0.1 ms.
 - The bids are test bids from a demo inventory of fictional brands. It's a standalone prototype, not connected to a
   real ad auction, with no accounts: it runs locally.
-- The 3D products and the nine placements on the patio clip were set up by hand; uploads get flat surfaces and
-  vessels only. Uploads use one shot (the longest); its sound plays muted until a viewer turns it on (the stock
+- The five placements on the patio clip were set up by hand (its rendered 3D can and bottle were dropped on Nov 3:
+  they read as computer-made); uploads get flat surfaces and vessels only. Uploads use one shot (the longest); its sound plays muted until a viewer turns it on (the stock
   test footage has none).
 
 ## What's next
 
 Ship it as an opt-in setting in a short-video feed: the creator's switch at upload, placements filled by the
-platform's ad auction. On the technical side: objects that move, products inserted in 3D on any upload (working now
-on a hand-calibrated clip), and faster processing.
+platform's ad auction. On the technical side: objects that move, products inserted in 3D (tried on a hand-calibrated clip,
+not yet convincing enough to ship), and faster processing.
 
 ## Built during the hackathon
 

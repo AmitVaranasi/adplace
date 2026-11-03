@@ -16,3 +16,5 @@ eval/rating/
 configs/uploads.json
 configs/uploads.lock
 configs/uploads.tmp
+.creator.lock
+.creator.json.*.tmp

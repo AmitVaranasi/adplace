@@ -214,7 +214,8 @@ class GlassDecal(ShirtPrint):
         # the measuring below takes about a minute and an upload needs it three times (the gates, the player export,
         # the final check render): keep it per object, keyed by this file's code and the logos the spot must fit, so
         # either changing re-measures
-        logos = hashlib.sha1(" ".join(logo_brands()).encode()).hexdigest()[:6]
+        logos = hashlib.sha1(b"".join(b.encode() + (ROOT / "assets/creatives/gen" / f"{b}_glass_print.png").read_bytes()
+                                      for b in logo_brands())).hexdigest()[:6]   # which logos, and their shapes
         cache = (scene_dir(clip) /
                  f"vessel_{type(self).__name__}_{spec.get('prompt', 'cup')}_{spec['object']}_{CODE}_{logos}.pkl")
         if cache.exists():

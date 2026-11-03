@@ -527,7 +527,10 @@ def plain(reasons):
     """Plain sentences for the report, each once, in order; anything unrecognised is passed through."""
     out = []
     for r in reasons:
-        text = next((p for key, p in PLAIN if key in r), r)
+        # the key nearest the start names the gate ("logo too small: ... px tall on screen" is not "on screen");
+        # on a tie the longer key is the more specific one
+        hits = [(r.find(key), -len(key), p) for key, p in PLAIN if key in r]
+        text = min(hits)[2] if hits else r
         if text not in out:
             out.append(text)
     return out
@@ -738,9 +741,18 @@ def ingest(src, run_id=None):
         run.write("report.json", report)
         run.progress("done", 100, f"{len(accepted)} placed, {len(cands) - len(accepted)} declined")
     except Exception as e:
-        traceback.print_exc()
-        run.progress("error", 100, f"{type(e).__name__}: {e}")
+        traceback.print_exc()   # the details go to the run's ingest.log; the creator reads a sentence
+        run.progress("error", 100, failure_message(e))
     return run.id
+
+
+def failure_message(e):
+    """What a creator reads when an upload fails: what happened and what to do, never a command line or a path."""
+    if isinstance(e, subprocess.CalledProcessError) and "ffmpeg" in str(e.cmd):
+        return "We couldn't read that video file. Try an mp4, mov or webm that plays on your computer."
+    if isinstance(e, FileNotFoundError):
+        return "The uploaded file went missing before we could process it. Please upload it again."
+    return "Something went wrong while processing this video. Please try again, or try another video."
 
 
 if __name__ == "__main__":

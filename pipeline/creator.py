@@ -10,7 +10,9 @@ writes the file), and a video only carries ads once a creator.json says so.
 """
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 from pathlib import Path
 
 NAME = "creator.json"
@@ -18,7 +20,7 @@ NAME = "creator.json"
 
 def load(export_dir: Path) -> dict:
     p = Path(export_dir) / NAME
-    s = json.loads(p.read_text()) if p.exists() else {"enabled": False}
+    s = json.loads(p.read_text()) if p.exists() else {"enabled": False}   # save() replaces it whole: never half-written
     return {"enabled": bool(s.get("enabled")), "places": dict(s.get("places", {})), "brands": dict(s.get("brands", {}))}
 
 
@@ -26,8 +28,18 @@ def save(export_dir: Path, settings: dict) -> dict:
     s = {"enabled": bool(settings.get("enabled")),
          "places": {k: bool(v) for k, v in settings.get("places", {}).items()},
          "brands": {k: bool(v) for k, v in settings.get("brands", {}).items()}}
-    (Path(export_dir) / NAME).write_text(json.dumps(s, indent=2) + "\n")
+    p = Path(export_dir) / NAME
+    tmp = p.with_name(f".{NAME}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(s, indent=2) + "\n")
+    os.replace(tmp, p)   # a reader sees the old file or the new one, never half of it
     return s
+
+
+def update(export_dir: Path, changes: dict) -> dict:
+    """Merge changes into the saved settings, one writer at a time (a creator ticking boxes quickly)."""
+    with open(Path(export_dir) / ".creator.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return save(export_dir, {**load(export_dir), **changes})
 
 
 def start_off(export_dir: Path) -> None:

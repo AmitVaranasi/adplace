@@ -120,7 +120,6 @@
   .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .modes { display: inline-flex; gap: 5px; }
   .sound { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: #a2a9b8; }
-  .sound[hidden] { display: none; }
   #note { text-align: right; font-size: 11px; margin: 8px 0 0; }
   #error {
     border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px;
@@ -130,7 +129,9 @@
     main { padding: 16px; }
     .layout { grid-template-columns: 1fr; }
     aside { order: 2; }   /* the phones first: on a small screen the preview is what you came for */
+    .jump { display: inline-block; }   /* ...and a way down to the settings below them */
   }
+  .jump { display: none; font-size: 13px; color: #6bd6b2; margin-top: 8px; }
   @media (max-width: 700px) {
     body { --phone-w: min(330px, calc(100vw - 32px)) !important; }
     .controls { justify-content: flex-start; }
@@ -175,6 +176,7 @@
         </span>
       </div>
       <p id="note" class="muted">Test bids from the demo inventory, second-price CPMs.</p>
+      <a class="jump" href="#creator">Creator settings: placement, places, brands</a>
     </div>
   </header>
 
@@ -252,7 +254,7 @@
     const p = api.profiles()[api.viewer()] || {};
     side.who.replaceChildren(document.createTextNode(p.label || api.viewer()),
       make("small", {textContent: (p.preferences || []).join(" · ")}));
-    if (!r) { side.lots.textContent = "Bidding…"; return; }
+    if (!r) { side.lots.textContent = side.failed ? "Auction unavailable: this viewer sees the original." : "Bidding…"; return; }
     side.offNote.hidden = r.creator_enabled !== false;
     side.offNote.textContent = "The creator hasn't turned on product placement, so this viewer sees the original.";
     const rows = Object.entries(r.placements).map(([id, lot]) => {
@@ -261,7 +263,7 @@
         make("span", {textContent: title(surfaceOf(id))}),
         make("strong", {textContent: lot.winner ? title(lot.winner) : "No ad"}),
         make("span", {textContent: lot.winner ? "Won at $" + lot.price_cpm.toFixed(2) + " CPM" +
-          (next ? ", next " + title(next.brand) : ", only bidder") : "No approved brand bid"}));
+          (next ? ", next " + title(next.brand) : " reserve, only brand left for it") : "No approved brand bid"}));
     });
     side.lots.replaceChildren(...rows, make("small", {textContent: r.creator_enabled === false
       ? "No auction: placement is off." : "Auction decided in " + r.ms.toFixed(2) + " ms."}));
@@ -285,7 +287,7 @@
           // silent clips (the stock footage has no sound track) don't offer the choice
           $("sound-wrap").hidden = !sides.some(s => s.api && s.api.track().audio);
           setSound();
-          api.onAuction = (id, body) => { side.last = body; showLots(side); };
+          api.onAuction = (id, body) => { side.last = body; side.failed = !body; showLots(side); };
           side.last = api.auction();
           if (!side.select.options.length) {
             for (const [id, p] of Object.entries(api.profiles()))
@@ -401,7 +403,12 @@
     await load(sides[0], params.get("a") || "viewer-a");
     await load(sides[1], params.get("b") || "viewer-b");
     for (const id of ["play", "restart", "rebid"]) $(id).disabled = false;
-  })().catch(showError);
+  })().catch(error => {   // an unknown or removed video: say so instead of two empty phones
+    sides.forEach(s => { s.el.hidden = true; });
+    $("creator").hidden = true;
+    showError(error);
+    $("error").append(" ", make("a", {href: "/", textContent: "Back to My videos"}));
+  });
 })();
 </script>
 </body>

@@ -16,7 +16,7 @@ the scene itself, labelled as AI product placement. Switching brands re-rendered
 
 Screen: `/` (My videos): the creator's library, each video with its places for ads and its placement switch. Click
 "Upload a video", drop `assets/clips/raw3/m43248.mp4`; back in the library it shows as processing; skip past the wait
-("a few minutes, once"). Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
+("about ten minutes, once"). Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
 original, "The creator hasn't turned on product placement"), turn on "Allow product placement"; both phones' ads
 appear. Untick Brewlark: the commuter's poster re-bids to another brand.
 
@@ -33,15 +33,16 @@ Say: "Muse Spark reads the scene, lists every place an ad could go and checks it
 one through the shot. We track them against the room and keep only what stays still and in view, and we say in plain
 words why we turned the rest down."
 
-## 1:30–2:15 Why it looks filmed, and why it's always findable
+## 1:30–2:15 Why it looks filmed, and how it stays traceable
 
 Screen: full player `/player?clip=upload_m43248`, play at full speed; pause on the hand passing the glass, the logo
 wrapped round the matcha glass, the poster's perspective and grain. Toggle Original / With ads. Then "Download my
-version": "watermark verified".
+version" for a viewer whose copy was rendered before recording (a new one takes about a minute):
+"watermark verified"; drop that file on Check a file (`/verify`) to show the campaigns it names.
 
 Say: "The ad takes the scene's perspective, light, focus and grain, and hands stay in front of it. Every ad carries a
 visible label, and the file you take away carries an invisible Meta Video Seal watermark naming the campaign, still
-there after re-encoding."
+there after the file is compressed again."
 
 ## 2:15–2:40 The bid at playback
 
@@ -55,9 +56,10 @@ draws the winner in live. That's choosing the brand, not processing the video. T
 
 Say, with the figures below, the two test sets kept separate:
 
-- "On 23 videos it had never seen, it placed 3 ads out of 56 candidates, and one of those it now turns down because the logo would be too small to read. With open-ended discovery on four clips, it
-  measured 19 places and placed 5. It turns down what it can't place well, and says why."
-- "Processing takes a few minutes per 10-second clip, once, offline. Only still objects carry ads so far, which limits
+- "On 23 videos it had never seen, today's code places one ad and turns everything else down, each with a reason
+  we checked by hand. On four clips where Muse listed every place it could see, we measured 19 and placed 3. It
+  would rather place nothing than place badly."
+- "Processing takes about ten minutes per 10-second clip, once, offline. Only still objects carry ads so far, which limits
   how much inventory a video has today."
 - "Next: objects people pick up, and shipping this as an opt-in setting in a short-video feed."
 
