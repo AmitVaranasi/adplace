@@ -109,7 +109,7 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 
 | Check | Result |
 |---|---|
-| 23 unseen stock videos, final code (`runs/testset_all23.txt`) | 56 candidates, 3 placed (3 videos); every decline checked by eye: nothing to place on (8 videos), a fast blurred sweep, a parking sign, branded or embossed glasses, sauce ramekins, objects picked up or carried in |
+| 23 unseen stock videos, final code (`runs/testset_all23.txt`) | 56 candidates, 3 placed (3 videos; 2 with the Nov 3 readability gate, a logo at least 28 px tall on screen); every decline checked by eye: nothing to place on (8 videos), a fast blurred sweep, a parking sign, branded or embossed glasses, sauce ramekins, objects picked up or carried in |
 | Bar clip (10 s) upload, end to end | 379 s with SAM results cached (595 s before the per-object cache; add 1–4 min for SAM on a fresh upload); wall poster and the still matcha glass placed, the glass she drinks from declined (travels 4.8 radii in a second, limit 0.5) |
 | Still glass vs camera | logo moves with the camera within 0.000 px median per frame |
 | Live player vs server, glass and cup logos | 1.3–1.9 grey levels mean difference on the logo |

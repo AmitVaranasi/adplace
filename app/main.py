@@ -165,8 +165,9 @@ def latest_report(stem):
             r = json.loads(p.read_text())
         except (OSError, ValueError):
             continue
-        if r.get("clip_stem") == stem and (best is None or p.stat().st_mtime > best[0]):
-            best = (p.stat().st_mtime, r)
+        t = r.get("finished_at") or p.stat().st_mtime
+        if r.get("clip_stem") == stem and (best is None or t > best[0]):
+            best = (t, r)
     return best[1] if best else {}
 
 
@@ -341,7 +342,7 @@ def videos():
                 r = json.loads(rp.read_text())
             except ValueError:
                 continue
-            t = rp.stat().st_mtime
+            t = r.get("finished_at") or rp.stat().st_mtime
             stem = r.get("clip_stem")
             if stem and (stem not in latest or t > latest[stem][0]):
                 latest[stem] = (t, d, r)

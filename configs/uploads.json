@@ -392,21 +392,15 @@
   ],
   "context_tags": [
    "conversation",
+   "daytime",
    "dining",
    "food",
    "outdoor",
-   "restaurant"
+   "restaurant",
+   "social"
   ],
   "dynamic_slots": [],
-  "objects3d": [
-   {
-    "id": "c03",
-    "kind": "glass_decal",
-    "surface": "glass",
-    "prompt": "cup",
-    "object": 1
-   }
-  ]
+  "objects3d": []
  },
  "assets/clips/uploads/upload_pair.mp4": {
   "hidden": true,
@@ -547,22 +541,7 @@
    "restaurant"
   ],
   "dynamic_slots": [],
-  "objects3d": [
-   {
-    "id": "c01",
-    "kind": "cup_decal",
-    "surface": "cup",
-    "prompt": "bowl",
-    "object": 0
-   },
-   {
-    "id": "c03",
-    "kind": "cup_decal",
-    "surface": "cup",
-    "prompt": "bowl",
-    "object": 2
-   }
-  ]
+  "objects3d": []
  },
  "assets/clips/uploads/upload_m44010.mp4": {
   "hidden": true,

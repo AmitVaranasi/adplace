@@ -40,9 +40,11 @@ def focus_and_grain(frames, store, keys):
         m = store[i].astype(np.uint8)
         g = cv2.cvtColor(frames[i], cv2.COLOR_BGR2GRAY).astype(np.float32)
         k = lambda n: np.ones((n, n), np.uint8)
-        ring_in = (cv2.erode(m, k(5)) & ~cv2.erode(m, k(13)) & 1).astype(np.float32)
-        ring_out = (cv2.dilate(m, k(13)) & ~cv2.dilate(m, k(5)) & 1).astype(np.float32)
-        local = lambda ring: cv2.boxFilter(g * ring, -1, (21, 21)) / np.maximum(cv2.boxFilter(ring, -1, (21, 21)), 1e-3)
+        # the contrast is read 4.5-12.5 px either side of the outline: nearer, a soft (out of focus) edge's own blur
+        # lowers it and the blur comes out too small
+        ring_in = (cv2.erode(m, k(9)) & ~cv2.erode(m, k(25)) & 1).astype(np.float32)
+        ring_out = (cv2.dilate(m, k(25)) & ~cv2.dilate(m, k(9)) & 1).astype(np.float32)
+        local = lambda ring: cv2.boxFilter(g * ring, -1, (31, 31)) / np.maximum(cv2.boxFilter(ring, -1, (31, 31)), 1e-3)
         step = np.abs(local(ring_in) - local(ring_out))
         grad = np.hypot(cv2.Sobel(g, cv2.CV_32F, 1, 0), cv2.Sobel(g, cv2.CV_32F, 0, 1)) / 8
         grad = cv2.dilate(grad, k(7))
@@ -235,6 +237,8 @@ class GlassDecal(ShirtPrint):
         good = {i: g for i, g in geo.items()
                 if areas[i] > 0.7 * typical and self.store.box(i)[3] < h - 2}
         self.place, self.clipped = {}, {i for i in seen if self.store.box(i)[3] >= h - 2}
+        # fit() replaces these; a vessel never fully in view skips it and is declined on the measures, not a crash
+        self.valid, self.poses, self.base, self.tex = [], {}, np.array([0.0, 0.0, 5.0]), {}
         self.ratio = 2.6
         if good:
             ratio = self.ratio = float(np.median([g[4] / g[2] for g in good.values()]))
@@ -254,9 +258,9 @@ class GlassDecal(ShirtPrint):
         tilt = smooth_runs({i: p[3:4] for i, p in self.place.items()}, self.frames, sigma=2.5)
         if good:
             self.sigma, self.grain = focus_and_grain(self.frames, self.store, sorted(good))
-            # the print's own softness: half the glass's, at most a pixel. A logo blurred as much as a shallow-focus
-            # glass's edge smears its letters; the reviewer wants it readable
-            self.sigma = min(0.5 * self.sigma, 1.0)
+            # the print's own softness: half the glass's when the glass is sharp (letters stay readable), all of it
+            # once the glass is out of focus, where a crisp logo on a soft bowl is the giveaway
+            self.sigma = print_sigma(self.sigma)
         if good:
             self.choose_spot(good)
         self.raw_centre = self.print_centres()
@@ -847,6 +851,12 @@ class CupDecal(GlassDecal):
         # a real design is design in nearly every sample of its cells, or in a cluster of them; a lone cell of shading
         # noise or grain is neither
         self.search_spot(seen & (share < 0.5) & (cv2.blur(share.astype(np.float32), (3, 3)) < 0.12))
+
+
+def print_sigma(sigma):
+    """The print's blur for a vessel whose silhouette is blurred by `sigma`: half of it for a sharp vessel (sigma
+    <= 1.4, letters stay crisp), all of it from sigma 1.9 (out of focus: a crisp logo there is the giveaway)."""
+    return float(sigma * np.clip(sigma - 0.9, 0.5, 1.0))
 
 
 def logo_brands():

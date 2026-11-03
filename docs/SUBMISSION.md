@@ -65,10 +65,21 @@ names. About 500 automated tests, passing on a fresh clone.
 - Cups with designs of their own: the logo goes on a blank patch, measured on the unwrapped cup with the handle cut
   out, never over the cup's own drawing.
 
+## How it would make money (hypothetical)
+
+Each placement is sold per viewer, at the second price the auction clears: per 1,000 views, a video earns the sum of
+its placements' clearing CPMs, shared between the creator and the platform. With the demo inventory's test bids the
+auction clears at a median of $4.31 CPM per placement ($2.12–$8.76) [`pipeline/auction.py`, 20 bids per viewer on
+the bar, m43999 and m44007 players], so a video with one or two places would earn about $4–10 per 1,000 views on top
+of whatever else it earns, without the creator making a sponsored video. These are test bids, not market prices.
+Against that, yield is low today: 2 of the 23 unseen videos (9%) have a place that passes, all in cafés and
+restaurants, so the first market is footage of tables, counters and walls: food, drink and lifestyle creators.
+
 ## Honest limits
 
-- Yield is low. On 23 stock videos it had never seen, it placed 3 ads from 56 candidates, and every decline was
-  checked by eye [`runs/testset_all23.txt`]. With open-ended discovery on 4 clips Muse named 43 places, 19 of them kinds we can measure, and 6 were placed
+- Yield is low. On 23 stock videos it had never seen, it placed 3 ads from 56 candidates (2 since a readability
+  gate was added on Nov 3: a logo must be at least 28 px tall on screen), and every decline was
+  checked by eye [`runs/testset_all23.txt`]. With open-ended discovery on 4 clips Muse named 43 places, 19 of them kinds we can measure, and 6 were placed (5 with the readability gate)
   [`runs/r_eval_*`]; the two sets ran on different code and aren't comparable.
 - Only still objects carry ads. Objects people pick up are declined.
 - Processing a 10-second upload takes a few minutes, once, offline [5.7 s clip: 8.6 min; 5 s clip with nothing to
