@@ -1,0 +1,98 @@
+{
+ "run_id": "r_eval_m41156",
+ "clip_stem": "upload_m41156",
+ "clip": "assets/clips/uploads/upload_m41156.mp4",
+ "source_name": "m41156.mp4",
+ "duration_s": 6.26,
+ "status": "done",
+ "elapsed_s": 149,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "sign"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Night street view of a neon sign, no people, children, medical, accident, violence, or grief visible.; Nighttime street view of illuminated pizza mascot neon sign with no people, children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "food",
+   "neon",
+   "neon sign",
+   "night",
+   "pizza",
+   "restaurant",
+   "street"
+  ]
+ },
+ "summary": {
+  "candidates": 4,
+  "placed": 0,
+  "declined": 4
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41156/thumbs/c01.jpg",
+   "on_screen_s": 6.26,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "edge-clipped fraction 1.0, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41156/thumbs/c02.jpg",
+   "on_screen_s": 6.26,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible is False; needs True"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41156/thumbs/c03.jpg",
+   "on_screen_s": 6.26,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible is False; needs True"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m41156/thumbs/c04.jpg",
+   "on_screen_s": 6.26,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 4.078 px, needs at most 2.5 px",
+    "p90 track residual 6.87 px, needs at most 5.0 px",
+    "edge-clipped fraction 0.7867, needs at most 0.3"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

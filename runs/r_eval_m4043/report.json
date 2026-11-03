@@ -1,0 +1,309 @@
+{
+ "run_id": "r_eval_m4043",
+ "clip_stem": "upload_m4043",
+ "clip": "assets/clips/uploads/upload_m4043.mp4",
+ "source_name": "m4043.mp4",
+ "duration_s": 14.83,
+ "status": "done",
+ "elapsed_s": 364,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "chalkboard",
+   "menu",
+   "menu board",
+   "screen",
+   "television"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Busy adult restaurant bar socializing, no children as focus, no medical, accident, violence or grief visible.; Adults dining and socializing in restaurant bar with no children as focus, medical, accident, violence or grief visible.",
+  "context_tags": [
+   "bar",
+   "crowd",
+   "dining",
+   "indoor",
+   "nightlife",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 13,
+  "placed": 0,
+  "declined": 13
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c01.jpg",
+   "on_screen_s": 12.6,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 6.504 px, needs at most 2.5 px",
+    "p90 track residual 117.6 px, needs at most 5.0 px",
+    "edge-clipped fraction 0.4259, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c02.jpg",
+   "on_screen_s": 5.83,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 4.404 px, needs at most 2.5 px",
+    "p90 track residual 88.25 px, needs at most 5.0 px",
+    "p95 corner jitter 4.336 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.5371, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "menu",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c03.jpg",
+   "on_screen_s": 11.6,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 14.79 px, needs at most 2.5 px",
+    "p90 track residual 80.77 px, needs at most 5.0 px",
+    "edge-clipped fraction 0.3736, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "menu",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c04.jpg",
+   "on_screen_s": 5.8,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 4.091 px, needs at most 2.5 px",
+    "p90 track residual 86.88 px, needs at most 5.0 px",
+    "p95 corner jitter 4.405 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.5345, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c05.jpg",
+   "on_screen_s": 12.6,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 5.332 px, needs at most 2.5 px",
+    "p90 track residual 119.5 px, needs at most 5.0 px",
+    "p95 corner jitter 3.142 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.4259, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c06.jpg",
+   "on_screen_s": 6.4,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame.",
+    "Its lighting changes too much over the shot."
+   ],
+   "details": [
+    "median track residual 12.61 px, needs at most 2.5 px",
+    "p90 track residual 36.51 px, needs at most 5.0 px",
+    "p95 corner jitter 6.063 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.5104, needs at most 0.3",
+    "luma standard deviation 28.36, needs at most 25.0"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c07",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c07.jpg",
+   "on_screen_s": 6.07,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 4.417 px, needs at most 2.5 px",
+    "p90 track residual 88.26 px, needs at most 5.0 px",
+    "p95 corner jitter 5.175 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.5549, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c08",
+   "surface": "screen",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c08.jpg",
+   "on_screen_s": 12.13,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture.",
+    "People or things cover too much of it at some point.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "median track residual 2.771 px, needs at most 2.5 px",
+    "p90 track residual 6.805 px, needs at most 5.0 px",
+    "p95 corner jitter 5.437 px, needs at most 3.0 px",
+    "minimum side 27.6 px, needs at least 48.0 px",
+    "mean area fraction 0.001338, needs at least 0.004",
+    "maximum occlusion 0.715, needs at most 0.6",
+    "time the surface is visible but not covered 1.833 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c09",
+   "surface": "screen",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c09.jpg",
+   "on_screen_s": 14.83,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture."
+   ],
+   "details": [
+    "median track residual 4.98 px, needs at most 2.5 px",
+    "p90 track residual 11.05 px, needs at most 5.0 px",
+    "p95 corner jitter 3.099 px, needs at most 3.0 px",
+    "minimum side 26.3 px, needs at least 48.0 px",
+    "mean area fraction 0.002854, needs at least 0.004"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c10",
+   "surface": "screen",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c10.jpg",
+   "on_screen_s": 6.87,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "median track residual 3.061 px, needs at most 2.5 px",
+    "p90 track residual 28.04 px, needs at most 5.0 px",
+    "p95 corner jitter 3.569 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.4223, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c11",
+   "surface": "screen",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c11.jpg",
+   "on_screen_s": 14.83,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "median track residual 6.952 px, needs at most 2.5 px",
+    "p90 track residual 29.65 px, needs at most 5.0 px",
+    "p95 corner jitter 3.757 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.4584, needs at most 0.3"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c12",
+   "surface": "screen",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c12.jpg",
+   "on_screen_s": 12.03,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture.",
+    "People or things cover too much of it at some point.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "median track residual 3.281 px, needs at most 2.5 px",
+    "p90 track residual 8.535 px, needs at most 5.0 px",
+    "p95 corner jitter 5.488 px, needs at most 3.0 px",
+    "minimum side 29.52 px, needs at least 48.0 px",
+    "mean area fraction 0.001504, needs at least 0.004",
+    "maximum occlusion 0.6459, needs at most 0.6",
+    "time the surface is visible but not covered 2.0 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c13",
+   "surface": "screen",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m4043/thumbs/c13.jpg",
+   "on_screen_s": 6.87,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "median track residual 8.434 px, needs at most 2.5 px",
+    "p90 track residual 30.4 px, needs at most 5.0 px",
+    "p95 corner jitter 5.189 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.4757, needs at most 0.3"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

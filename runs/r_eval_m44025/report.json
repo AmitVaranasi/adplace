@@ -1,0 +1,250 @@
+{
+ "run_id": "r_eval_m44025",
+ "clip_stem": "upload_m44025",
+ "clip": "assets/clips/uploads/upload_m44025.mp4",
+ "source_name": "m44025.mp4",
+ "duration_s": 14.26,
+ "status": "done",
+ "elapsed_s": 314,
+ "note": "",
+ "scene": {
+  "places": [
+   {
+    "name": "table",
+    "kind": "other",
+    "where": "foreground center under food and drinks"
+   },
+   {
+    "name": "plate",
+    "kind": "other",
+    "where": "on table in front of woman in blue robe"
+   },
+   {
+    "name": "serving board",
+    "kind": "other",
+    "where": "foreground center under pizza slices"
+   },
+   {
+    "name": "glass",
+    "kind": "vessel",
+    "where": "on table middle holding yellow drink"
+   },
+   {
+    "name": "napkin",
+    "kind": "print",
+    "where": "on table next to yellow drink glass"
+   },
+   {
+    "name": "wall",
+    "kind": "other",
+    "where": "background behind plants"
+   },
+   {
+    "name": "shirt",
+    "kind": "other",
+    "where": "foreground right worn by person with braids"
+   },
+   {
+    "name": "robe",
+    "kind": "other",
+    "where": "worn by woman with curly hair on left"
+   },
+   {
+    "name": "mug",
+    "kind": "vessel",
+    "where": "on table foreground left with dark drink"
+   }
+  ],
+  "scene_safe": true,
+  "safety_reason": "Two adults sharing pizza and talking at outdoor table, no children as focus, medical, accident, violence or grief visible.; Two adults eating pizza and talking outdoors, no children, medical, accident, violence or grief visible",
+  "context_tags": [
+   "conversation",
+   "dining",
+   "food",
+   "outdoor",
+   "restaurant"
+  ],
+  "surfaces": [
+   "glass",
+   "mug",
+   "napkin",
+   "plate",
+   "robe",
+   "serving board",
+   "shirt",
+   "table",
+   "wall"
+  ]
+ },
+ "summary": {
+  "candidates": 9,
+  "placed": 1,
+  "declined": 8
+ },
+ "placements": [
+  {
+   "id": "c03",
+   "surface": "glass",
+   "decision": "placed",
+   "thumb": "/runs/r_eval_m44025/thumbs/c03.jpg",
+   "on_screen_s": 10.43,
+   "reasons": [],
+   "details": [],
+   "qa": {
+    "id": "c03",
+    "pass": true,
+    "checks": {},
+    "reasons": []
+   }
+  },
+  {
+   "id": "c01",
+   "surface": "print",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44025/thumbs/c01.jpg",
+   "on_screen_s": 5.0,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "It's too small to carry readable artwork.",
+    "It's too small in the picture.",
+    "People or things cover too much of it at some point.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "minimum side 42.67 px, needs at least 48.0 px",
+    "mean area fraction 0.003247, needs at least 0.004",
+    "maximum occlusion 0.8382, needs at most 0.6",
+    "time the surface is visible but not covered 4.046 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44025/thumbs/c02.jpg",
+   "on_screen_s": 10.59,
+   "reasons": [
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "no blank patch: no blank area of the glass (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
+    "moves: travels 0.6 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "table",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a table yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "plate",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a plate yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "serving board",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a serving board yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c07",
+   "surface": "wall",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a wall yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c08",
+   "surface": "shirt",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a shirt yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c09",
+   "surface": "robe",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a robe yet"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": "/player?clip=upload_m44025",
+ "viewers": [
+  {
+   "profile_id": "viewer-a",
+   "label": "Morning commuter"
+  },
+  {
+   "profile_id": "viewer-b",
+   "label": "Weekend runner"
+  },
+  {
+   "profile_id": "viewer-c",
+   "label": "Book lover"
+  },
+  {
+   "profile_id": "viewer-d",
+   "label": "Weekend traveller"
+  },
+  {
+   "profile_id": "viewer-e",
+   "label": "Home cook"
+  },
+  {
+   "profile_id": "viewer-f",
+   "label": "Tech commuter"
+  }
+ ]
+}

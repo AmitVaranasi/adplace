@@ -1,0 +1,33 @@
+{
+ "run_id": "r_eval_m9211",
+ "clip_stem": "upload_m9211",
+ "clip": "assets/clips/uploads/upload_m9211.mp4",
+ "source_name": "m9211.mp4",
+ "duration_s": 17.0,
+ "status": "done",
+ "elapsed_s": 22,
+ "note": "",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Three adults walking and talking happily in a public plaza with drinks, no children as focus, medical, accident, violence, or grief visible.; Three adults walking and chatting happily outdoors with drinks; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "cafe",
+   "city",
+   "daytime",
+   "drink",
+   "friends",
+   "outdoor",
+   "outdoors",
+   "street"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

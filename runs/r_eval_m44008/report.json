@@ -1,0 +1,30 @@
+{
+ "run_id": "r_eval_m44008",
+ "clip_stem": "upload_m44008",
+ "clip": "assets/clips/uploads/upload_m44008.mp4",
+ "source_name": "m44008.mp4",
+ "duration_s": 12.47,
+ "status": "done",
+ "elapsed_s": 16,
+ "note": "Nothing in this video can carry an ad. We look for posters, picture frames, signs, menu boards, screens, and plain glasses, cups and mugs that stay still, and found none.",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Close-up shots of pizza being held and served and blurry potted plants; no children, medical, accident, violence, or grief visible.; Shows only pizza being held and served and blurry plants, with no children, medical, accident, violence, or grief content.",
+  "context_tags": [
+   "dining",
+   "food",
+   "pizza",
+   "plants",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

@@ -1,0 +1,91 @@
+{
+ "run_id": "r_eval_m24152",
+ "clip_stem": "upload_m24152",
+ "clip": "assets/clips/uploads/upload_m24152.mp4",
+ "source_name": "m24152.mp4",
+ "duration_s": 8.68,
+ "status": "done",
+ "elapsed_s": 250,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "coffee cup"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Neutral adult cafe dining scene with no children, medical, accident, violence or grief.; Adults dining calmly in a cafe with table service; no children as focus, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "food",
+   "indoor",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 3,
+  "placed": 0,
+  "declined": 3
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m24152/thumbs/c01.jpg",
+   "on_screen_s": 8.36,
+   "reasons": [
+    "We couldn't track it through the shot.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "could not track: the cup's shape fitted in 72% of frames, needs 80%",
+    "track residual: logo well inside the cup in 43% of frames, needs 90%",
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
+    "moves: travels 2.1 cup radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We couldn't track it through the shot."
+   ],
+   "details": [
+    "could not track: Muse Spark gave no usable answer"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m24152/thumbs/c03.jpg",
+   "on_screen_s": 6.24,
+   "reasons": [
+    "It's too small to carry readable artwork.",
+    "We couldn't track it through the shot.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "An ad would vanish while the surface is still in view.",
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "minimum side: cup 31 px wide, needs 44 px",
+    "could not track: the cup's shape fitted in 31% of frames, needs 80%",
+    "track residual: logo well inside the cup in 71% of frames, needs 90%",
+    "visible but not covered for 1.0 s",
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
+    "moves: travels 2.2 cup radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

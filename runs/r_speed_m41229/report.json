@@ -1,0 +1,30 @@
+{
+ "run_id": "r_speed_m41229",
+ "clip_stem": "upload_m41229",
+ "clip": "assets/clips/uploads/upload_m41229.mp4",
+ "source_name": "m41229.mp4",
+ "duration_s": 9.71,
+ "status": "done",
+ "elapsed_s": 12,
+ "note": "",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Two adult women in a cafe with positive social interaction; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "cafe",
+   "indoor",
+   "coffee shop",
+   "conversation",
+   "friends"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

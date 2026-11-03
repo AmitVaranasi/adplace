@@ -454,7 +454,8 @@ void main() {
 <script>
 "use strict";
 (() => {
-  const CLIPS = ["patio_waiter", "pizzeria_counter", "pizzeria_box"];
+  // the pizzeria clips are YouTube footage for experiments only (configs/clips.json): not listed, not published
+  const CLIPS = ["patio_waiter"];
   // an uploaded clip (scripts/ingest.py) is opened by name from the upload page
   const asked = new URLSearchParams(location.search).get("clip");
   if (asked && /^[\w-]+$/.test(asked) && !CLIPS.includes(asked)) CLIPS.unshift(asked);

@@ -1,0 +1,81 @@
+{
+ "run_id": "r_eval_m42482",
+ "clip_stem": "upload_m42482",
+ "clip": "assets/clips/uploads/upload_m42482.mp4",
+ "source_name": "m42482.mp4",
+ "duration_s": 16.22,
+ "status": "done",
+ "elapsed_s": 660,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "pizza box"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult hands slicing a pizza in a box, no children, medical, accident, violence or grief visible.; Adult hands cutting pizza in a box; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "food",
+   "hands",
+   "kitchen",
+   "pizza",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 2,
+  "placed": 0,
+  "declined": 2
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "box",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m42482/thumbs/c01.jpg",
+   "on_screen_s": 0.79,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "It isn't on screen long enough to register.",
+    "It's never visible long enough in one go.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "It's mostly cut off by the edge of the frame.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "on screen 0.7925 s, needs at least 2.0 s",
+    "longest run 0.7925 s, needs at least 1.5 s",
+    "median track residual missing or non-finite, needs at most 2.5 px",
+    "p90 track residual missing or non-finite, needs at most 5.0 px",
+    "edge-clipped fraction 1.0, needs at most 0.3",
+    "time the surface is visible but not covered 15.43 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "box",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m42482/thumbs/c02.jpg",
+   "on_screen_s": 10.76,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's too small to carry readable artwork.",
+    "It's mostly cut off by the edge of the frame."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 34.57 px, needs at most 2.5 px",
+    "p90 track residual 92.87 px, needs at most 5.0 px",
+    "p95 corner jitter 24.04 px, needs at most 3.0 px",
+    "minimum side 26.49 px, needs at least 48.0 px",
+    "edge-clipped fraction 1.0, needs at most 0.3"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

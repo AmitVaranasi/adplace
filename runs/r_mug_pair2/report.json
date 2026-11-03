@@ -1,0 +1,88 @@
+{
+ "run_id": "r_mug_pair2",
+ "clip_stem": "upload_pair2",
+ "clip": "assets/clips/uploads/upload_pair2.mp4",
+ "source_name": "mug_pair.mp4",
+ "duration_s": 5.0,
+ "status": "done",
+ "elapsed_s": 132,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "mug"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Two novelty mugs on a counter with no people or sensitive content.; Two novelty mugs on a table, no people, violence, medical or distress content",
+  "context_tags": [
+   "drinkware",
+   "indoor",
+   "kitchen",
+   "table",
+   "tabletop"
+  ]
+ },
+ "summary": {
+  "candidates": 2,
+  "placed": 2,
+  "declined": 0
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "cup",
+   "decision": "placed",
+   "thumb": "/runs/r_mug_pair2/thumbs/c01.jpg",
+   "on_screen_s": 5.0,
+   "reasons": [],
+   "details": [],
+   "qa": {
+    "id": "c01",
+    "pass": true,
+    "checks": {},
+    "reasons": []
+   }
+  },
+  {
+   "id": "c02",
+   "surface": "cup",
+   "decision": "placed",
+   "thumb": "/runs/r_mug_pair2/thumbs/c02.jpg",
+   "on_screen_s": 5.0,
+   "reasons": [],
+   "details": [],
+   "qa": {
+    "id": "c02",
+    "pass": true,
+    "checks": {},
+    "reasons": []
+   }
+  }
+ ],
+ "player_url": "/player?clip=upload_pair2",
+ "viewers": [
+  {
+   "profile_id": "viewer-a",
+   "label": "Morning commuter"
+  },
+  {
+   "profile_id": "viewer-b",
+   "label": "Weekend runner"
+  },
+  {
+   "profile_id": "viewer-c",
+   "label": "Book lover"
+  },
+  {
+   "profile_id": "viewer-d",
+   "label": "Weekend traveller"
+  },
+  {
+   "profile_id": "viewer-e",
+   "label": "Home cook"
+  },
+  {
+   "profile_id": "viewer-f",
+   "label": "Tech commuter"
+  }
+ ]
+}

@@ -1,0 +1,31 @@
+{
+ "run_id": "r_eval_m44005",
+ "clip_stem": "upload_m44005",
+ "clip": "assets/clips/uploads/upload_m44005.mp4",
+ "source_name": "m44005.mp4",
+ "duration_s": 11.93,
+ "status": "done",
+ "elapsed_s": 15,
+ "note": "",
+ "scene": {
+  "surfaces": [],
+  "scene_safe": true,
+  "safety_reason": "Adult eating pizza outdoors, no children, medical, accident, violence or grief visible; Adult eating pizza outdoors with no children as focus, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "daytime",
+   "eating",
+   "food",
+   "outdoor",
+   "outdoors",
+   "pizza"
+  ]
+ },
+ "summary": {
+  "candidates": 0,
+  "placed": 0,
+  "declined": 0
+ },
+ "placements": [],
+ "player_url": null,
+ "viewers": []
+}

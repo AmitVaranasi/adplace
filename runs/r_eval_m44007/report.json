@@ -1,0 +1,341 @@
+{
+ "run_id": "r_eval_m44007",
+ "clip_stem": "upload_m44007",
+ "clip": "assets/clips/uploads/upload_m44007.mp4",
+ "source_name": "m44007.mp4",
+ "duration_s": 5.67,
+ "status": "done",
+ "elapsed_s": 190,
+ "note": "",
+ "scene": {
+  "places": [
+   {
+    "name": "glass",
+    "kind": "vessel",
+    "where": "top center of table with orange juice"
+   },
+   {
+    "name": "plate",
+    "kind": "other",
+    "where": "left side of table"
+   },
+   {
+    "name": "napkin",
+    "kind": "print",
+    "where": "top left under cutlery"
+   },
+   {
+    "name": "bowl",
+    "kind": "vessel",
+    "where": "top center with breadsticks"
+   },
+   {
+    "name": "ramekin",
+    "kind": "vessel",
+    "where": "behind orange juice glass at top"
+   },
+   {
+    "name": "serving board",
+    "kind": "other",
+    "where": "center under pizza"
+   },
+   {
+    "name": "table",
+    "kind": "other",
+    "where": "wooden table surface covering frame"
+   },
+   {
+    "name": "sleeve",
+    "kind": "other",
+    "where": "blue patterned sleeve on left person"
+   },
+   {
+    "name": "wall",
+    "kind": "other",
+    "where": "gray background behind table at top"
+   },
+   {
+    "name": "shirt",
+    "kind": "other",
+    "where": "left edge on person's arm"
+   },
+   {
+    "name": "sweatshirt",
+    "kind": "other",
+    "where": "right edge on person's arm"
+   }
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adults sharing pizza at a restaurant table, no children as focus, medical, accident, violence or grief visible.; Two adults sharing pizza at a table, no children as focus, no medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "indoor",
+   "pizza",
+   "restaurant"
+  ],
+  "surfaces": [
+   "bowl",
+   "glass",
+   "napkin",
+   "plate",
+   "ramekin",
+   "serving board",
+   "shirt",
+   "sleeve",
+   "sweatshirt",
+   "table",
+   "wall"
+  ]
+ },
+ "summary": {
+  "candidates": 14,
+  "placed": 1,
+  "declined": 13
+ },
+ "placements": [
+  {
+   "id": "c07",
+   "surface": "glass",
+   "decision": "placed",
+   "thumb": "/runs/r_eval_m44007/thumbs/c07.jpg",
+   "on_screen_s": 5.67,
+   "reasons": [],
+   "details": [],
+   "qa": {
+    "id": "c07",
+    "pass": true,
+    "checks": {},
+    "reasons": []
+   }
+  },
+  {
+   "id": "c01",
+   "surface": "print",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44007/thumbs/c01.jpg",
+   "on_screen_s": 2.84,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 30.1 px, needs at most 2.5 px",
+    "p90 track residual 46.41 px, needs at most 5.0 px",
+    "p95 corner jitter 4.18 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.9265, needs at most 0.3",
+    "time the surface is visible but not covered 2.836 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "print",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44007/thumbs/c02.jpg",
+   "on_screen_s": 4.3,
+   "reasons": [
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "People or things cover too much of it at some point.",
+    "People or things cover too much of it most of the time.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "median track residual 13.09 px, needs at most 2.5 px",
+    "p90 track residual 13.78 px, needs at most 5.0 px",
+    "p95 corner jitter 12.17 px, needs at most 3.0 px",
+    "maximum occlusion 0.924, needs at most 0.6",
+    "mean occlusion 0.3521, needs at most 0.35",
+    "time the surface is visible but not covered 1.376 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44007/thumbs/c03.jpg",
+   "on_screen_s": 5.67,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Green outline is a tiny fragment on the table beside the orange-juice glass and does not enclose one complete drinking glass, cup/mug, or bowl. No placeable vessel is outlined."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44007/thumbs/c04.jpg",
+   "on_screen_s": 5.3,
+   "reasons": [
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges."
+   ],
+   "details": [
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44007/thumbs/c05.jpg",
+   "on_screen_s": 5.67,
+   "reasons": [
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges."
+   ],
+   "details": [
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44007/thumbs/c06.jpg",
+   "on_screen_s": 5.67,
+   "reasons": [
+    "We couldn't track it through the shot."
+   ],
+   "details": [
+    "could not track: the glass's shape fitted in 76% of frames, needs 80%"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c08",
+   "surface": "plate",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a plate yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c09",
+   "surface": "serving board",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a serving board yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c10",
+   "surface": "table",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a table yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c11",
+   "surface": "sleeve",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a sleeve yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c12",
+   "surface": "wall",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a wall yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c13",
+   "surface": "shirt",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a shirt yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c14",
+   "surface": "sweatshirt",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a sweatshirt yet"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": "/player?clip=upload_m44007",
+ "viewers": [
+  {
+   "profile_id": "viewer-a",
+   "label": "Morning commuter"
+  },
+  {
+   "profile_id": "viewer-b",
+   "label": "Weekend runner"
+  },
+  {
+   "profile_id": "viewer-c",
+   "label": "Book lover"
+  },
+  {
+   "profile_id": "viewer-d",
+   "label": "Weekend traveller"
+  },
+  {
+   "profile_id": "viewer-e",
+   "label": "Home cook"
+  },
+  {
+   "profile_id": "viewer-f",
+   "label": "Tech commuter"
+  }
+ ]
+}

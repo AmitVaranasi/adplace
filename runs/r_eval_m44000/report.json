@@ -1,0 +1,51 @@
+{
+ "run_id": "r_eval_m44000",
+ "clip_stem": "upload_m44000",
+ "clip": "assets/clips/uploads/upload_m44000.mp4",
+ "source_name": "m44000.mp4",
+ "duration_s": 20.6,
+ "status": "done",
+ "elapsed_s": 206,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult woman dining peacefully outdoors with pizza, no children, medical, accident, violence or grief elements visible.; Adult woman dining peacefully outdoors with pizza; no children, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "dining",
+   "drink",
+   "food",
+   "outdoor",
+   "outdoor dining",
+   "pizza",
+   "restaurant"
+  ]
+ },
+ "summary": {
+  "candidates": 1,
+  "placed": 0,
+  "declined": 1
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44000/thumbs/c01.jpg",
+   "on_screen_s": 20.6,
+   "reasons": [
+    "We couldn't track it through the shot.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "could not track: the glass's shape fitted in 54% of frames, needs 80%",
+    "moves: travels 4.7 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

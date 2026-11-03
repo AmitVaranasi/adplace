@@ -1,0 +1,96 @@
+{
+ "run_id": "r_eval_m44011",
+ "clip_stem": "upload_m44011",
+ "clip": "assets/clips/uploads/upload_m44011.mp4",
+ "source_name": "m44011.mp4",
+ "duration_s": 12.68,
+ "status": "done",
+ "elapsed_s": 197,
+ "note": "",
+ "scene": {
+  "surfaces": [
+   "drinking glass"
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adults sharing pizza and drinks outdoors with positive mood; no children, medical, accident, violence or grief visible.; Adults enjoying pizza and a drink outdoors in a friendly mood; no children as focus, medical, accident, violence, or grief visible.",
+  "context_tags": [
+   "drink",
+   "food",
+   "outdoor",
+   "outdoors",
+   "pizza",
+   "social"
+  ]
+ },
+ "summary": {
+  "candidates": 4,
+  "placed": 0,
+  "declined": 4
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44011/thumbs/c01.jpg",
+   "on_screen_s": 10.8,
+   "reasons": [
+    "We couldn't track it through the shot.",
+    "An ad would vanish while the surface is still in view.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "could not track: the glass's shape fitted in 44% of frames, needs 80%",
+    "visible but not covered for 1.0 s",
+    "moves: travels 6.4 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44011/thumbs/c02.jpg",
+   "on_screen_s": 1.84,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: The outlined object is a small black sauce ramekin/dipping bowl, not a drinking glass nor a coffee cup/teacup/mug. It is solid black with no print, pattern, or brand name/logo visible."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44011/thumbs/c03.jpg",
+   "on_screen_s": 1.42,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Partially cropped small black sauce ramekin/bowl at bottom-left frame edge, not a drinking glass or coffee/teacup/mug. No print or brand logo visible on the visible portion."
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_eval_m44011/thumbs/c04.jpg",
+   "on_screen_s": 2.21,
+   "reasons": [
+    "We couldn't track it through the shot.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "could not track: the glass's shape fitted in 55% of frames, needs 80%",
+    "moves: travels 3.6 glass radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "viewers": []
+}

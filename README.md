@@ -21,16 +21,46 @@ Demo script: `docs/DEMO.md`. Write-up: `docs/SUBMISSION.md`.
 ## Quick start
 
 ```bash
-eval "$(grep '^export MODEL_API_KEY=' ~/.zshrc)"; export MODEL_API_KEY     # Meta Model API key
+git clone https://github.com/AmitVaranasi/adplace && cd adplace
+python3.12 -m venv .venv
+.venv/bin/pip install --no-deps videoseal==1.0.1 && .venv/bin/pip install -r requirements.txt
+export MODEL_API_KEY=...            # Meta Model API key: needed to process uploads, not to watch the demo
 .venv/bin/python -m uvicorn app.main:app --port 8411
-# http://127.0.0.1:8411/                     My videos: the creator's library (status, places for ads, on/off, remove)
-# http://127.0.0.1:8411/upload               upload a clip; live progress, then a report of what was placed and why not
-# http://127.0.0.1:8411/reels?clip=<stem>    creator settings (opt in, approve places and brands) + two viewers' phones
-# http://127.0.0.1:8411/player?clip=<stem>   the live per-viewer player with the playback auction
-# http://127.0.0.1:8411/verify               the first demo page: render a viewer's copy, check a file for the watermark
-.venv/bin/python scripts/ingest.py <video>   # the same upload pipeline from the command line
+```
+
+Then open:
+
+| Page | What it is |
+|---|---|
+| `http://127.0.0.1:8411/` | My videos: the creator's library (uploads in progress, places for ads, placement on/off, remove) |
+| `/upload` | upload a clip; live progress, then a report of what was placed and why the rest was declined |
+| `/reels?clip=upload_m43248` | creator settings (opt in, approve places and brands) beside two viewers' phones, each with its own auction |
+| `/player?clip=upload_m43248` | the full live player: any viewer, the auction's prices, Original / With ads, download |
+| `/verify` | the first demo page: render a viewer's copy, check any file for the Video Seal watermark |
+
+The repo carries the demo data so a fresh clone plays straight away: the live players (`app/static/player/*`, with
+their `stack.mp4`), and the latest report, thumbnails and poster for each video in the library (`runs/*`). Without a
+key you can browse the library, reports, players and `/reels`, and run the playback auction; uploading a new video
+calls SAM 3.1 and Muse Spark and needs `MODEL_API_KEY`. Rendering a watermarked download needs the source clip and
+the upload's mask cache, which stay local (`assets/clips/`, `cache/`); on a fresh clone, upload a video first.
+
+```bash
+.venv/bin/python scripts/ingest.py <video>   # the upload pipeline from the command line
 .venv/bin/python -m pytest -q                # tests
 ```
+
+## Meta models: what runs where
+
+| Model | How | Where in the code | What for |
+|---|---|---|---|
+| SAM 3.1 | Meta Model API (`sam-3.1`), responses decoded with `meta-sam-parser` | `pipeline/sam_api.py`, `pipeline/fast_mask_codec.py`, `scripts/ingest.py` | text-prompted video segmentation of every place Muse lists (posters, frames, signs, menus, screens), of cups, glasses and bowls, of cup handles (to keep logos off them) and of people in front |
+| Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads each scene (every place an ad could go and its kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
+| Muse Image 1.0 | Meta Model API (`muse-image-1.0`) | `scripts/gen_creatives.py` | the fictional brands' artwork (posters, prints, labels) |
+| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file, checked after re-encoding |
+
+No other models run in the product. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
+weights locally through `transformers` (`--backend local`, not in requirements.txt); everything an upload does goes
+through the API.
 
 ## Built during the hackathon
 
@@ -71,12 +101,6 @@ Video Seal's pip package has two packaging issues on macOS: `decord` has no Appl
 its model card and attenuation config are resolved relative to the working directory. `pipeline/videoseal_cfg/`
 vendors the config and `pipeline/watermark.py` loads it by absolute path.
 
-## Demo app
-
-```bash
-.venv/bin/python -m uvicorn app.main:app --port 8411    # open http://127.0.0.1:8411
-```
-
 ## Results on uploads (Nov 2)
 
 | Check | Result |
@@ -107,4 +131,4 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 | Llama 3.3 70B choice, 3 viewers on the night billboard | matching brand for each (brewlark / kestrel / paperwhale) | matches interests |
 | Road-safety sign | no placement, no model call | refused |
 
-Footage is openly licensed; see `assets/ATTRIBUTION.md`. Brands are fictional.
+Footage is openly licensed; see `assets/ATTRIBUTION.md`. Brands are fictional. Code: MIT (`LICENSE`).
