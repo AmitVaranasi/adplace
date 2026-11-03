@@ -60,7 +60,7 @@ an upload (which spends Meta API credit), so don't expose it to the internet as 
 | SAM 3.1 | Meta Model API (`sam-3.1`), responses decoded with `meta-sam-parser` | `pipeline/sam_api.py`, `pipeline/fast_mask_codec.py`, `scripts/ingest.py` | text-prompted video segmentation of every place Muse lists (posters, frames, signs, menus, screens), of cups, glasses and bowls, of cup handles (to keep logos off them) and of people in front |
 | Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads sampled frames of each scene (the places an ad could go and their kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
 | Muse Image 1.0 | Meta Model API (`muse-image-1.0`) | `scripts/gen_creatives.py` | the fictional brands' artwork (posters, prints, labels) |
-| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file; found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that or after cropping |
+| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file; found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that or after a 9:16 re-crop |
 
 The upload and playback path uses only these. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
 weights locally through `transformers` (`--backend local`, not in requirements.txt); everything an upload does goes

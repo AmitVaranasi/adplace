@@ -32,7 +32,8 @@ light, focus and grain, printed on glasses (and cups, on test clips), behind the
 show the same video to two viewers, each with the sponsors their own auction picked.
 
 Every frame with an ad carries a visible "AI product placement" label, and the file a viewer downloads carries an
-invisible Meta Video Seal watermark carrying an id this server resolves to the campaigns: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264]. Cropping removes it: a 9:16 re-crop of a landscape download, as a repost to a vertical feed would do, is not found.
+invisible Meta Video Seal watermark carrying an id this server resolves to the campaigns: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264]. A slight crop can survive (a 90% crop was still found); a 9:16 re-crop of a landscape download, as a repost to a
+vertical feed would do, is not.
 
 ## How we used Meta's AI tools
 

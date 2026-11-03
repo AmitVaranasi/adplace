@@ -142,6 +142,8 @@
       make("span", {className: "badge" + (live ? " live" : ""), textContent:
         !v.has_player ? (v.found ? "None kept" : "Nothing to place") : live ? "Placement on" : "Placement off"}));
     const facts = [
+      v.updated ? new Date(v.updated * 1000).toLocaleString(undefined, {month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit"}) : null,   // tells two uploads of the same file apart
       v.duration_s ? Number(v.duration_s).toFixed(1) + " s" : null,
       v.has_player ? plural(v.placed, "place for ads", "places for ads") + " (" + v.places.map(title).join(", ") + ")"
         : v.found ? plural(v.found, "place checked, none kept", "places checked, none kept")

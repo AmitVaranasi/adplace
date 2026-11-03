@@ -50,6 +50,8 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
                 continue
             if p.get("surface") in known and p["surface"] not in c.get("eligible_surfaces", []):
                 continue
+            if p.get("contents") and p["contents"] in c.get("unsuitable_contents", []):
+                continue   # a coffee brand on a glass of orange juice reads as a mistake
             bid = float(c.get("bid_cpm", RESERVE_CPM)) * (1 + rng.uniform(-jitter, jitter))
             if bid < RESERVE_CPM:
                 continue
@@ -82,5 +84,5 @@ def placements_of(track):
         bs = [b for b in o["boxes"] if b]
         area = sum(b[2] * b[3] for b in bs) / max(len(bs), 1) * 0.5   # a wrapped print covers about half its box
         out.append({"id": o["id"], "surface": o.get("surface"), "brands": list(o["brands"]),
-                    "area": area / (track["width"] * track["height"])})
+                    "contents": o.get("contents", ""), "area": area / (track["width"] * track["height"])})
     return out

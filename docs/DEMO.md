@@ -20,7 +20,7 @@ Screen: `/` (My videos): the creator's library, each video with its places for a
 "Upload a video", drop `assets/clips/raw3/m43248.mp4`; back in the library it shows as processing; skip past the wait
 ("10 to 15 minutes, once") and open the report of the same clip processed earlier, saying so: "this is that clip,
 processed earlier". Don't upload an unseen clip on camera: most find nothing to place on. Open "Settings & preview" on `/reels`: start with the switch off (both phones show the
-original, "The creator hasn't turned on product placement"), turn on "Allow product placement"; both phones' ads
+original, "Product placement is off for this video"), turn on "Allow product placement"; both phones' ads
 appear. Untick Brewlark: the commuter's glass re-bids to another brand.
 
 Say: "Placement is off until the creator turns it on. They approve each place we found and each brand they're happy

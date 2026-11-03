@@ -646,10 +646,14 @@
         resetPick();
         return;
       }
+      // the same file can't succeed a second time if it isn't a readable video: offer only another file then
+      const unreadable = /couldn't read a video/i.test(String(error.message || error));
       showError("We could not send the clip: " + String(error.message || error).replace(/\.?$/, "."), [
-        make("button", {type: "button", className: "primary", textContent: "Try again", onclick: startUpload}),
-        make("button", {type: "button", textContent: "Choose a different file", onclick: resetPick}),
-      ]);
+        unreadable ? null : make("button", {type: "button", className: "primary", textContent: "Try again",
+          onclick: startUpload}),
+        make("button", {type: "button", className: unreadable ? "primary" : "", textContent: "Choose a different file",
+          onclick: resetPick}),
+      ].filter(Boolean));
       $("uploading").hidden = true;
       $("drop").hidden = false;
       $("chosen").hidden = false;

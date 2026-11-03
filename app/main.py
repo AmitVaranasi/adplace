@@ -6,6 +6,8 @@ cached. Rendering a (clip, brand) pair runs for real the first time and is reuse
 """
 import functools
 import hashlib
+import hmac
+import secrets
 import json
 import re
 import shutil
@@ -148,6 +150,23 @@ class ViewerRenderRequest(BaseModel):
     clip: str          # stem, e.g. "patio_waiter"
     profile_id: str
     assignment: dict[str, str] | None = None   # what this viewer's auction chose; default: the export's choice
+    token: str | None = None   # the auction's signature over that assignment (auction_token)
+
+
+def _secret():
+    """This server's signing key, kept across restarts (cache/ is git-ignored)."""
+    p = ROOT / "cache" / "auction_secret"
+    if not p.exists():
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(secrets.token_hex(32))
+    return p.read_text().strip().encode()
+
+
+def auction_token(clip, profile_id, assignment):
+    """Signs what an auction this server ran awarded, so a download can only name brands that actually won (a copy
+    naming any brand a browser asks for would be an impression nobody bought)."""
+    msg = json.dumps([clip, profile_id, sorted(assignment.items())]).encode()
+    return hmac.new(_secret(), msg, hashlib.sha256).hexdigest()
 
 
 class AuctionRequest(BaseModel):
@@ -177,7 +196,8 @@ def run_auction(req: AuctionRequest):
     r = auction.run(creator.allowed(auction.placements_of(track), settings), load("inventory.json"),
                     viewers[req.profile_id].get("preferences", []), entry.get("context_tags", []),
                     jitter=min(max(req.jitter, 0.0), 0.5), seed=req.seed)
-    return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"]}
+    return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"],
+            "token": auction_token(req.clip, req.profile_id, r["assignment"])}
 
 
 def player_export_dir(stem):
@@ -225,8 +245,10 @@ def creator_get(stem: str):
                        "on_screen_s": r.get("on_screen_s"), "thumb": r.get("thumb"),
                        "where": where(centre.get(p["id"]))})
         for b in p["brands"]:
-            if p["surface"] not in campaigns.get(b, {}).get("eligible_surfaces", [p["surface"]]):
-                continue   # artwork exists, but the brand doesn't run on this kind of surface (no sportswear on a juice glass)
+            c = campaigns.get(b, {})
+            if p["surface"] not in c.get("eligible_surfaces", [p["surface"]]) or \
+                    (p.get("contents") and p["contents"] in c.get("unsuitable_contents", [])):
+                continue   # artwork exists, but not this kind of surface or drink (no sportswear, no coffee on juice)
             brands.setdefault(b, {"id": b, "category": campaigns.get(b, {}).get("category"),
                                   "allowed": settings["brands"].get(b, True), "places": []})["places"].append(p["id"])
     unsupported = lambda p: any(str(d).startswith("not yet:") for d in p.get("details", []))  # noqa: E731
@@ -333,7 +355,9 @@ def viewer_render(req: ViewerRenderRequest):
         raise HTTPException(404, f"unknown profile {req.profile_id}")
     clip = track["clip"]
     assignment = viewers[req.profile_id]["assignment"]
-    if req.assignment is not None:   # from /api/auction: only brands this export has artwork for
+    if req.assignment is not None:   # from /api/auction, signed by it: only brands that won this viewer's auction
+        if not req.token or not hmac.compare_digest(req.token, auction_token(req.clip, req.profile_id, req.assignment)):
+            raise HTTPException(403, "That isn't what this viewer's auction awarded. Run the bid again, then download.")
         brands = {s["id"]: set(s["brands"]) for s in track["slots"] + track.get("objects", [])}
         if any(k not in brands or v not in brands[k] for k, v in req.assignment.items()):
             raise HTTPException(400, "assignment names a placement or brand this export doesn't have")
@@ -409,6 +433,7 @@ def failure_text(msg):
     return msg
 
 
+MAX_RUNNING = 2   # uploads processed at once
 STALLED_S = 30 * 60   # a run with no progress for this long has stopped (the process died or the machine slept)
 
 
@@ -616,6 +641,11 @@ async def ingest(file: UploadFile):
     from datetime import datetime
     if not (file.filename or "").lower().endswith((".mp4", ".mov", ".m4v", ".webm")):
         raise HTTPException(400, "please upload an mp4, mov or webm video")
+    busy = [d for d in (ROOT / "runs").glob("r_*") if (d / "progress.jsonl").exists() and not (d / "report.json").exists()
+            and not (d / "removed").exists() and time.time() - (d / "progress.jsonl").stat().st_mtime < 600
+            and '"stage": "error"' not in (d / "progress.jsonl").read_text()]
+    if len(busy) >= MAX_RUNNING:   # each run spends Meta API credit and minutes of this machine
+        raise HTTPException(429, f"{len(busy)} videos are already processing. Try again when one of them finishes.")
     run_id = f"r_{datetime.now():%Y%m%d_%H%M}_{uuid.uuid4().hex[:8]}"
     run_dir = ROOT / "runs" / run_id
     run_dir.mkdir(parents=True)

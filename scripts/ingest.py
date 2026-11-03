@@ -66,7 +66,10 @@ def flat_slot(name, kind):
                     "dynamic_content": False}
         return {"surface": "print", "creative_format": "menu_card", "shading": True, "dynamic_content": False}
     surface = SURFACES.get(name, display_surface(name))
-    return {"surface": surface, "dynamic_content": surface == "screen", "wall_light": surface != "screen"}
+    slot = {"surface": surface, "dynamic_content": surface == "screen", "wall_light": surface != "screen"}
+    if surface == "poster":   # Muse Image's photographic posters: bold, high-contrast, read at phone size
+        slot["creative_format"] = "poster"
+    return slot
 STAGES = ["upload", "shots", "segment", "track", "score", "render", "export", "qa", "done"]
 
 
@@ -524,6 +527,16 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
 ]
 
 
+DRINKS = ["coffee", "latte", "matcha", "tea", "juice", "smoothie", "beer", "wine", "cocktail", "soda", "water", "milk"]
+
+
+def contents_of(text):
+    """What is in a vessel, from Muse's description of it ("a drinking glass with juice" -> "juice"); "" if unsaid.
+    The auction keeps brands off drinks they don't fit (inventory: unsuitable_contents)."""
+    text = str(text).lower()
+    return next((d for d in DRINKS if d in text), "")
+
+
 def plain(reasons):
     """Plain sentences for the report, each once, in order; anything unrecognised is passed through."""
     out = []
@@ -649,7 +662,8 @@ def ingest(src, run_id=None):
             except Exception as e:
                 c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
                 c["frames"], c["thumb"] = [0, 0], None
-            c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid)}
+            c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid),
+                         "contents": contents_of(c["metrics"].get("muse_reason", ""))}
             c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
             cands.append(c)
         # places with no placement method yet: reported as found, so the report shows every opportunity

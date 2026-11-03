@@ -227,7 +227,8 @@ def export_glass(clip, spec, frames, start, inventory, d):
         cv2.imwrite(str(logos / f"{b}_glass.png"), np.rint(obj.art(b) * 255).astype(np.uint8))
     print(f"  {spec['id']}: glass, {len(brands)} brands live, {len(cells)} frames, atlas {atlas.shape[1]}x{atlas.shape[0]}",
           flush=True)
-    return {"id": spec["id"], "kind": "glass", "surface": spec.get("surface", "glass"), "boxes": boxes,
+    return {"id": spec["id"], "kind": "glass", "surface": spec.get("surface", "glass"), "contents": spec.get("contents", ""),
+            "boxes": boxes,
             "place": place, "atlas": f"art/{spec['id']}_glass.png", "sigma": round(float(obj.sigma), 3),
             "grain": round(float(obj.grain), 3), "half_angle": round(float(obj.half), 4),
             # per brand, the player widens the print so the logo is logo_height of the vessel's height (half_for)

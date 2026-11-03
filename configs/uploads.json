@@ -58,7 +58,8 @@
     "object": 0,
     "surface": "poster",
     "dynamic_content": false,
-    "wall_light": true
+    "wall_light": true,
+    "creative_format": "poster"
    }
   ],
   "objects3d": [
@@ -587,7 +588,8 @@
     "kind": "glass_decal",
     "surface": "glass",
     "prompt": "cup",
-    "object": 1
+    "object": 1,
+    "contents": "juice"
    }
   ]
  },

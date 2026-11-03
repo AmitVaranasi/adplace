@@ -102,7 +102,8 @@
     <p class="muted">Every copy a viewer downloads carries an invisible Meta Video Seal watermark naming the campaigns
       in it. Drop a video to check whether it carries one.</p>
     <p class="muted">The mark survives moderate re-compression, so a copy that has been compressed again still answers
-      (tested down to 854 px wide at CRF 28, or 640 px at CRF 23). Cropping the picture removes it.</p>
+      (tested down to 854 px wide at CRF 28, or 640 px at CRF 23). A slight crop can survive; a 9:16 re-crop for a
+      vertical feed removes it.</p>
   </header>
 
   <section class="panel" aria-labelledby="pick-title">
@@ -250,6 +251,15 @@
   }
 
   function notFound(data) {
+    if (data.bit_accuracy >= 0.75) {   // well above chance, below what names a campaign: say so, not "nothing"
+      $("result-body").replaceChildren(
+        make("div", {className: "verdict"},
+          make("span", {className: "pill none", textContent: "Damaged mark"}),
+          make("strong", {textContent: "Probably an AdPlace copy, too degraded to read which campaigns."})),
+        make("p", {className: "muted", textContent: "Best match " + pct(data.bit_accuracy) + " of the bits: far above "
+          + "the 50% of chance, below the 90% we need to name a campaign. Heavy re-compression or cropping does this."}));
+      return;
+    }
     $("result-body").replaceChildren(
       make("div", {className: "verdict"},
         make("span", {className: "pill none", textContent: "Nothing found"}),

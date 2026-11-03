@@ -1396,7 +1396,7 @@ void main() {
     $("download-status").scrollIntoView({block:"nearest"});
     try {
       const r=await fetch("/api/viewer_render",{method:"POST",
-        headers:{"content-type":"application/json"},body:JSON.stringify({clip,profile_id:viewer,assignment:won()})});
+        headers:{"content-type":"application/json"},body:JSON.stringify({clip,profile_id:viewer,assignment:won(),token:(live.auction[viewer] || {}).token})});
       const body=await r.json();
       if (!r.ok) throw new Error(body.detail || r.status);
       if (token!==downloadToken) return;

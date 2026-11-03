@@ -204,8 +204,8 @@
         <input id="enabled" type="checkbox">
         <span class="track" aria-hidden="true"></span>
         <span><strong>Allow product placement</strong>
-          <small>Brands can appear on the places below, always labelled as AI product placement. Off until you
-            turn it on.</small></span>
+          <small>Brands can appear on the places below, always labelled as AI product placement. New uploads
+            start with this off.</small></span>
       </label>
 
       <div class="controls-when-on">
@@ -251,7 +251,9 @@
 (() => {
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const clip = /^[\w-]+$/.test(params.get("clip") || "") ? params.get("clip") : "upload_m43248";
+  // no clip named: the bar demo; a malformed name goes to the server, which says it has no such video
+  const clip = params.get("clip") || "upload_m43248";
+  let showAds = true;
   const title = s => s ? s.charAt(0).toUpperCase() + s.slice(1).replaceAll("_", " ") : "";
   const make = (tag, props, ...kids) => {
     const el = Object.assign(document.createElement(tag), props || {});
@@ -280,10 +282,10 @@
     side.who.replaceChildren(document.createTextNode(p.label || api.viewer()),
       make("small", {textContent: (p.preferences || []).join(" · ")}));
     side.handle.textContent = "@" + creatorHandle;
-    const sponsors = r ? [...new Set(Object.values(r.assignment))].map(title) : [];
+    const sponsors = r && showAds ? [...new Set(Object.values(r.assignment))].map(title) : [];
     side.caption.replaceChildren(document.createTextNode(captionText + " "),
       sponsors.length ? make("span", {className: "sponsors", textContent: "AI product placement: " + sponsors.join(", ")})
-        : make("span", {textContent: "No sponsors for this viewer."}));
+        : make("span", {textContent: showAds ? "No sponsors for this viewer." : "The original, without ads."}));
     if (!r) { side.lots.textContent = side.failed ? "Auction unavailable: this viewer sees the original." : "Bidding…"; return; }
     side.offNote.hidden = r.creator_enabled !== false;
     side.offNote.textContent = "Product placement is off for this video, so this viewer sees the original.";
@@ -376,7 +378,8 @@
       b.classList.toggle("selected", (b.dataset.mode === "ads") === ads);
       b.setAttribute("aria-pressed", String((b.dataset.mode === "ads") === ads));
     }
-    sides.forEach(s => s.api && s.api.setAds(ads));
+    showAds = ads;
+    sides.forEach(s => { if (s.api) s.api.setAds(ads); showLots(s); });   // the caption follows what's on screen
   };
 
   // --- the creator's settings -------------------------------------------------------------------------------------

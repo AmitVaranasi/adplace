@@ -36,7 +36,16 @@
     "food",
     "morning"
    ],
-   "bid_cpm": 6.0
+   "bid_cpm": 6.0,
+   "unsuitable_contents": [
+    "juice",
+    "smoothie",
+    "beer",
+    "wine",
+    "cocktail",
+    "soda",
+    "water"
+   ]
   },
   {
    "brand_id": "kestrel",
@@ -167,7 +176,12 @@
     "cooking",
     "health"
    ],
-   "bid_cpm": 5.0
+   "bid_cpm": 5.0,
+   "unsuitable_contents": [
+    "beer",
+    "wine",
+    "cocktail"
+   ]
   },
   {
    "brand_id": "voltway",
@@ -238,7 +252,13 @@
     "dining",
     "snacks"
    ],
-   "bid_cpm": 6.5
+   "bid_cpm": 6.5,
+   "unsuitable_contents": [
+    "coffee",
+    "latte",
+    "tea",
+    "milk"
+   ]
   },
   {
    "brand_id": "slicedash",
