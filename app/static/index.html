@@ -217,17 +217,22 @@
       textContent: "Bit accuracy " + pct(data.bit_accuracy) + " — far above the 50% you'd get by chance."});
     const kids = [make("div", {className: "verdict"},
       make("span", {className: "pill found", textContent: "Watermark found"}),
-      make("strong", {textContent: "This file came from AdPlace."})), bits];
+      make("strong", {textContent: "An AdPlace campaign watermark is in this file."})), bits,
+      make("p", {className: "muted", textContent: "The mark is an id this server looks up in its own records: it says "
+        + "which campaigns a viewer's copy carried, not who made the file."})];
 
-    const places = data.campaigns && typeof data.campaigns === "object" ? Object.entries(data.campaigns) : [];
+    const cap = t => { t = String(t); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const places = Array.isArray(data.places) ? data.places.map(p => [cap(p.place), cap(p.brand), p.campaign])
+      : data.campaigns && typeof data.campaigns === "object" ? Object.entries(data.campaigns).map(([k, v]) => [k, "", v]) : [];
     if (places.length) {
-      const rows = places.map(([place, campaign]) => make("tr", null,
-        make("td", {textContent: String(place)}), make("td", {textContent: String(campaign)})));
+      const rows = places.map(([place, brand, campaign]) => make("tr", null,
+        make("td", {textContent: place}), make("td", {textContent: brand}), make("td", {textContent: String(campaign)})));
       kids.push(make("h3", {textContent: "What is in it"}));
       kids.push(make("table", null,
         make("caption", {textContent: "Each place in the scene and the campaign shown there."}),
         make("thead", null, make("tr", null,
-          make("th", {scope: "col", textContent: "Place"}), make("th", {scope: "col", textContent: "Campaign"}))),
+          make("th", {scope: "col", textContent: "Place"}), make("th", {scope: "col", textContent: "Brand"}),
+          make("th", {scope: "col", textContent: "Campaign"}))),
         make("tbody", null, ...rows)));
       const facts = make("dl");
       if (data.clip) facts.append(make("dt", {textContent: "Clip"}), make("dd", {textContent: String(data.clip)}));

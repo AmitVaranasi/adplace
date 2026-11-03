@@ -64,7 +64,9 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
         price = min(max(floor, RESERVE_CPM), w["bid_cpm"])
         taken.add(w["brand"])
         assignment[p["id"]] = w["brand"]
-        detail[p["id"]] = {"winner": w["brand"], "price_cpm": round(price, 2), "bidders": bidders}
+        detail[p["id"]] = {"winner": w["brand"], "price_cpm": round(price, 2), "bidders": bidders,
+                           # why this viewer: the interests of theirs the winner targets
+                           "matched": sorted(set(campaigns[w["brand"]].get("preference_tags", [])) & set(preferences))}
     return {"assignment": assignment, "placements": detail, "ms": round(1000 * (time.perf_counter() - t0), 2)}
 
 

@@ -6,12 +6,12 @@ where it came from is in brackets. Raw screen footage for each part is in `outpu
 
 ## 0:00–0:20 Two phones, one video, different sponsors
 
-Screen: `/reels?clip=upload_m43248`, placement already on, both phones playing in sync. Left: Morning commuter
+Screen: `/reels?clip=upload_m43248&steady=1` (bids without jitter, so the brands match this script on every take), placement already on, both phones playing in sync. Left: Morning commuter
 (Brewlark on the glass), right: Weekend runner (Fizzwell on the glass, Kestrel on the poster). The glass is
 auctioned first (it's in focus and nearest the camera), so it's what differs most. Pause where no hand is in front
 of the glass. Raw footage: `outputs/demo/reels.mp4`.
 
-Say: "This is a prototype of an opt-in ad format for short videos. One video, two viewers, two different sponsors in
+Say: "This is a prototype of an opt-in ad format for short videos. One video, two viewers, each with sponsors picked for them in
 the scene itself, labelled as AI product placement. Switching brands re-rendered nothing for either of them."
 
 ## 0:20–0:50 The creator opts in
@@ -29,8 +29,8 @@ to carry, and every viewer's auction respects that."
 ## 0:50–1:30 What Meta's models found, and what they turned down
 
 Screen: the upload report (`/upload?run=r_eval_m43248`) or the "Places we didn't use" list on `/reels`. Show the poster
-and the matcha glass placed; read two declines aloud (the Fizzwell glass she picks up; the dark wall gap her head
-covers).
+and the matcha glass placed; read two declines aloud (the glass she picks up: "someone picks it up or moves it"; the
+second poster: "Muse Spark judged it not a natural place for an ad").
 
 Say: "Muse Spark reads the scene, proposes the places an ad could go and checks it's safe for ads. SAM 3.1 outlines each
 one through the shot. We track them against the room and keep only what stays still and in view, and we say in plain
@@ -39,12 +39,12 @@ words why we turned the rest down."
 ## 1:30–2:15 Why it looks filmed, and how it stays traceable
 
 Screen: full player `/player?clip=upload_m43248`, play at full speed; pause on the hand passing the glass, the logo
-wrapped round the matcha glass, the poster's perspective and grain. Toggle Original / With ads. Then "Download my
-version" for a viewer whose copy was rendered before recording (a new one takes about a minute):
+on the matcha glass with her hand in front of it, the poster's perspective and blur. Toggle Original / With ads. Then "Download my
+version" for a viewer whose copy was rendered before recording (a new one takes one to three minutes):
 "watermark verified"; drop that file on Check a file (`/verify`) to show the campaigns it names.
 
 Say: "The ad takes the scene's perspective, light, focus and grain, and hands stay in front of it. Every ad carries a
-visible label, and the file you take away carries an invisible Meta Video Seal watermark naming the campaign, still
+visible label, and the file you take away carries an invisible Meta Video Seal watermark carrying a campaign id, still
 there after the file is compressed again, though not after it's cropped."
 
 ## 2:15–2:40 The bid at playback
@@ -52,7 +52,7 @@ there after the file is compressed again, though not after it's cropped."
 Screen: back on `/reels`, "Run both bids again": prices, runner-up and "decided in 0.1 ms" under each phone.
 
 Say: "Everything that depends on the video was worked out once, at upload, and is the same for every brand. So when
-someone presses play, a second-price auction only picks names, in about a tenth of a millisecond on the server, and the browser
+a viewer's video loads, a second-price auction only picks names, in about a tenth of a millisecond on the server, and the browser
 draws the winner in live. That's choosing the brand, not processing the video. These are test bids."
 
 ## 2:40–3:00 Honest numbers and what's next

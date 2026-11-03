@@ -9,11 +9,11 @@ short-video feed such as Reels is where it would ship.
 Upload a video once. AdPlace looks for places in its longest shot that could carry an ad (it measures posters,
 pictures, signs and screens, and glasses, cups and bowls that stay still; on real uploads so far, wall posters and
 still glasses have passed), tracks each one against the room, and declines anything it can't place
-well, saying why. When a viewer presses play, a second-price auction picks a brand for every placement in well under a
+well, saying why. When a viewer's video loads, a second-price auction picks a brand for every placement in well under a
 millisecond, and the browser composites the winners into the footage live: matched to its perspective, light, focus
-and grain, behind the people and hands in front, wrapped round glasses and cups, and on a blank patch of a cup that has
+and grain, behind the people and hands in front, printed on glasses and cups, and on a blank patch of a cup that has
 a design of its own. Every frame carries a visible "AI product placement" label; the file a viewer downloads carries
-an invisible Meta Video Seal watermark naming the campaign.
+an invisible Meta Video Seal watermark carrying an id this server resolves to the campaigns.
 
 Meta tooling: SAM 3.1 and Muse Spark 1.3 through the Meta Model API, Muse Image 1.0 for the brand artwork, Video Seal.
 Built for the Meta AI Developer Hackathon (Oct 26 – Nov 4, 2026). Spec: `SPEC.md`. Upload contract: `INGEST.md`.
@@ -117,7 +117,7 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 | Live player vs server, glass and cup logos | 1.3–1.9 grey levels mean difference on the logo |
 | Playback auction | 0.06–0.2 ms on the server, 5–17 ms round trip |
 | Live player frame rate (M3 Pro, Chrome) | 23–24 fps on 24 fps clips |
-| Watermarked download from an auction result | verified, 156 s for a 10 s clip |
+| Watermarked download from an auction result | verified; 35–90 s for a new render on an idle machine (156 s for the first), instant when cached |
 
 ## Earlier results (billboard_night, 120 frames, 1416x720)
 

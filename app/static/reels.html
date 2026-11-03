@@ -129,7 +129,8 @@
   .lots small { grid-column: 1 / -1; }
   .lots div { padding: 6px 0; border-top: 1px solid #262a33; }
   .lots strong { font-size: 14px; display: block; }
-  .lots span { color: #a2a9b8; }
+  .lots span { color: #a2a9b8; display: block; }
+  .lots .why { color: #6bd6b2; }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .modes { display: inline-flex; gap: 5px; }
   .sound { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: #a2a9b8; }
@@ -169,7 +170,7 @@
     <div>
       <h1>Two viewers, one video</h1>
       <p class="muted">A prototype of an opt-in ad format for short videos. The creator approves the places and
-        brands; each viewer's own auction picks the brand when they press play. Switching brands re-renders nothing, and every ad
+        brands; each viewer's own auction picks the brands when their video loads. Switching brands re-renders nothing, and every ad
         is labelled.</p>
     </div>
     <div>
@@ -254,7 +255,7 @@
   const title = s => s ? s.charAt(0).toUpperCase() + s.slice(1).replaceAll("_", " ") : "";
   const make = (tag, props, ...kids) => {
     const el = Object.assign(document.createElement(tag), props || {});
-    el.append(...kids);
+    el.append(...kids.filter(k => k != null));
     return el;
   };
   const showError = e => { $("error").textContent = String(e && e.message || e); $("error").hidden = false; };
@@ -285,12 +286,14 @@
         : make("span", {textContent: "No sponsors for this viewer."}));
     if (!r) { side.lots.textContent = side.failed ? "Auction unavailable: this viewer sees the original." : "Bidding…"; return; }
     side.offNote.hidden = r.creator_enabled !== false;
-    side.offNote.textContent = "The creator hasn't turned on product placement, so this viewer sees the original.";
+    side.offNote.textContent = "Product placement is off for this video, so this viewer sees the original.";
     const rows = Object.entries(r.placements).map(([id, lot]) => {
       const next = lot.bidders[1];
       return make("div", null,
         make("span", {textContent: title(surfaceOf(id))}),
         make("strong", {textContent: lot.winner ? title(lot.winner) : "No ad"}),
+        lot.winner && lot.matched && lot.matched.length
+          ? make("span", {className: "why", textContent: "Matches: " + lot.matched.join(", ")}) : null,
         make("span", {textContent: lot.winner ? "Won at $" + lot.price_cpm.toFixed(2) + " CPM" +
           (next ? ", next " + title(next.brand) : " reserve, only brand left for it") : "No approved brand bid"}));
     });
@@ -328,7 +331,8 @@
         };
         wait();
       };
-      side.frame.src = "/player?embed=1&clip=" + encodeURIComponent(clip) + "&viewer=" + encodeURIComponent(viewer);
+      side.frame.src = "/player?embed=1&clip=" + encodeURIComponent(clip) + "&viewer=" + encodeURIComponent(viewer) +
+        (params.get("steady") === "1" ? "&steady=1" : "");
     });
   }
 
@@ -385,19 +389,33 @@
     };
   }
 
+  // One save at a time: clicks made while one is on its way are sent together when it returns, from the boxes as
+  // they are then, so a later click can never be overtaken by an earlier one. The switch then shows what the server
+  // saved, not what was clicked.
+  let saving = false, again = false;
   async function save() {
     $("creator").classList.toggle("off", !$("enabled").checked);
     $("saved").textContent = "Saving…";
+    if (saving) { again = true; return; }
+    saving = true;
     try {
-      const r = await fetch("/api/creator/" + encodeURIComponent(clip), {method: "PUT",
-        headers: {"content-type": "application/json"}, body: JSON.stringify(body())});
-      const out = await r.json();
-      if (!r.ok) throw new Error(out.detail || r.status);
+      let out;
+      do {
+        again = false;
+        const r = await fetch("/api/creator/" + encodeURIComponent(clip), {method: "PUT",
+          headers: {"content-type": "application/json"}, body: JSON.stringify(body())});
+        out = await r.json();
+        if (!r.ok) throw new Error(out.detail || r.status);
+      } while (again);
+      $("enabled").checked = out.enabled;
+      $("creator").classList.toggle("off", !out.enabled);
       $("saved").textContent = out.enabled ? "Saved. Each viewer's next auction uses these settings."
         : "Saved. Placement is off: viewers see your original video.";
       sides.forEach(s => s.api && s.api.rebid());
     } catch (error) {
       $("saved").textContent = "Couldn't save: " + (error.message || error);
+    } finally {
+      saving = false;
     }
   }
 

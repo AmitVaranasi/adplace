@@ -26,13 +26,13 @@ it, whether someone picks it up. Only places that stay still and in view carry a
 plain reason ("Someone picks it up or moves it", "No blank patch on the mug's own design").
 
 Placement is off until the creator turns it on. They approve each place and each brand from their library, and every
-auction respects that. When a viewer presses play, a second-price auction picks a brand for each place in about a
+auction respects that. When a viewer's video loads, a second-price auction picks a brand for each place in about a
 tenth of a millisecond on the server, and the browser composites the winner into the footage live: in the scene's perspective,
-light, focus and grain, wrapped round glasses (and cups, on test clips), behind the hands and people in front. Two phones side by side
-show the same video to two viewers with two different sponsors.
+light, focus and grain, printed on glasses (and cups, on test clips), behind the hands and people in front. Two phones side by side
+show the same video to two viewers, each with the sponsors their own auction picked.
 
 Every frame with an ad carries a visible "AI product placement" label, and the file a viewer downloads carries an
-invisible Meta Video Seal watermark naming the campaign: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264]. Cropping removes it: a 9:16 re-crop of a landscape download, as a repost to a vertical feed would do, is not found.
+invisible Meta Video Seal watermark carrying an id this server resolves to the campaigns: found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that [a bar download, re-encoded with libx264]. Cropping removes it: a 9:16 re-crop of a landscape download, as a repost to a vertical feed would do, is not found.
 
 ## How we used Meta's AI tools
 

@@ -326,7 +326,8 @@
       <div class="stats">
         <span class="stat"><strong id="stat-candidates">—</strong><span>places measured</span></span>
         <span class="stat"><strong id="stat-placed">—</strong><span>ads placed</span></span>
-        <span class="stat"><strong id="stat-declined">—</strong><span>declined</span></span>
+        <span class="stat"><strong id="stat-declined">—</strong><span>measured and declined</span></span>
+        <span class="stat"><strong id="stat-unsupported">—</strong><span>seen, not a kind we place on yet</span></span>
       </div>
       <div class="row">
         <a id="open-reels" class="button primary" href="#">Turn on product placement</a>
@@ -908,6 +909,7 @@
     $("stat-candidates").textContent = placements.length;
     $("stat-placed").textContent = placements.filter(p => p.decision === "placed").length;
     $("stat-declined").textContent = placements.filter(p => p.decision !== "placed").length;
+    $("stat-unsupported").textContent = named.length;   // these and the measured ones add up to the report's total
     $("unsupported").hidden = !named.length;
     $("unsupported").textContent = "Also in the scene, kinds we can't place an ad on yet (not measured): " +
       named.join(", ") + ".";

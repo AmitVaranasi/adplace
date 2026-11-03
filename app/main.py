@@ -39,8 +39,18 @@ PLAYERS = Path(__file__).parent / "static" / "player"
 async def removed_videos_stay_gone(request, call_next):
     """A video its creator removed is gone for viewers: its player files (the video, the artwork) are refused too."""
     parts = request.url.path.split("/")
+    gone = JSONResponse({"detail": "This video was removed by its creator."}, status_code=404)
     if len(parts) > 4 and parts[1:3] == ["static", "player"] and (PLAYERS / parts[3] / "removed").exists():
-        return JSONResponse({"detail": "This video was removed by its creator."}, status_code=404)
+        return gone
+    if len(parts) > 3 and parts[1] == "runs":
+        # a run's folder holds the creator's source video and logs: only its poster and thumbnails are public,
+        # and none of it once the creator removed the video
+        if not (parts[3] == "poster.jpg" or (parts[3] == "thumbs" and len(parts) == 5 and parts[4].endswith(".jpg"))):
+            return JSONResponse({"detail": "Not public."}, status_code=404)
+        if (ROOT / "runs" / parts[2] / "removed").exists():
+            return gone
+    if len(parts) > 2 and parts[1] == "clips" and parts[2] == "uploads":   # creators' source videos stay private
+        return JSONResponse({"detail": "Not public."}, status_code=404)
     return await call_next(request)
 
 
@@ -144,6 +154,7 @@ class AuctionRequest(BaseModel):
     clip: str          # stem of a player export
     profile_id: str
     jitter: float = 0.15
+    seed: int | None = None   # fixed for a recording: the same viewer gets the same brands every time
 
 
 def player_export(stem):
@@ -165,7 +176,7 @@ def run_auction(req: AuctionRequest):
     settings = creator.load(player_export_dir(req.clip))
     r = auction.run(creator.allowed(auction.placements_of(track), settings), load("inventory.json"),
                     viewers[req.profile_id].get("preferences", []), entry.get("context_tags", []),
-                    jitter=min(max(req.jitter, 0.0), 0.5))
+                    jitter=min(max(req.jitter, 0.0), 0.5), seed=req.seed)
     return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"]}
 
 
@@ -521,6 +532,18 @@ def render(req: RenderRequest):
             "seconds": round(time.time() - t0, 1)}
 
 
+def named_places(clip_stem, campaigns):
+    """c07 -> brewlark-2026-q4 as a person reads it: the kind of place, the brand, the campaign."""
+    surfaces = {}
+    t = PLAYERS / clip_stem / "track.json"
+    if clip_stem.replace("_", "").replace("-", "").isalnum() and t.exists():
+        track = json.loads(t.read_text())
+        surfaces = {s["id"]: s.get("surface") for s in track.get("slots", []) + track.get("objects", [])}
+    brands = {c["campaign_token"]: c["brand_id"] for c in load("inventory.json")["campaigns"]}
+    return [{"place": (surfaces.get(pid) or "place").replace("_", " "), "brand": brands.get(tok, tok), "campaign": tok}
+            for pid, tok in campaigns.items()]
+
+
 VERIFY_FRAMES = 96   # every other frame of the first ~8 s at 24 fps: what the download's own check reads
 
 
@@ -574,6 +597,7 @@ async def verify(file: UploadFile):
     if r["campaign"] in manifests:   # "clip|c01=brewlark-2026-q4|c03=..." -> which campaign is in which place
         clip, *placed = (manifests[r["campaign"]] or "").split("|")
         r.update(manifest_id=r["campaign"], clip=clip, campaigns=dict(x.split("=", 1) for x in placed))
+        r["places"] = named_places(clip, r["campaigns"])
     r.pop("scores", None)
     return r
 

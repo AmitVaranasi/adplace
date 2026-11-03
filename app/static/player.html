@@ -461,6 +461,8 @@ void main() {
   const asked = new URLSearchParams(location.search).get("clip");
   const $ = id => document.getElementById(id);
   const EMBED = new URLSearchParams(location.search).get("embed") === "1";
+  // ?steady=1: bids without their impression-to-impression jitter, so a recording shows the same brands each take
+  const STEADY = new URLSearchParams(location.search).get("steady") === "1";
   const askedViewer = new URLSearchParams(location.search).get("viewer");
   if (EMBED) document.body.classList.add("embed");
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -1160,7 +1162,7 @@ void main() {
     const t0=performance.now(),seq=session.bidSeq=(session.bidSeq || 0)+1;
     try {
       const r=await fetch("/api/auction",{method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({clip:session.data.name,profile_id:id})});
+        body:JSON.stringify({clip:session.data.name,profile_id:id,...(STEADY ? {jitter:0} : {})})});
       const body=await r.json();
       if (!r.ok) throw new Error(body.detail || r.status);
       body.roundTrip=Math.round(performance.now()-t0);
@@ -1196,9 +1198,10 @@ void main() {
         const id=profileId,a=session.auction[id],shown=a ? Object.entries(a.assignment) : [];
         if (b.removed) {   // the creator took the video down: no more ads, and say why
           session.auction={}; session.removed=true;
+          session.video.pause();   // its files are gone from the server too: nothing left to play
+          for (const id of ["play","scrub","rebid","download"]) $(id).disabled=true;
           profileUI(); paint(false);
-          $("auction").textContent="The creator removed this video, so it plays without ads.";
-          $("download").disabled=true;
+          $("auction").textContent="The creator removed this video. It's no longer available.";
           return;
         }
         if (!b.enabled && shown.length) {
@@ -1236,23 +1239,26 @@ void main() {
       const lot=a && a.placements[slot.id];
       if (lot && lot.winner) {
         const price=document.createElement("p"),second=lot.bidders[1];
-        price.textContent=second ? "Won at $"+lot.price_cpm.toFixed(2)+" CPM against "+(lot.bidders.length-1)+
+        price.textContent=(lot.matched && lot.matched.length ? "Matches this viewer's "+lot.matched.join(", ")+". " : "")+
+          (second ? "Won at $"+lot.price_cpm.toFixed(2)+" CPM against "+(lot.bidders.length-1)+
           " other bid"+(lot.bidders.length===2 ? "" : "s")+" (next: "+nice(second.brand)+")"
           : "Won at the $"+lot.price_cpm.toFixed(2)+" reserve: the other brands that fit here are in this video "+
-            "already (one place per brand)";
+            "already (one place per brand)");
         item.append(price);
-      } else if (!a && p.rationale && typeof p.rationale==="object" && p.rationale[slot.id]) {
+      } else if (!a && !live.bidFailed && !live.removed && p.rationale && typeof p.rationale==="object" &&
+                 p.rationale[slot.id]) {
         const reason=document.createElement("p");
         reason.textContent=String(p.rationale[slot.id]);
         list.append(reason);
       }
     }
-    $("rationale").textContent=!a && typeof p.rationale==="string" ? p.rationale : "";
-    $("chooser").textContent=a ? "" : p.chooser || "Muse";
+    const stale=live.bidFailed || live.removed;   // no live answer: no reasoning from an earlier one either
+    $("rationale").textContent=!a && !stale && typeof p.rationale==="string" ? p.rationale : "";
+    $("chooser").textContent=a || stale ? "" : p.chooser || "Muse";
     const ads=!!a && Object.keys(a.assignment).length>0;
     $("download").disabled=!ads || !!live.removed;
     $("download").title=ads ? "" : "No ad won for this viewer, so the original plays: nothing to download.";
-    $("auction").textContent=a && a.creator_enabled===false ? "The creator hasn't turned on product placement for "+
+    $("auction").textContent=a && a.creator_enabled===false ? "Product placement is off for "+
       "this video, so every viewer sees the original." : a ? "Second-price auction, decided in "+a.ms.toFixed(2)+" ms on the server ("+
       a.roundTrip+" ms round trip). Placements were prepared at upload, so no rendering was needed." : "";
   }
@@ -1347,7 +1353,7 @@ void main() {
   }
 
   function togglePlay() {
-    if (!live) return;
+    if (!live || live.removed) return;
     const s=live;
     if (!s.video.paused) s.video.pause();
     else {

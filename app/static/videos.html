@@ -140,11 +140,12 @@
     const pic = make("div", {className: "pic"},
       v.poster ? make("img", {src: v.poster, alt: "", loading: "lazy", decoding: "async"}) : null,
       make("span", {className: "badge" + (live ? " live" : ""), textContent:
-        !v.has_player ? "Nothing to place" : live ? "Placement on" : "Placement off"}));
+        !v.has_player ? (v.found ? "None kept" : "Nothing to place") : live ? "Placement on" : "Placement off"}));
     const facts = [
       v.duration_s ? Number(v.duration_s).toFixed(1) + " s" : null,
       v.has_player ? plural(v.placed, "place for ads", "places for ads") + " (" + v.places.map(title).join(", ") + ")"
-        : plural(v.found, "place measured", "places measured"),
+        : v.found ? plural(v.found, "place checked, none kept", "places checked, none kept")
+          : "nothing in it we can place an ad on yet",
     ].filter(Boolean).join(" · ");
     const body = make("div", {className: "body"},
       make("h3", {textContent: v.name}),
