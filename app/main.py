@@ -465,6 +465,8 @@ def _run_dir(run_id):
 def run_progress(run_id: str):
     p = _run_dir(run_id) / "progress.jsonl"
     events = [json.loads(line) for line in p.read_text().splitlines()[-50:]] if p.exists() else []
+    if not events and (p.parent / "report.json").exists():   # shipped demo runs keep the report, not the log
+        events = [{"stage": "done", "pct": 100, "msg": "finished"}]
     latest = events[-1] if events else {"stage": "upload", "pct": 0, "msg": "waiting to start"}
     return {"events": events, "latest": latest, "done": latest["stage"] in ("done", "error"),
             "error": latest["msg"] if latest["stage"] == "error" else None}
