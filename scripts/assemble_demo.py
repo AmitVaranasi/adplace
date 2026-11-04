@@ -1,12 +1,14 @@
 """Assemble the 3-minute demo draft from scripts/record_demo.py's raw footage: each segment's clip cut to its line of
-voice-over (macOS `say`, a stand-in for a human narrator), then an end card. Writes outputs/demo/adplace_demo.mp4.
+voice-over (a neural voice through edge-tts, or macOS `say`), then an end card. Writes outputs/demo/adplace_demo.mp4.
 
-  python scripts/assemble_demo.py [--voice Samantha] [--rate 175]
+  python scripts/assemble_demo.py [--engine edge|say] [--voice en-US-AndrewMultilingualNeural] [--rate +0%]
 Replace the narration with a human voice-over in any editor: outputs/demo/vo_<segment>.m4a are the lines alone.
 """
 import argparse
 import json
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,8 +53,10 @@ def duration(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--voice", default="Samantha")
-    ap.add_argument("--rate", default="165")
+    ap.add_argument("--engine", default="edge", choices=["edge", "say"])
+    ap.add_argument("--voice", default=None)
+    ap.add_argument("--rate", default=None)
+    ap.add_argument("--out", default="adplace_demo.mp4")
     a = ap.parse_args()
     # Check a file takes a minute to answer: keep the download (its first seconds) and the result (its last ones)
     v = OUT / "verify.mp4"
@@ -63,8 +67,20 @@ def main():
     parts = []
     for name, start, line in SEGMENTS:
         name = "verify_cut" if name == "verify" else name
-        aiff, vo = OUT / f"vo_{name}.aiff", OUT / f"vo_{name}.m4a"
-        run("say", "-v", a.voice, "-r", a.rate, "-o", aiff, line)
+        aiff, vo = OUT / f"vo_{name}.raw", OUT / f"vo_{name}.m4a"
+        if a.engine == "edge":   # Microsoft's neural voices (free, no key): only the narration text is sent
+            for attempt in range(4):   # the service sometimes drops a request
+                r = subprocess.run([str(Path(sys.executable).parent / "edge-tts"), "--voice",
+                                    a.voice or "en-US-AndrewMultilingualNeural", f"--rate={a.rate or '+0%'}",
+                                    "--text", line, "--write-media", str(aiff)], capture_output=True, text=True)
+                if r.returncode == 0:
+                    break
+                time.sleep(3 * (attempt + 1))
+            else:
+                raise SystemExit(f"edge-tts failed for {name}: {r.stderr[-300:]}")
+        else:
+            run("say", "-v", a.voice or "Samantha", "-r", a.rate or "165", "-o", aiff.with_suffix(".aiff"), line)
+            aiff = aiff.with_suffix(".aiff")
         run("ffmpeg", "-y", "-loglevel", "error", "-i", aiff, "-ar", "44100", "-ac", "2", "-c:a", "aac", "-b:a", "160k", vo)
         aiff.unlink()
         length = duration(vo) + 0.8   # a breath after each line
@@ -90,7 +106,7 @@ def main():
     parts.append(card)
     lst = OUT / "_parts.txt"
     lst.write_text("".join(f"file '{p}'\n" for p in parts))
-    final = OUT / "adplace_demo.mp4"
+    final = OUT / a.out
     run("ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", final)
     for p in parts + [lst]:
         p.unlink()
