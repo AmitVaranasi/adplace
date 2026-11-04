@@ -4,6 +4,32 @@ Judging: impact 30, Meta tooling 25, execution 20, demo 25. Every number said al
 where it came from is in brackets. Raw screen footage for each part is in `outputs/demo/` (recorded by
 `scripts/record_demo.py` from the running app; re-record with `python scripts/record_demo.py`).
 
+## Recording plan
+
+Raw footage: `python scripts/record_demo.py` (app running) writes one silent 1440x900 file per segment to
+`outputs/demo/`. Narrate over them in any editor (iMovie, CapCut, DaVinci), or use them as the reference for a live
+screen recording of the same steps. Voice-over below: about 320 words, 3:00 at a calm pace (judges found the earlier script too dense). Record it in one take per
+segment; trim each clip to its line.
+
+| Time | File | On screen | Voice-over |
+|---|---|---|---|
+| 0:00-0:20 | `phones.mp4` | Two phones, the iced coffee: Brewlark on the left, Fizzwell on the right | "This is AdPlace, an opt-in ad format for short videos. One video, two viewers, and each sees a different sponsor printed on the same glass, picked by an auction when their video loads. Nothing was re-rendered to switch brands, and every ad is labelled as AI product placement." |
+| 0:20-0:50 | `optin.mp4` | My videos; the Test set funnel; the switch off, then on; Brewlark unticked | "Creators decide. Every upload starts with placement off. Here the creator turns it on, approves each place, and turns a brand down: the commuter's glass re-bids to another sponsor straight away. And it's strict: on twenty-three stock videos it had never seen, it measured sixty-five places and kept one, with a reason for every no." |
+| 0:50-1:30 | `report.mp4` | The bar clip's report: the poster and glass placed, the declines | "When a creator uploads, Muse Spark reads the scene and proposes places an ad could go. SAM 3.1 outlines each one through the shot. We track it against the room and keep only what stays still and in view. The glass she picks up is declined: someone moves it. Muse also turned down a second poster as an unnatural place for an ad." |
+| 1:30-2:05 | `player.mp4` | The iced coffee with the hand writing; Original / With ads; the bar clip | "The logo takes the glass's shape, focus and grain, and hands stay in front of it. As a final check, Muse Spark reads the brand back off the rendered video; if it can't read it, the placement is dropped. The poster artwork is Muse Image." |
+| 2:05-2:30 | `verify.mp4` | Download (watermark verified); Check a file names the campaign | "The copy a viewer keeps carries an invisible Meta Video Seal watermark. Drop it on Check a file and it names the campaign in each place. It survives re-compression; a heavy crop removes it." |
+| 2:30-2:45 | `auction.mp4` | Both bids again: prices, runner-up, time | "Because the heavy work happens once, at upload, the auction at playback only picks names: under a millisecond on the server. These are test bids from a demo inventory." |
+| 2:45-3:00 | `close.mp4` + text card | Card: "1 of 23 unseen videos placed · 10-15 min per clip, once · test bids · Meta SAM 3.1, Muse Spark, Muse Image, Video Seal" | "Next: objects people pick up, more kinds of surface, and an opt-in setting inside a short-video feed." |
+
+Before recording live (if not using the raw files):
+- App running on the same machine; open each URL once first so the video is cached.
+- Browser window 1440x900, zoom 100%, no other tabs or bookmarks bar; dark mode.
+- Use the `&steady=1` URLs so the brands match the voice-over on every take.
+- Placement on for `upload_m1737` and `upload_m43248` (My videos switch), except the moment you turn it on.
+- Downloads are pre-rendered for each viewer (`outputs/viewers/`), so Download returns at once.
+- Don't upload an unseen clip on camera, don't show the patio clip as pipeline output (it was set up by hand), and
+  don't say it survives a repost to a vertical feed (a 9:16 crop removes the watermark).
+
 ## 0:00–0:20 Two phones, one video, different sponsors
 
 Screen: `/reels?clip=upload_m1737&steady=1` (bids without jitter, so the brands match this script on every take),
