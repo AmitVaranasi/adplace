@@ -4,6 +4,7 @@ Paste-ready answers for the Meta AI Developer Hackathon form (cerebralvalley.ai,
 figure was measured in this repo; the source is in brackets and is not part of the answer.
 
 **Track:** Indie developer (solo).
+**Theme:** Build for Your World (a creator's own videos, monetized with their consent).
 **Repo:** https://github.com/AmitVaranasi/adplace
 **Demo video:** (link once uploaded)
 
