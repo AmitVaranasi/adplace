@@ -8,18 +8,23 @@ where it came from is in brackets. Raw screen footage for each part is in `outpu
 
 Raw footage: `python scripts/record_demo.py` (app running) writes one silent 1440x900 file per segment to
 `outputs/demo/`. Narrate over them in any editor (iMovie, CapCut, DaVinci), or use them as the reference for a live
-screen recording of the same steps. Voice-over below: about 320 words, 3:00 at a calm pace (judges found the earlier script too dense). Record it in one take per
+screen recording of the same steps. Voice-over below: about 420 words in eight chapters, 2:40 with the Ava voice. Record it in one take per
 segment; trim each clip to its line.
 
-| Time | File | On screen | Voice-over |
-|---|---|---|---|
-| 0:00-0:20 | `phones.mp4` | Two phones, the iced coffee: Brewlark on the left, Fizzwell on the right | "This is AdPlace, an opt-in ad format for short videos. One video, two viewers, and each sees a different sponsor printed on the same glass, picked by an auction when their video loads. Nothing was re-rendered to switch brands, and every ad is labelled as AI product placement." |
-| 0:20-0:50 | `optin.mp4` | My videos; the Test set funnel; the switch off, then on; Brewlark unticked | "Creators decide. Every upload starts with placement off. Here the creator turns it on, approves each place, and turns a brand down: the commuter's glass re-bids to another sponsor straight away. And it's strict: on twenty-three stock videos it had never seen, it measured sixty-five places and kept one, with a reason for every no." |
-| 0:50-1:30 | `report.mp4` | The bar clip's report: the poster and glass placed, the declines | "When a creator uploads, Muse Spark reads the scene and proposes places an ad could go. SAM 3.1 outlines each one through the shot. We track it against the room and keep only what stays still and in view. The glass she picks up is declined: someone moves it. Muse also turned down a second poster as an unnatural place for an ad." |
-| 1:30-2:05 | `player.mp4` | The iced coffee with the hand writing; Original / With ads; the bar clip | "The logo takes the glass's shape, focus and grain, and hands stay in front of it. As a final check, Muse Spark reads the brand back off the rendered video; if it can't read it, the placement is dropped. The poster artwork is Muse Image." |
-| 2:05-2:30 | `verify.mp4` | Download (watermark verified); Check a file names the campaign | "The copy a viewer keeps carries an invisible Meta Video Seal watermark. Drop it on Check a file and it names the campaign in each place. It survives re-compression; a heavy crop removes it." |
-| 2:30-2:45 | `auction.mp4` | Both bids again: prices, runner-up, time | "Because the heavy work happens once, at upload, the auction at playback only picks names: under a millisecond on the server. These are test bids from a demo inventory." |
-| 2:45-3:00 | `close.mp4` + text card | Card: "1 of 23 unseen videos placed · 10-15 min per clip, once · test bids · Meta SAM 3.1, Muse Spark, Muse Image, Video Seal" | "Next: objects people pick up, more kinds of surface, and an opt-in setting inside a short-video feed." |
+| Chapter (on-screen caption) | Raw clip | Voice-over |
+|---|---|---|
+| Title card | `phones.mp4` (still) | (silent, 3.5 s): "AdPlace · Sponsors inside videos creators already made, with their consent" |
+| The idea | `phones.mp4` | "Short-video creators earn from brands only when they film a sponsored post. AdPlace is a prototype of a different ad format: the creator opts in, and a sponsor appears inside videos they've already made. Here, one video plays to two viewers. The commuter sees Brewlark on the glass; the runner sees Fizzwell. Same footage, nothing re-rendered, and every ad is labelled." |
+| 1  Upload | `report.mp4` | "It starts when a creator uploads. Meta's Muse Spark reads the scene, proposes places an ad could go, and checks that the scene is safe for brands. SAM 3.1 outlines each place through the whole shot, along with the people in front of it. We track every place against the room and measure it: how long it's on screen, how steady it is, how often it's covered. Only still, visible places pass. Everything else is declined, with a plain reason, like the glass she picks up." |
+| 2  The creator decides | `optin.mp4` | "Nothing runs until the creator says yes. Placement starts off. They turn it on, approve each place, and choose the brands they're happy to carry. Untick a brand, and that viewer's glass re-bids to another sponsor straight away." |
+| 3  Each viewer, their own sponsor | `auction.mp4` | "When a viewer's video loads, a second-price auction picks a brand for each place, matched to their interests, in under a millisecond. The heavy work was done once, at upload, so playback only picks names, and the browser draws the winner in live." |
+| 4  It should look filmed | `player.mp4` | "The logo takes the glass's shape, focus and grain, and the writing hand stays in front of it. Switch to the original to compare. As a final check, Muse Spark reads the brand back off the rendered video. If it can't read it, the placement is dropped. The poster artwork is made with Muse Image." |
+| 5  Disclosed and traceable | `verify.mp4` | "Every ad carries a visible label. And the copy a viewer keeps carries an invisible Meta Video Seal watermark. Drop it on Check a file, and it names the campaign in each place. It survives re-compression; a heavy crop removes it." |
+| Where it stands | `funnel.mp4` | "It's deliberately strict. On twenty-three stock videos it had never seen, it measured sixty-five places and kept one. It would rather place nothing than place badly, and today it works best in cafés and restaurants, on still glasses and posters." |
+| Next | `close.mp4` | "Next: objects people pick up, more kinds of surfaces, and an opt-in setting inside a short-video feed. AdPlace: a creator's own videos, sponsored with their consent." |
+| End card | `close.mp4` (still) | "1 of 23 unseen videos placed · 10-15 min per clip, once · test bids · Meta SAM 3.1 · Muse Spark · Muse Image · Video Seal" |
+
+The draft: `python scripts/assemble_demo.py --out adplace_demo_ava.mp4` (Ava, a Microsoft neural voice via edge-tts; about 2:40). The lines live in `SEGMENTS` there; edit them and re-run to change the video.
 
 Before recording live (if not using the raw files):
 - App running on the same machine; open each URL once first so the video is cached.

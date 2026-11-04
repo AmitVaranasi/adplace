@@ -47,37 +47,41 @@ def phones(pg, base, run):
 
 
 def optin(pg, base, run):
-    """0:20-0:50: the library, the test-set funnel, then the creator turns placement on and turns a brand down."""
-    pg.goto(f"{base}/")
-    pg.wait_for_timeout(3500)
-    pg.click('[data-filter="test"]')
-    pg.wait_for_timeout(4500)
+    """The creator decides: placement off, turned on, a brand turned down and back."""
     creator(base, False, HERO)
     pg.goto(f"{base}/reels?clip={HERO}&steady=1")
     reels_ready(pg)
     pg.click("#play")
-    pg.wait_for_timeout(3500)
+    pg.wait_for_timeout(4000)
     pg.click(".switch")                                   # on: both phones' ads appear
-    pg.wait_for_timeout(4500)
+    pg.wait_for_timeout(5000)
     pg.click("#brands input[value=brewlark]")             # the commuter's glass re-bids
-    pg.wait_for_timeout(4500)
+    pg.wait_for_timeout(5500)
     pg.click("#brands input[value=brewlark]")
-    pg.wait_for_timeout(2500)
+    pg.wait_for_timeout(3500)
     creator(base, True, HERO)
 
 
+def funnel(pg, base, run):
+    """Where it stands: the creator's library, then the test set's funnel."""
+    pg.goto(f"{base}/")
+    pg.wait_for_timeout(5000)
+    pg.click('[data-filter="test"]')
+    pg.wait_for_timeout(14000)   # the funnel stays in view while it's described
+
+
 def report(pg, base, run):
-    """0:50-1:30: what Meta's models found in the bar clip, what was placed and why the rest was declined."""
+    """Upload: what Meta's models found in the bar clip, what was placed and why the rest was declined."""
     pg.goto(f"{base}/upload?run={run}")
     pg.wait_for_selector("#report-title", state="visible", timeout=60000)
-    pg.wait_for_timeout(3000)
+    pg.wait_for_timeout(5000)
     for _ in range(5):
-        pg.mouse.wheel(0, 320)
-        pg.wait_for_timeout(1500)
+        pg.mouse.wheel(0, 260)
+        pg.wait_for_timeout(2600)
     for d in pg.query_selector_all("details")[:2]:
         d.click()
-        pg.wait_for_timeout(1500)
-    pg.wait_for_timeout(1500)
+        pg.wait_for_timeout(3500)
+    pg.wait_for_timeout(9000)
 
 
 def player_ready(pg):
@@ -121,14 +125,17 @@ def verify(pg, base, run):
 
 
 def auction(pg, base, run):
-    """2:15-2:40: both bids again on the two-place bar clip: prices, runner-up, time."""
+    """Each viewer, their own sponsor: the bar clip's two places, both bids again, another viewer."""
     pg.goto(f"{base}/reels?clip=upload_m43248&steady=1")
     reels_ready(pg)
     pg.click("#play")
-    pg.wait_for_timeout(3000)
-    for _ in range(2):
-        pg.click("#rebid")
-        pg.wait_for_timeout(3000)
+    pg.wait_for_timeout(4000)
+    pg.click("#rebid")
+    pg.wait_for_timeout(4500)
+    pg.select_option('[data-side="b"] select', "viewer-c")   # the book lover: Paperwhale on the poster
+    pg.wait_for_timeout(6000)
+    pg.select_option('[data-side="b"] select', "viewer-b")
+    pg.wait_for_timeout(4000)
 
 
 def close(pg, base, run):
@@ -137,7 +144,7 @@ def close(pg, base, run):
 
 
 PARTS = {"phones": phones, "optin": optin, "report": report, "player": player, "verify": verify, "auction": auction,
-         "close": close}
+         "funnel": funnel, "close": close}
 
 
 def main():
