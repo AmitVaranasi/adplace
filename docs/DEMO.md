@@ -6,10 +6,12 @@ where it came from is in brackets. Raw screen footage for each part is in `outpu
 
 ## 0:00–0:20 Two phones, one video, different sponsors
 
-Screen: `/reels?clip=upload_m43248&steady=1` (bids without jitter, so the brands match this script on every take), placement already on, both phones playing in sync. Left: Morning commuter
-(Brewlark on the glass), right: Weekend runner (Fizzwell on the glass, Kestrel on the poster). The glass is
-auctioned first (it's in focus and nearest the camera), so it's what differs most. Pause where no hand is in front
-of the glass. Raw footage: `outputs/demo/reels.mp4`.
+Screen: `/reels?clip=upload_m1737&steady=1` (bids without jitter, so the brands match this script on every take),
+placement already on, both phones playing in sync: an iced coffee on a tray while someone writes. Left: Morning
+commuter, Brewlark on the glass ("Matches: coffee, morning"); right: Weekend runner, Fizzwell on the same glass.
+This placement came out of the upload pipeline untouched (Mixkit 1737, `runs/r_v5_m1737`); Muse Spark read the brand
+off the rendered video in every sampled frame and rated it 4 of 5 for looking printed. Then switch to
+`/reels?clip=upload_m43248&steady=1` for a scene with two places (a wall poster and a glass).
 
 Say: "This is a prototype of an opt-in ad format for short videos. One video, two viewers, each with sponsors picked for them in
 the scene itself, labelled as AI product placement. Switching brands re-rendered nothing for either of them."

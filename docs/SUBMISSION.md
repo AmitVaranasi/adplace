@@ -88,7 +88,9 @@ before the Nov 3 gates), all in cafés and restaurants, so the first market is f
   28 px tall on screen, and sharp enough to read), two of those three are declined (too small; no clear space for
   the logo): 1 placed. With open-ended discovery on 4 clips Muse named
   43 places, 19 of them kinds we can measure; 6 were placed before the gates and 3 after (a bar's wall poster and
-  two glasses) [`runs/r_eval_*`, `runs/r_v2_m44025`, `runs/r_v4_m43999`].
+  two glasses) [`runs/r_eval_*`, `runs/r_v2_m44025`, `runs/r_v4_m43999`]. Four more cafe clips picked
+  for still drinks and wall boards (Nov 3): one placed, an iced coffee on a tray, readable in every sampled frame;
+  three declined (a glass tracked too briefly, a cup with no blank patch, boards Muse judged unnatural) [`runs/r_v5_*`].
 - Only still objects carry ads. Objects people pick up are declined.
 - Processing takes 10 to 15 minutes for a 10-second upload with places to measure, once, offline (under a minute when
   nothing in it can carry an ad) [10.2 s bar clip: 12.1 min alone, 15.7 min with two other uploads running; 5.7 s
