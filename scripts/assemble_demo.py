@@ -51,11 +51,6 @@ SEGMENTS = [
      "Next: objects people pick up, more kinds of surfaces, and an opt-in setting inside a short-video feed. "
      "AdPlace: a creator's own videos, sponsored with their consent."),
 ]
-TITLE = ["AdPlace", "Sponsors inside videos creators already made, with their consent"]
-CARD = ["AdPlace", "1 of 23 unseen videos placed  ·  10-15 min per clip, once  ·  test bids",
-        "Meta SAM 3.1  ·  Muse Spark  ·  Muse Image  ·  Video Seal"]
-
-
 def run(*cmd):
     subprocess.run([str(c) for c in cmd], check=True)
 
@@ -69,15 +64,36 @@ def caption(text):
             f"drawtext=fontfile={FONT}:text='{text}':fontcolor=white:fontsize=34:x=40:y=h-62")
 
 
-def title_card(src, lines, out, seconds=3.5):
-    """A still of `src`'s first frame, darkened, with the title (silent)."""
-    text = ",".join(f"drawtext=fontfile={FONT}:text='{t}':fontcolor=white:fontsize={sz}:x=(w-text_w)/2:y={y}"
-                    for t, sz, y in zip(lines, (88, 34, 30), (350, 470, 525)))
-    run("ffmpeg", "-y", "-loglevel", "error", "-ss", "3", "-i", src, "-f", "lavfi", "-t", seconds,
+CARDS = ROOT / "scripts" / "demo_cards"   # title.html, end.html: rendered to outputs/demo/cards/*.png
+
+
+def render_cards():
+    """The title and end cards: HTML in the app's look, screenshotted at the video's size."""
+    import os
+    from playwright.sync_api import sync_playwright
+    chrome = os.path.expanduser("~/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/"
+                                "Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing")
+    (OUT / "cards").mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as p:
+        b = p.chromium.launch(executable_path=chrome, headless=True,
+                              args=["--headless=new", "--allow-file-access-from-files"])
+        pg = b.new_page(viewport={"width": 1440, "height": 900})
+        for name in ("title", "end"):
+            pg.goto((CARDS / f"{name}.html").as_uri())
+            pg.wait_for_timeout(700)
+            pg.screenshot(path=str(OUT / "cards" / f"{name}.png"))
+        b.close()
+
+
+def image_card(png, out, seconds):
+    """A designed card held for `seconds`: a slow push-in, faded in and out (silent)."""
+    frames = int(seconds * 30)
+    run("ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-i", png, "-f", "lavfi", "-t", seconds,
         "-i", "anullsrc=r=44100:cl=stereo", "-filter_complex",
-        f"[0:v]loop=loop=200:size=1:start=0,trim=duration={seconds},setpts=PTS-STARTPTS,fps=30,eq=brightness=-0.4,"
-        f"{text},format=yuv420p[v]", "-map", "[v]", "-map", "1:a", "-c:v", "libx264", "-crf", "18", "-c:a", "aac",
-        "-ar", "44100", "-ac", "2", "-shortest", out)
+        f"[0:v]scale=2880:1800,zoompan=z='1+0.035*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+        f"d={frames}:s=1440x900:fps=30,fade=t=in:st=0:d=0.5,fade=t=out:st={seconds - 0.4}:d=0.4,format=yuv420p[v]",
+        "-map", "[v]", "-map", "1:a", "-t", seconds, "-c:v", "libx264", "-crf", "16", "-c:a", "aac", "-ar", "44100",
+        "-ac", "2", out)
 
 
 def duration(path):
@@ -99,8 +115,9 @@ def main():
     run("ffmpeg", "-y", "-loglevel", "error", "-i", v, "-filter_complex",
         f"[0:v]trim=1:6,setpts=PTS-STARTPTS[a];[0:v]trim={tail},setpts=PTS-STARTPTS[b];[a][b]concat=n=2:v=1[v]",
         "-map", "[v]", "-c:v", "libx264", "-crf", "18", OUT / "verify_cut.mp4")
+    render_cards()
     opening = OUT / "_part_title.mp4"
-    title_card(OUT / "phones.mp4", TITLE, opening)
+    image_card(OUT / "cards" / "title.png", opening, 4.5)
     parts = [opening]
     for name, start, chapter, line in SEGMENTS:
         name = "verify_cut" if name == "verify" else name
@@ -131,15 +148,8 @@ def main():
             "-ac", "2", part)
         parts.append(part)
         print(f"{name}: {length:.1f} s", flush=True)
-    # end card: the last phones frame, darkened, with the figures
     card = OUT / "_part_card.mp4"
-    text = ",".join(f"drawtext=fontfile=/System/Library/Fonts/Supplemental/Arial.ttf:text='{t}':fontcolor=white:fontsize={s}:x=(w-text_w)/2:y={y}"
-                    for t, s, y in zip(CARD, (64, 30, 26), (330, 430, 490)))
-    run("ffmpeg", "-y", "-loglevel", "error", "-sseof", "-0.1", "-i", OUT / "close.mp4", "-f", "lavfi", "-t", "4",
-        "-i", "anullsrc=r=44100:cl=stereo", "-filter_complex",
-        f"[0:v]loop=loop=120:size=1:start=0,trim=duration=4,setpts=PTS-STARTPTS,fps=30,eq=brightness=-0.35,{text},"
-        f"format=yuv420p[v]", "-map", "[v]", "-map", "1:a", "-c:v", "libx264", "-crf", "18", "-c:a", "aac",
-        "-shortest", card)
+    image_card(OUT / "cards" / "end.png", card, 6)
     parts.append(card)
     lst = OUT / "_parts.txt"
     lst.write_text("".join(f"file '{p}'\n" for p in parts))

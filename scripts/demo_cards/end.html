@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg:#0d0f13; --line:#2c3039; --muted:#a2a9b8; --accent:#6bd6b2; }
+  * { box-sizing:border-box; margin:0; }
+  body { width:1440px; height:900px; overflow:hidden; background:var(--bg); color:#eef0f4;
+         font-family:-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
+  .glow { position:absolute; inset:0; background:radial-gradient(1000px 650px at 50% 30%, #1b3530 0%, transparent 62%); }
+  .wrap { position:absolute; left:0; right:0; top:120px; text-align:center; }
+  h1 { font-size:110px; font-weight:800; letter-spacing:-.04em; }
+  h1 span { color:var(--accent); }
+  .pitch { font-size:30px; color:#dfe3ea; margin-top:14px; }
+  .tiles { display:flex; justify-content:center; gap:22px; margin-top:64px; }
+  .tile { width:260px; border:1px solid var(--line); background:#151920; border-radius:16px; padding:24px 22px;
+          text-align:left; }
+  .tile b { display:block; font-size:44px; font-weight:750; color:var(--accent); letter-spacing:-.02em; }
+  .tile span { display:block; font-size:18px; color:#cfd4dd; margin-top:6px; line-height:1.35; }
+  .meta { margin-top:58px; font-size:21px; color:var(--muted); }
+  .meta b { color:#eef0f4; font-weight:600; }
+  .repo { margin-top:18px; font-size:24px; color:#eef0f4; font-family:"SF Mono", Menlo, monospace; }
+  .note { position:absolute; bottom:44px; left:0; right:0; text-align:center; font-size:15px; color:#7d8494; }
+</style></head>
+<body>
+  <div class="glow"></div>
+  <div class="wrap">
+    <h1>AdPlace<span>.</span></h1>
+    <div class="pitch">A creator's own videos, sponsored with their consent.</div>
+    <div class="tiles">
+      <div class="tile"><b>Opt-in</b><span>off until the creator approves places and brands</span></div>
+      <div class="tile"><b>&lt;1 ms</b><span>per-viewer auction; nothing re-rendered to switch brands</span></div>
+      <div class="tile"><b>1 of 23</b><span>unseen stock videos placed: strict, every decline explained</span></div>
+      <div class="tile"><b>100%</b><span>watermark found in a viewer's download</span></div>
+    </div>
+    <div class="meta">Meta <b>Muse Spark</b> · <b>SAM 3.1</b> · <b>Muse Image</b> · <b>Video Seal</b></div>
+    <div class="repo">github.com/AmitVaranasi/adplace</div>
+  </div>
+  <div class="note">A prototype with test bids from a demo inventory of fictional brands. Processing takes 10-15 minutes per 10-second clip, once.</div>
+</body></html>

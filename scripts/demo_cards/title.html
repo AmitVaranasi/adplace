@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg:#0d0f13; --panel:#171a20; --line:#2c3039; --muted:#a2a9b8; --accent:#6bd6b2; }
+  * { box-sizing:border-box; margin:0; }
+  body { width:1440px; height:900px; overflow:hidden; background:var(--bg); color:#eef0f4;
+         font-family:-apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
+  .glow { position:absolute; inset:0; background:
+          radial-gradient(900px 600px at 78% 45%, #1d3a33 0%, transparent 60%),
+          radial-gradient(700px 500px at 5% 100%, #1a2030 0%, transparent 70%); }
+  .left { position:absolute; left:96px; top:150px; width:610px; }
+  .eyebrow { font-size:17px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+  h1 { font-size:132px; font-weight:800; letter-spacing:-.04em; line-height:1; margin:22px 0 26px; }
+  h1 span { color:var(--accent); }
+  .pitch { font-size:34px; line-height:1.3; color:#dfe3ea; font-weight:500; }
+  .points { display:flex; gap:10px; margin-top:38px; }
+  .points div { border:1px solid var(--line); background:#151920cc; border-radius:999px; padding:9px 15px;
+                font-size:17px; color:#dfe3ea; white-space:nowrap; }
+  .built { position:absolute; left:96px; bottom:82px; font-size:17px; color:var(--muted); }
+  .built b { color:#eef0f4; font-weight:600; }
+  .shot { position:absolute; width:540px; aspect-ratio:16/9.6; border-radius:18px; overflow:hidden;
+          border:1px solid #3a404c; box-shadow:0 30px 80px #000a; background:#000; }
+  .shot img { width:100%; height:100%; object-fit:cover; object-position:22% 30%; transform:scale(1.35);
+              transform-origin:24% 32%; display:block; }
+  .shot .tag { position:absolute; left:16px; bottom:16px; background:#0b0d10d9; border:1px solid #ffffff22;
+               border-radius:10px; padding:9px 14px; font-size:18px; }
+  .shot .tag small { display:block; color:var(--muted); font-size:14px; }
+  .shot .tag b { color:var(--accent); }
+  .a { right:130px; top:96px; transform:rotate(-1.6deg); }
+  .b { right:80px; top:462px; transform:rotate(1.4deg); }
+  .same { position:absolute; right:640px; top:404px; font-size:16px; color:var(--muted); text-align:right; line-height:1.4; }
+</style></head>
+<body>
+  <div class="glow"></div>
+  <div class="left">
+    <div class="eyebrow">Meta AI Developer Hackathon · Indie track</div>
+    <h1>AdPlace<span>.</span></h1>
+    <div class="pitch">Sponsors inside the videos creators already made, chosen per viewer, with the creator's consent.</div>
+    <div class="points"><div>Creator opt-in</div><div>A sponsor per viewer</div><div>Labelled and watermarked</div></div>
+  </div>
+  <div class="shot a"><img src="../../outputs/demo/cards/brewlark.jpg">
+    <div class="tag"><small>Viewer 1 · coffee lover</small><b>Brewlark</b> on the glass</div></div>
+  <div class="shot b"><img src="../../outputs/demo/cards/fizzwell.jpg">
+    <div class="tag"><small>Viewer 2 · runner</small><b>Fizzwell</b> on the same glass</div></div>
+  <div class="built">Built with <b>Muse Spark</b> · <b>SAM 3.1</b> · <b>Muse Image</b> · <b>Video Seal</b></div>
+</body></html>
