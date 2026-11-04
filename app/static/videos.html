@@ -35,6 +35,7 @@
   .primary:hover, a.button.primary:hover { background: #2a4a42; }
   .card .actions .remove { margin-left: auto; background: none; border-color: transparent; color: #a2a9b8;
                            font-size: 12px; padding: 6px 4px; }
+  .card .actions .remove.armed { color: #ffb4b4; border-color: #9c5555; }
   .card .actions .remove:hover { color: #f0b4b4; }
   a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #6bd6b2; outline-offset: 3px; }
 
@@ -44,6 +45,9 @@
   .stat span { font-size: 12px; color: #a2a9b8; }
 
   .filters { display: flex; gap: 6px; margin: 22px 0 14px; flex-wrap: wrap; }
+  .funnel { border: 1px solid #2c3039; background: #171a20; border-radius: 10px; padding: 12px 14px;
+            margin-bottom: 14px; font-size: 13px; max-width: 760px; }
+  .funnel p { margin: 0 0 6px; }
   .filters button[aria-pressed=true] { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
@@ -117,7 +121,9 @@
     <button type="button" data-filter="ads" aria-pressed="true">With places for ads</button>
     <button type="button" data-filter="all" aria-pressed="false">All</button>
     <button type="button" data-filter="none" aria-pressed="false">Nothing to place</button>
+    <button type="button" data-filter="test" aria-pressed="false">Test set</button>
   </div>
+  <div id="funnel" class="funnel" hidden></div>
   <div id="videos" class="grid" aria-live="polite"></div>
 </main>
 
@@ -139,11 +145,14 @@
     const pic = make("div", {className: "pic"},
       v.poster ? make("img", {src: v.poster, alt: "", loading: "lazy", decoding: "async"}) : null,
       make("span", {className: "badge" + (live ? " live" : ""), textContent:
-        !v.has_player ? "Nothing to place" : live ? "Placement on" : "Placement off"}));
+        !v.has_player ? (v.found ? "None kept" : "Nothing to place") : live ? "Placement on" : "Placement off"}));
     const facts = [
+      v.updated ? new Date(v.updated * 1000).toLocaleString(undefined, {month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit"}) : null,   // tells two uploads of the same file apart
       v.duration_s ? Number(v.duration_s).toFixed(1) + " s" : null,
       v.has_player ? plural(v.placed, "place for ads", "places for ads") + " (" + v.places.map(title).join(", ") + ")"
-        : plural(v.found, "place looked at", "places looked at"),
+        : v.found ? plural(v.found, "place checked, none kept", "places checked, none kept")
+          : "nothing in it we can place an ad on yet",
     ].filter(Boolean).join(" · ");
     const body = make("div", {className: "body"},
       make("h3", {textContent: v.name}),
@@ -181,7 +190,15 @@
       textContent: "Report"}));
     const remove = make("button", {type: "button", className: "remove", textContent: "Remove"});
     remove.onclick = async () => {
-      if (!confirm("Remove " + v.name + " from your videos? Brands stop appearing in it.")) return;
+      // ask in place (a browser dialog can be blocked): the first click asks, a second within 5 s removes
+      if (!remove.dataset.armed) {
+        remove.dataset.armed = "1";
+        remove.textContent = v.has_player ? "Remove it? Viewers stop seeing it" : "Remove it from your videos?";
+        remove.classList.add("armed");
+        setTimeout(() => { delete remove.dataset.armed; remove.textContent = "Remove"; remove.classList.remove("armed"); },
+          5000);
+        return;
+      }
       remove.disabled = true;
       try {
         const r = await fetch("/api/videos/" + encodeURIComponent(v.clip), {method: "DELETE"});
@@ -207,18 +224,46 @@
       make("small", {textContent: p.message}),
       failed ? null : make("div", {className: "bar"}, make("span", {style: "width:" + Math.round(p.pct) + "%"})),
       make("div", {className: "actions"}, make("a", {className: "button", href: "/upload?run=" +
-        encodeURIComponent(p.run_id), textContent: failed ? "See what happened" : "Watch progress"})));
+        encodeURIComponent(p.run_id), textContent: failed ? "See what happened" : "Watch progress"}),
+        failed ? dismiss(p) : null));
+  }
+
+  function dismiss(p) {   // a failed upload has no video to remove: clear its card
+    const b = make("button", {type: "button", className: "remove", textContent: "Remove"});
+    b.onclick = async () => {
+      b.disabled = true;
+      try {
+        const r = await fetch("/api/runs/" + encodeURIComponent(p.run_id), {method: "DELETE"});
+        if (!r.ok) throw new Error((await r.json()).detail || r.status);
+        data.processing = data.processing.filter(x => x !== p);
+        render();
+      } catch (error) {
+        b.disabled = false;
+        showError("Couldn't remove that upload: " + (error.message || error));
+      }
+    };
+    return b;
   }
 
   function render() {
-    const vs = data.videos;
+    const all = data.videos, vs = all.filter(v => !v.test);   // a creator's own videos; test runs have their tab
     $("s-videos").textContent = vs.length;
     $("s-ready").textContent = vs.filter(v => v.has_player).length;
     $("s-live").textContent = vs.filter(v => v.has_player && v.enabled).length;
     $("s-places").textContent = vs.reduce((n, v) => n + v.placed, 0);
     $("processing-box").hidden = !data.processing.length;
     $("processing").replaceChildren(...data.processing.map(processingCard));
-    const shown = vs.filter(v => filter === "all" || (filter === "ads") === v.has_player);
+    const shown = filter === "test" ? all.filter(v => v.test || v.unseen)
+      : vs.filter(v => filter === "all" || (filter === "ads") === v.has_player);
+    const f = data.funnel;
+    $("funnel").hidden = filter !== "test" || !f;
+    if (f) $("funnel").replaceChildren(
+      make("p", null, make("strong", {textContent: "How often it can place an ad today. "}),
+        "We uploaded " + f.videos + " stock videos it had never seen. It measured " + f.measured + " places in them " +
+        "and kept " + f.placed + " (in " + f.with_ads + " video" + (f.with_ads === 1 ? "" : "s") + "). Every other " +
+        "place was declined with the reason on its report: it would rather place nothing than place badly."),
+      make("p", {className: "muted", textContent: "Most stock footage has nothing it can measure yet (no still poster, " +
+        "picture or glass), or the object moves. Also here: clips used while building it."}));
     $("videos").replaceChildren(...(shown.length ? shown.map(card) : [make("div", {className: "empty"},
       make("p", {textContent: vs.length ? "No videos here." : "No videos yet."}),
       make("a", {className: "button primary", href: "/upload", textContent: "Upload a video"}))]));

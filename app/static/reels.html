@@ -109,28 +109,44 @@
   }
   .phone .who small { display: block; font-weight: 400; color: #dfe3ea; }
   .phone .off-note {
-    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px); bottom: calc(var(--pad) + 52px);
+    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px); bottom: calc(var(--pad) + 86px);
     font-size: 11px; background: #000a; border-radius: 6px; padding: 6px 8px; pointer-events: none;
   }
+  /* what a short-video feed puts round a landscape video: the creator, the caption (with the sponsors this viewer
+     sees, disclosed), the actions */
+  .phone .feed {
+    position: absolute; left: calc(var(--pad) + 12px); right: calc(var(--pad) + 12px); bottom: calc(var(--pad) + 12px);
+    font-size: 11px; pointer-events: none; color: #e9ecf1;
+  }
+  .phone .feed .row { display: flex; align-items: center; gap: 7px; font-weight: 600; margin-bottom: 5px; }
+  .phone .feed .avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #6bd6b2, #3a7bd5); }
+  .phone .feed .follow { border: 1px solid #ffffff66; border-radius: 6px; padding: 1px 6px; font-weight: 500; font-size: 10px; }
+  .phone .feed p { margin: 0; color: #c9ced8; line-height: 1.35; }
+  .phone .feed .sponsors { color: #fff; }
+  .phone .acts { display: flex; gap: 16px; margin-top: 6px; font-size: 10px; color: #c9ced8; }
+  .phone .acts b { font-size: 13px; font-weight: 400; margin-right: 3px; color: #e9ecf1; }
   .lots { font-size: 12px; min-height: 92px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
   .lots small { grid-column: 1 / -1; }
   .lots div { padding: 6px 0; border-top: 1px solid #262a33; }
   .lots strong { font-size: 14px; display: block; }
-  .lots span { color: #a2a9b8; }
+  .lots span { color: #a2a9b8; display: block; }
+  .lots .why { color: #6bd6b2; }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .modes { display: inline-flex; gap: 5px; }
   .sound { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: #a2a9b8; }
-  .sound[hidden] { display: none; }
   #note { text-align: right; font-size: 11px; margin: 8px 0 0; }
   #error {
     border: 1px solid #9c5555; border-radius: 8px; background: #382025; padding: 12px; font-size: 13px;
     margin-bottom: 16px; overflow-wrap: anywhere;
   }
+  .jump { display: none; font-size: 13px; color: #6bd6b2; margin-top: 8px; }
   @media (max-width: 1000px) {
+    .jump { display: inline-block; }   /* the settings sit below the phones here: a way down to them */
     main { padding: 16px; }
     .layout { grid-template-columns: 1fr; }
     aside { order: 2; }   /* the phones first: on a small screen the preview is what you came for */
   }
+
   @media (max-width: 700px) {
     body { --phone-w: min(330px, calc(100vw - 32px)) !important; }
     .controls { justify-content: flex-start; }
@@ -154,7 +170,7 @@
     <div>
       <h1>Two viewers, one video</h1>
       <p class="muted">A prototype of an opt-in ad format for short videos. The creator approves the places and
-        brands; each viewer's own auction picks the brand when they press play. Switching brands re-renders nothing, and every ad
+        brands; each viewer's own auction picks the brands when their video loads. Switching brands re-renders nothing, and every ad
         is labelled.</p>
     </div>
     <div>
@@ -175,6 +191,7 @@
         </span>
       </div>
       <p id="note" class="muted">Test bids from the demo inventory, second-price CPMs.</p>
+      <a class="jump" href="#creator">Creator settings: placement, places, brands</a>
     </div>
   </header>
 
@@ -187,8 +204,8 @@
         <input id="enabled" type="checkbox">
         <span class="track" aria-hidden="true"></span>
         <span><strong>Allow product placement</strong>
-          <small>Brands can appear on the places below, always labelled as AI product placement. Off until you
-            turn it on.</small></span>
+          <small>Brands can appear on the places below, always labelled as AI product placement. New uploads
+            start with this off.</small></span>
       </label>
 
       <div class="controls-when-on">
@@ -209,13 +226,19 @@
         <div class="viewer" data-side="a">
           <select aria-label="Left viewer"></select>
           <div class="phone"><iframe title="Left viewer's video"></iframe>
-            <div class="who"></div><div class="off-note" hidden></div></div>
+            <div class="who"></div><div class="off-note" hidden></div>
+            <div class="feed" aria-hidden="true"><div class="row"><span class="avatar"></span><span class="handle"></span>
+              <span class="follow">Follow</span></div><p class="caption"></p>
+              <div class="acts"><span><b>&#9825;</b>2.4k</span><span><b>&#9675;</b>86</span><span><b>&#10148;</b>Share</span></div></div></div>
           <div class="lots" aria-live="polite"></div>
         </div>
         <div class="viewer" data-side="b">
           <select aria-label="Right viewer"></select>
           <div class="phone"><iframe title="Right viewer's video"></iframe>
-            <div class="who"></div><div class="off-note" hidden></div></div>
+            <div class="who"></div><div class="off-note" hidden></div>
+            <div class="feed" aria-hidden="true"><div class="row"><span class="avatar"></span><span class="handle"></span>
+              <span class="follow">Follow</span></div><p class="caption"></p>
+              <div class="acts"><span><b>&#9825;</b>2.4k</span><span><b>&#9675;</b>86</span><span><b>&#10148;</b>Share</span></div></div></div>
           <div class="lots" aria-live="polite"></div>
         </div>
       </div>
@@ -228,11 +251,13 @@
 (() => {
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const clip = /^[\w-]+$/.test(params.get("clip") || "") ? params.get("clip") : "upload_m43248";
+  // no clip named: the bar demo; a malformed name goes to the server, which says it has no such video
+  const clip = params.get("clip") || "upload_m43248";
+  let showAds = true;
   const title = s => s ? s.charAt(0).toUpperCase() + s.slice(1).replaceAll("_", " ") : "";
   const make = (tag, props, ...kids) => {
     const el = Object.assign(document.createElement(tag), props || {});
-    el.append(...kids);
+    el.append(...kids.filter(k => k != null));
     return el;
   };
   const showError = e => { $("error").textContent = String(e && e.message || e); $("error").hidden = false; };
@@ -241,7 +266,11 @@
   const sides = [...document.querySelectorAll(".viewer")].map(el => ({
     el, select: el.querySelector("select"), frame: el.querySelector("iframe"), who: el.querySelector(".who"),
     offNote: el.querySelector(".off-note"), lots: el.querySelector(".lots"), api: null, last: null,
+    handle: el.querySelector(".handle"), caption: el.querySelector(".caption"),
   }));
+  // the feed furniture's words: a stand-in creator, and a caption from the video's own scene tags
+  const creatorHandle = "your.channel";
+  let captionText = "";
   const surfaceOf = id => (settings && settings.places.find(p => p.id === id) || {}).surface || id;
 
   // --- the two phones ---------------------------------------------------------------------------------------------
@@ -252,16 +281,23 @@
     const p = api.profiles()[api.viewer()] || {};
     side.who.replaceChildren(document.createTextNode(p.label || api.viewer()),
       make("small", {textContent: (p.preferences || []).join(" · ")}));
-    if (!r) { side.lots.textContent = "Bidding…"; return; }
+    side.handle.textContent = "@" + creatorHandle;
+    const sponsors = r && showAds ? [...new Set(Object.values(r.assignment))].map(title) : [];
+    side.caption.replaceChildren(document.createTextNode(captionText + " "),
+      sponsors.length ? make("span", {className: "sponsors", textContent: "AI product placement: " + sponsors.join(", ")})
+        : make("span", {textContent: showAds ? "No sponsors for this viewer." : "The original, without ads."}));
+    if (!r) { side.lots.textContent = side.failed ? "Auction unavailable: this viewer sees the original." : "Bidding…"; return; }
     side.offNote.hidden = r.creator_enabled !== false;
-    side.offNote.textContent = "The creator hasn't turned on product placement, so this viewer sees the original.";
+    side.offNote.textContent = "Product placement is off for this video, so this viewer sees the original.";
     const rows = Object.entries(r.placements).map(([id, lot]) => {
       const next = lot.bidders[1];
       return make("div", null,
         make("span", {textContent: title(surfaceOf(id))}),
         make("strong", {textContent: lot.winner ? title(lot.winner) : "No ad"}),
+        lot.winner && lot.matched && lot.matched.length
+          ? make("span", {className: "why", textContent: "Matches: " + lot.matched.join(", ")}) : null,
         make("span", {textContent: lot.winner ? "Won at $" + lot.price_cpm.toFixed(2) + " CPM" +
-          (next ? ", next " + title(next.brand) : ", only bidder") : "No approved brand bid"}));
+          (next ? ", next " + title(next.brand) : " reserve, only brand left for it") : "No approved brand bid"}));
     });
     side.lots.replaceChildren(...rows, make("small", {textContent: r.creator_enabled === false
       ? "No auction: placement is off." : "Auction decided in " + r.ms.toFixed(2) + " ms."}));
@@ -285,7 +321,7 @@
           // silent clips (the stock footage has no sound track) don't offer the choice
           $("sound-wrap").hidden = !sides.some(s => s.api && s.api.track().audio);
           setSound();
-          api.onAuction = (id, body) => { side.last = body; showLots(side); };
+          api.onAuction = (id, body) => { side.last = body; side.failed = !body; showLots(side); };
           side.last = api.auction();
           if (!side.select.options.length) {
             for (const [id, p] of Object.entries(api.profiles()))
@@ -297,7 +333,8 @@
         };
         wait();
       };
-      side.frame.src = "/player?embed=1&clip=" + encodeURIComponent(clip) + "&viewer=" + encodeURIComponent(viewer);
+      side.frame.src = "/player?embed=1&clip=" + encodeURIComponent(clip) + "&viewer=" + encodeURIComponent(viewer) +
+        (params.get("steady") === "1" ? "&steady=1" : "");
     });
   }
 
@@ -341,7 +378,8 @@
       b.classList.toggle("selected", (b.dataset.mode === "ads") === ads);
       b.setAttribute("aria-pressed", String((b.dataset.mode === "ads") === ads));
     }
-    sides.forEach(s => s.api && s.api.setAds(ads));
+    showAds = ads;
+    sides.forEach(s => { if (s.api) s.api.setAds(ads); showLots(s); });   // the caption follows what's on screen
   };
 
   // --- the creator's settings -------------------------------------------------------------------------------------
@@ -354,19 +392,33 @@
     };
   }
 
+  // One save at a time: clicks made while one is on its way are sent together when it returns, from the boxes as
+  // they are then, so a later click can never be overtaken by an earlier one. The switch then shows what the server
+  // saved, not what was clicked.
+  let saving = false, again = false;
   async function save() {
     $("creator").classList.toggle("off", !$("enabled").checked);
     $("saved").textContent = "Saving…";
+    if (saving) { again = true; return; }
+    saving = true;
     try {
-      const r = await fetch("/api/creator/" + encodeURIComponent(clip), {method: "PUT",
-        headers: {"content-type": "application/json"}, body: JSON.stringify(body())});
-      const out = await r.json();
-      if (!r.ok) throw new Error(out.detail || r.status);
+      let out;
+      do {
+        again = false;
+        const r = await fetch("/api/creator/" + encodeURIComponent(clip), {method: "PUT",
+          headers: {"content-type": "application/json"}, body: JSON.stringify(body())});
+        out = await r.json();
+        if (!r.ok) throw new Error(out.detail || r.status);
+      } while (again);
+      $("enabled").checked = out.enabled;
+      $("creator").classList.toggle("off", !out.enabled);
       $("saved").textContent = out.enabled ? "Saved. Each viewer's next auction uses these settings."
         : "Saved. Placement is off: viewers see your original video.";
-      sides.forEach(s => s.api && s.api.rebid());
+      sides.forEach(s => s.api && s.api.rebid(false));   // same impression, new settings
     } catch (error) {
       $("saved").textContent = "Couldn't save: " + (error.message || error);
+    } finally {
+      saving = false;
     }
   }
 
@@ -382,7 +434,7 @@
           make("small", {textContent: p.on_screen_s != null ? "On screen " + p.on_screen_s.toFixed(1) + " s" : ""}))))));
     $("brands").replaceChildren(...s.brands.map(b => make("label", null,
       make("input", {type: "checkbox", value: b.id, checked: b.allowed, onchange: save}),
-      title(b.id), b.category ? make("small", {textContent: b.category}) : "")));
+      title(b.id), b.category ? make("small", {textContent: b.category.replaceAll("_", " ")}) : "")));
     $("declined-title").textContent = "Places we didn't use (" + s.declined.length + ")";
     $("declined-box").hidden = !s.declined.length && !s.not_supported.length;
     $("declined").replaceChildren(...s.declined.map(d => make("li", null,
@@ -398,10 +450,17 @@
     const s = await r.json();
     if (!r.ok) throw new Error(s.detail || r.status);
     renderSettings(s);
+    const tags = (s.scene && s.scene.context_tags) || [];
+    captionText = tags.length ? tags.slice(0, 3).map(t => "#" + t.replaceAll("_", "")).join(" ") : "";
     await load(sides[0], params.get("a") || "viewer-a");
     await load(sides[1], params.get("b") || "viewer-b");
     for (const id of ["play", "restart", "rebid"]) $(id).disabled = false;
-  })().catch(showError);
+  })().catch(error => {   // an unknown or removed video: say so instead of two empty phones
+    sides.forEach(s => { s.el.hidden = true; });
+    $("creator").hidden = true;
+    showError(error);
+    $("error").append(" ", make("a", {href: "/", textContent: "Back to My videos"}));
+  });
 })();
 </script>
 </body>

@@ -10,7 +10,7 @@
    "c03": "fizzwell"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "brewlark matches coffee-morning interests and fizzwell fits cafe-drink context on eligible surfaces."
+  "rationale": "Matched coffee interest with brewlark and drink context with fizzwell on eligible surfaces."
  },
  "viewer-b": {
   "label": "Weekend runner",
@@ -20,10 +20,10 @@
   ],
   "assignment": {
    "c01": "kestrel",
-   "c03": "brewlark"
+   "c03": "fernleaf"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Kestrel matches viewer running fitness and Brewlark fits cafe context on eligible surfaces."
+  "rationale": "kestrel matches running-fitness interests on poster and fernleaf fits cafe-food context on glass."
  },
  "viewer-c": {
   "label": "Book lover",
@@ -36,7 +36,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "paperwhale matches viewer reading interests and brewlark matches cafe context."
+  "rationale": "paperwhale matches viewer reading-learning on poster while brewlark fits cafe context on glass."
  },
  "viewer-d": {
   "label": "Weekend traveller",
@@ -50,7 +50,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Nimbus matches viewer travel interests on poster and Brewlark fits cafe context on glass."
+  "rationale": "nimbus matches viewer travel interests and brewlark fits cafe context."
  },
  "viewer-e": {
   "label": "Home cook",
@@ -64,7 +64,7 @@
    "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "Picked best viewer-interest matches with eligible surfaces."
+  "rationale": "Fernleaf matches all viewer interests and brewlark fits cafe context on eligible surfaces."
  },
  "viewer-f": {
   "label": "Tech commuter",
@@ -75,9 +75,9 @@
   ],
   "assignment": {
    "c01": "voltway",
-   "c03": "slicedash"
+   "c03": "brewlark"
   },
   "chooser": "muse (muse-spark-1.3)",
-  "rationale": "voltway matches viewer interests and slicedash matches tech plus cafe context on eligible surfaces."
+  "rationale": "voltway matches viewer interests and brewlark fits cafe context on eligible surfaces."
  }
 }

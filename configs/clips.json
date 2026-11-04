@@ -364,9 +364,9 @@
   "hidden": true,
   "dynamic": true,
   "objects3d": [
-   {"id": "patio_can", "surface": "can", "kind": "can", "at": [705, 525], "frames": [0, 157],
+   {"id": "patio_can", "disabled": "rendered 3D object read as computer-made (crisper than the footage, no contact shadow)", "surface": "can", "kind": "can", "at": [705, 525], "frames": [0, 157],
     "area_frac": 0.01, "neighbours": ["pizza", "plates", "drinks"]},
-   {"id": "patio_bottle", "surface": "bottle", "kind": "bottle", "at": [840, 395], "frames": [0, 157],
+   {"id": "patio_bottle", "disabled": "rendered 3D object read as computer-made (crisper than the footage, no contact shadow)", "surface": "bottle", "kind": "bottle", "at": [840, 395], "frames": [0, 157],
     "area_frac": 0.01, "neighbours": ["pizza", "drinks"]},
    {"id": "patio_tent", "surface": "table_card", "kind": "tent", "at": [1062, 412], "frames": [0, 157],
     "area_frac": 0.01, "neighbours": ["plates", "drinks"]},
@@ -418,6 +418,8 @@
    },
    {
     "id": "patio_napkin",
+    "player": false,
+    "note": "off in the player: the menu print on a napkin this small was unreadable",
     "prompt": "napkin",
     "object": 0,
     "surface": "menu",

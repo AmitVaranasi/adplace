@@ -106,7 +106,18 @@
    "qa": {
     "id": "c07",
     "pass": true,
-    "checks": {},
+    "checks": {
+     "readable": {
+      "value": 1.0,
+      "limit": 0.6666666666666666,
+      "pass": true
+     },
+     "looks_printed": {
+      "value": 1.33,
+      "limit": null,
+      "pass": true
+     }
+    },
     "reasons": []
    }
   },

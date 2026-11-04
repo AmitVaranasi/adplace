@@ -6,13 +6,16 @@ A prototype of an opt-in ad format for short videos: creators approve placements
 and different viewers see different labelled sponsors, with nothing re-rendered to switch brands. Built as a standalone prototype; a
 short-video feed such as Reels is where it would ship.
 
-Upload a video once. AdPlace finds what in it can carry an ad (posters, picture frames, signs, menu boards, screens,
-and glasses, cups and mugs that stay still), tracks each one against the room, and declines anything it can't place
-well, saying why. When a viewer presses play, a second-price auction picks a brand for every placement in well under a
+Upload a video once. AdPlace looks for places in its longest shot that could carry an ad (it measures posters,
+pictures, signs and screens, and glasses, cups and bowls that stay still; on real uploads so far, wall posters and
+still glasses have passed), tracks each one against the room, and declines anything it can't place
+well, saying why. When a viewer's video loads, a second-price auction picks a brand for every placement in well under a
 millisecond, and the browser composites the winners into the footage live: matched to its perspective, light, focus
-and grain, behind the people and hands in front, wrapped round glasses and cups, and on a blank patch of a cup that has
+and grain, behind the people and hands in front, printed on glasses and cups, and on a blank patch of a cup that has
 a design of its own. Every frame carries a visible "AI product placement" label; the file a viewer downloads carries
-an invisible Meta Video Seal watermark naming the campaign.
+an invisible Meta Video Seal watermark carrying an id this server resolves to the campaigns.
+
+**What's new.** Product placement in finished footage is an existing industry (studios insert brands into shows, once, for every viewer). AdPlace changes three things: the creator opts in and approves each place and brand; the brand is chosen per viewer when their video loads, by an auction, and switching it re-renders nothing; and every ad is disclosed, on screen and in an invisible watermark in any copy a viewer keeps.
 
 Meta tooling: SAM 3.1 and Muse Spark 1.3 through the Meta Model API, Muse Image 1.0 for the brand artwork, Video Seal.
 Built for the Meta AI Developer Hackathon (Oct 26 – Nov 4, 2026). Spec: `SPEC.md`. Upload contract: `INGEST.md`.
@@ -36,7 +39,7 @@ Then open:
 | `/upload` | upload a clip; live progress, then a report of what was placed and why the rest was declined |
 | `/reels?clip=upload_m43248` | creator settings (opt in, approve places and brands) beside two viewers' phones, each with its own auction |
 | `/player?clip=upload_m43248` | the full live player: any viewer, the auction's prices, Original / With ads, download |
-| `/verify` | the first demo page: render a viewer's copy, check any file for the Video Seal watermark |
+| `/verify` | Check a file: drop any video to see whether it carries an AdPlace watermark and which campaigns it names |
 
 The repo carries the demo data so a fresh clone plays straight away: the live players (`app/static/player/*`, with
 their `stack.mp4`), and the latest report, thumbnails and poster for each video in the library (`runs/*`). Without a
@@ -57,11 +60,11 @@ an upload (which spends Meta API credit), so don't expose it to the internet as 
 | Model | How | Where in the code | What for |
 |---|---|---|---|
 | SAM 3.1 | Meta Model API (`sam-3.1`), responses decoded with `meta-sam-parser` | `pipeline/sam_api.py`, `pipeline/fast_mask_codec.py`, `scripts/ingest.py` | text-prompted video segmentation of every place Muse lists (posters, frames, signs, menus, screens), of cups, glasses and bowls, of cup handles (to keep logos off them) and of people in front |
-| Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads each scene (every place an ad could go and its kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
+| Muse Spark 1.3 | Meta Model API (`muse-spark-1.3`) | `scripts/ingest.py`, `pipeline/rank.py` | reads sampled frames of each scene (the places an ad could go and their kind, brand safety, context tags); classifies each vessel (glass, cup, bowl; plain or branded); judges whether each place is natural for an ad; brand choice with a stated reason on the hand-made clips |
 | Muse Image 1.0 | Meta Model API (`muse-image-1.0`) | `scripts/gen_creatives.py` | the fictional brands' artwork (posters, prints, labels) |
-| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file, checked after re-encoding |
+| Video Seal 1.0 | open weights, run locally | `pipeline/watermark.py` | invisible watermark naming the campaign in every downloaded file; found after re-encoding to 854 px wide at CRF 28 or 640 px at CRF 23, lost below that or after a 9:16 re-crop |
 
-No other models run in the product. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
+The upload and playback path uses only these. The early hand-made-clip scripts (`scripts/analyse.py`) can also run SAM 3 open
 weights locally through `transformers` (`--backend local`, not in requirements.txt); everything an upload does goes
 through the API.
 
@@ -69,7 +72,7 @@ through the API.
 
 | Day | Added |
 |---|---|
-| 11 (Nov 3) | Sound: an upload keeps its chosen shot's audio (`assets/clips/uploads/<stem>.m4a`), the player plays it in step with the video (muted until turned on), `/reels` lets one phone at a time be heard, and downloads carry it with the watermark still verifying (patch drafted by GPT-6.1 Sol). Readable logos: a logo must be at least 28 px tall and sharp enough to read, its blur following the vessel's focus; m44025 and m43999 now place nothing and their players were retired. Vessels never fully in view are declined with reasons instead of crashing the tracker |
+| 11 (Nov 3) | Sound (none of the stock demo clips has an audio track, so it shows only on uploads that have one): an upload keeps its chosen shot's audio (`assets/clips/uploads/<stem>.m4a`), the player plays it in step with the video (muted until turned on), `/reels` lets one phone at a time be heard, and downloads carry it with the watermark still verifying (patch drafted by GPT-6.1 Sol). Readable logos: a logo must be at least 28 px tall and sharp enough to read, its blur following the vessel's focus; m44025 and m43999 now place nothing and their players were retired. Vessels never fully in view are declined with reasons instead of crashing the tracker |
 | 10 (Nov 3) | Two critical reviews (GPT-6.1 Sol and Cursor, `outputs/judge/`) and fixes: the phone view keeps every ad in frame (a 4:5 window, else the whole frame letterboxed) with a readable label; three more vessel logos (Muse Image) so cups and glasses carry six brands and two viewers differ; consent fails closed (no file or no auction answer: no ads); "Check a file" now recognises a viewer's download (scene manifests) after re-encoding; reports count measured places apart from kinds we can't place on yet; honest QA wording for glasses and cups; path, size and cleanup fixes in the server; locked upload config; a fresh clone runs (requirements.txt, demo data, MIT license) |
 | 9 (Nov 2–3) | The application: an opt-in placement setting for short videos (`/reels`). Uploads start with placement off (`pipeline/creator.py`, `creator.json` beside the export); the creator turns it on and approves each place and brand, and every auction and download respects it. Two phones play the same video in sync for two viewers, each with its own auction (prices, runner-up, time). My videos (`/`): the creator's library with uploads in progress, places for ads, the placement switch and Remove; shared navigation across pages. Open-ended discovery merged: Muse lists every place with its kind, bowls carry logos, logos at least a fifth of the vessel's height |
 | 8 (Nov 2) | Still glasses behind bowls pinned by their outline, upright; logos moved onto the part of a glass that stays in view; each vessel measured once per upload (cached), player export 2.8 min -> 25 s. 23 unseen videos: 3 ads placed |
@@ -84,7 +87,7 @@ through the API.
 | 2 (Oct 27, evening) | Second surface (daylight roadside sign; road-safety signs excluded from placement); synthetic occluder test clip with ground truth; occlusion-aware tracking that fits the board's visible edges (GPT); occluder-mask gap filling; slot discovery and per-viewer choice (GLM); exposure matching for printed surfaces (GLM); segmented SAM runs; demo web app v0 |
 | 2 (Oct 27) | Spec agreed over 3 review rounds (Claude, GPT-6.1 Sol, GLM-5.3). SAM 3 surface masks with on-disk cache; quad tracking with re-acquisition (GPT); compositing with blur/grain matching, bleed and emissive mode (GPT); Video Seal embed/verify; three fictional brands; render pipeline. Kill test on a handheld night billboard: 95% of frames tracked, 1.6 px median corner error, watermark verified on every exported variant. |
 
-## Pipeline
+## Early pipeline for the hand-made clips (developer notes)
 
 ```bash
 python3 -m venv --system-site-packages .venv && .venv/bin/pip install --no-deps videoseal==1.0.1 \
@@ -110,13 +113,13 @@ vendors the config and `pipeline/watermark.py` loads it by absolute path.
 
 | Check | Result |
 |---|---|
-| 23 unseen stock videos, final code (`runs/testset_all23.txt`) | 56 candidates, 3 placed (3 videos; 2 with the Nov 3 readability gate, a logo at least 28 px tall on screen); every decline checked by eye: nothing to place on (8 videos), a fast blurred sweep, a parking sign, branded or embossed glasses, sauce ramekins, objects picked up or carried in |
+| 23 unseen stock videos (`runs/testset_all23.txt`) | 56 candidates, 3 placed on the Nov 2 code; 1 placed on today's code (the Nov 3 readability gates decline a logo under 28 px tall on screen, and the glass with no clear space for one); every decline checked by eye: nothing to place on (8 videos), a fast blurred sweep, a parking sign, branded or embossed glasses, sauce ramekins, objects picked up or carried in |
 | Bar clip (10 s) upload, end to end | 379 s with SAM results cached (595 s before the per-object cache; add 1–4 min for SAM on a fresh upload); wall poster and the still matcha glass placed, the glass she drinks from declined (travels 4.8 radii in a second, limit 0.5) |
 | Still glass vs camera | logo moves with the camera within 0.000 px median per frame |
 | Live player vs server, glass and cup logos | 1.3–1.9 grey levels mean difference on the logo |
 | Playback auction | 0.06–0.2 ms on the server, 5–17 ms round trip |
 | Live player frame rate (M3 Pro, Chrome) | 23–24 fps on 24 fps clips |
-| Watermarked download from an auction result | verified, 156 s for a 10 s clip |
+| Watermarked download from an auction result | verified; 35–90 s for a new render on an idle machine (156 s for the first), instant when cached |
 
 ## Earlier results (billboard_night, 120 frames, 1416x720)
 

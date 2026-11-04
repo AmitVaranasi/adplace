@@ -101,8 +101,9 @@
     <h1>Check a file</h1>
     <p class="muted">Every copy a viewer downloads carries an invisible Meta Video Seal watermark naming the campaigns
       in it. Drop a video to check whether it carries one.</p>
-    <p class="muted">The mark survives re-encoding, so a copy that has been compressed again or re-uploaded by another
-      app still answers.</p>
+    <p class="muted">The mark survives moderate re-compression, so a copy that has been compressed again still answers
+      (tested down to 854 px wide at CRF 28, or 640 px at CRF 23). A slight crop can survive; a 9:16 re-crop for a
+      vertical feed removes it.</p>
   </header>
 
   <section class="panel" aria-labelledby="pick-title">
@@ -149,7 +150,7 @@
   const pct = x => (100 * Number(x || 0)).toFixed(1) + "%";
   const mb = n => (n / (1024 * 1024)).toFixed(1) + " MB";
 
-  let file = null, checking = false, ticker = 0;
+  let file = null, sent = null, checking = false, ticker = 0;
 
   function showError(message) {
     $("error").textContent = message;
@@ -169,6 +170,10 @@
 
   function take(chosen) {
     if (!chosen) return;
+    if (checking) {   // one file at a time: a result must belong to the file it names
+      showError("Still checking " + sent.name + ". Choose another file when it's done.");
+      return;
+    }
     clearError();
     $("result").hidden = true;
     setStatus("");
@@ -194,6 +199,7 @@
   }
 
   function reset() {
+    if (checking) return;   // the file being checked stays until its answer is in
     file = null;
     $("file").value = "";
     $("picked").hidden = true;
@@ -212,17 +218,22 @@
       textContent: "Bit accuracy " + pct(data.bit_accuracy) + " — far above the 50% you'd get by chance."});
     const kids = [make("div", {className: "verdict"},
       make("span", {className: "pill found", textContent: "Watermark found"}),
-      make("strong", {textContent: "This file came from AdPlace."})), bits];
+      make("strong", {textContent: "An AdPlace campaign watermark is in this file."})), bits,
+      make("p", {className: "muted", textContent: "The mark is an id this server looks up in its own records: it says "
+        + "which campaigns a viewer's copy carried, not who made the file."})];
 
-    const places = data.campaigns && typeof data.campaigns === "object" ? Object.entries(data.campaigns) : [];
+    const cap = t => { t = String(t); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const places = Array.isArray(data.places) ? data.places.map(p => [cap(p.place), cap(p.brand), p.campaign])
+      : data.campaigns && typeof data.campaigns === "object" ? Object.entries(data.campaigns).map(([k, v]) => [k, "", v]) : [];
     if (places.length) {
-      const rows = places.map(([place, campaign]) => make("tr", null,
-        make("td", {textContent: String(place)}), make("td", {textContent: String(campaign)})));
+      const rows = places.map(([place, brand, campaign]) => make("tr", null,
+        make("td", {textContent: place}), make("td", {textContent: brand}), make("td", {textContent: String(campaign)})));
       kids.push(make("h3", {textContent: "What is in it"}));
       kids.push(make("table", null,
         make("caption", {textContent: "Each place in the scene and the campaign shown there."}),
         make("thead", null, make("tr", null,
-          make("th", {scope: "col", textContent: "Place"}), make("th", {scope: "col", textContent: "Campaign"}))),
+          make("th", {scope: "col", textContent: "Place"}), make("th", {scope: "col", textContent: "Brand"}),
+          make("th", {scope: "col", textContent: "Campaign"}))),
         make("tbody", null, ...rows)));
       const facts = make("dl");
       if (data.clip) facts.append(make("dt", {textContent: "Clip"}), make("dd", {textContent: String(data.clip)}));
@@ -240,20 +251,33 @@
   }
 
   function notFound(data) {
+    if (data.bit_accuracy >= 0.75) {   // well above chance, below what names a campaign: say so, not "nothing"
+      $("result-body").replaceChildren(
+        make("div", {className: "verdict"},
+          make("span", {className: "pill none", textContent: "Damaged mark"}),
+          make("strong", {textContent: "Probably an AdPlace copy, too degraded to read which campaigns."})),
+        make("p", {className: "muted", textContent: "Best match " + pct(data.bit_accuracy) + " of the bits: far above "
+          + "the 50% of chance, below the 90% we need to name a campaign. Heavy re-compression or cropping does this."}));
+      return;
+    }
     $("result-body").replaceChildren(
       make("div", {className: "verdict"},
         make("span", {className: "pill none", textContent: "Nothing found"}),
         make("strong", {textContent: "No AdPlace watermark found."})),
       make("p", {className: "muted",
         textContent: "Best match " + pct(data.bit_accuracy) + " of the bits, and chance is 50%, so this file "
-          + "carries no mark this server issued."}),
+          + "matches none of the campaigns this server issued. Heavier compression than we tested can also erase a "
+          + "mark, so this is not proof the file never had one."}),
       make("p", {className: "muted",
-        textContent: "A viewer's download from /player or /reels always carries one, even after re-encoding."}));
+        textContent: "A viewer's download from /player or /reels carries one; it is still found after moderate "
+          + "re-compression (tested down to 854 px at CRF 28)."}));
   }
 
   async function check() {
     if (!file || checking) return;
     checking = true;
+    sent = file;   // the result is reported against this file, whatever is picked meanwhile
+    $("drop").setAttribute("aria-disabled", "true");
     clearError();
     $("result").hidden = true;
     $("check").disabled = true;
@@ -266,14 +290,14 @@
     ticker = setInterval(tick, 1000);
 
     const body = new FormData();
-    body.append("file", file, file.name);
+    body.append("file", sent, sent.name);
     try {
       const r = await fetch("/api/verify", {method: "POST", body: body});
       let data = null;
       try { data = await r.json(); } catch (_) { data = null; }
       if (!r.ok) throw new Error((data && data.detail) || ("the server said " + r.status));
       if (data.campaign) found(data); else notFound(data);
-      setStatus("Checked " + file.name + " in " + Math.round((Date.now() - started) / 1000) + " s.");
+      setStatus("Checked " + sent.name + " in " + Math.round((Date.now() - started) / 1000) + " s.");
       $("result").hidden = false;
       $("result").focus();
     } catch (error) {
@@ -282,6 +306,7 @@
     } finally {
       clearInterval(ticker);
       checking = false;
+      $("drop").removeAttribute("aria-disabled");
       $("check").disabled = !file;
     }
   }

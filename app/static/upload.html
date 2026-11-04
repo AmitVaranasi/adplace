@@ -275,6 +275,10 @@
       <input id="file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v,.webm"
              aria-describedby="file-hint">
       <small id="file-hint" class="muted">An mp4, mov or webm file, up to 200 MB. For now we use one shot: if the video cuts between shots we keep the longest. Its sound starts muted; viewers can turn it on.</small>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">What works today: still posters, pictures and glasses in
+        cafés and restaurants; most other footage has nothing we can place on yet. Two that did:
+        <a href="/upload?run=r_eval_m43248">a bar (a poster and a glass)</a> and
+        <a href="/upload?run=r_eval_m44007">a pizza table (a glass)</a>.</p>
     </div>
 
     <div id="chosen" hidden>
@@ -314,7 +318,7 @@
     </p>
     <p id="live" class="muted" role="status" aria-live="polite" style="font-size:12px;margin:10px 0 0"></p>
     <ol id="steps" class="steps"></ol>
-    <p class="foot muted">This takes a few minutes. You can close the tab and come back to this address: the run id is
+    <p class="foot muted">A 10-second video with places to measure takes 10 to 15 minutes; one with nothing we can place on, under a minute. You can close the tab and come back to this address: the run id is
       in the web address.</p>
   </section>
 
@@ -326,7 +330,8 @@
       <div class="stats">
         <span class="stat"><strong id="stat-candidates">—</strong><span>places measured</span></span>
         <span class="stat"><strong id="stat-placed">—</strong><span>ads placed</span></span>
-        <span class="stat"><strong id="stat-declined">—</strong><span>declined</span></span>
+        <span class="stat"><strong id="stat-declined">—</strong><span>measured and declined</span></span>
+        <span class="stat"><strong id="stat-unsupported">—</strong><span>seen, not a kind we place on yet</span></span>
       </div>
       <div class="row">
         <a id="open-reels" class="button primary" href="#">Turn on product placement</a>
@@ -338,7 +343,7 @@
       </div>
     </div>
 
-    <div class="panel" aria-labelledby="cards-title">
+    <div id="cards-panel" class="panel" aria-labelledby="cards-title">
       <h2 id="cards-title">Every surface we looked at</h2>
       <p class="muted" style="font-size:12px;margin:0">Placed first. For the declined ones, the reason is the
         measurement that fell short.</p>
@@ -392,7 +397,11 @@
   async function readJSON(response) {
     let body = null;
     try { body = await response.json(); } catch (error) { body = null; }
-    if (!response.ok) throw new Error((body && body.detail) || "the server said " + response.status);
+    if (!response.ok) {
+      const error = new Error((body && body.detail) || "the server said " + response.status);
+      error.status = response.status;
+      throw error;
+    }
     return body;
   }
 
@@ -641,10 +650,14 @@
         resetPick();
         return;
       }
-      showError("We could not send the clip: " + (error.message || error) + ".", [
-        make("button", {type: "button", className: "primary", textContent: "Try again", onclick: startUpload}),
-        make("button", {type: "button", textContent: "Choose a different file", onclick: resetPick}),
-      ]);
+      // the same file can't succeed a second time if it isn't a readable video: offer only another file then
+      const unreadable = /couldn't read a video/i.test(String(error.message || error));
+      showError("We could not send the clip: " + String(error.message || error).replace(/\.?$/, "."), [
+        unreadable ? null : make("button", {type: "button", className: "primary", textContent: "Try again",
+          onclick: startUpload}),
+        make("button", {type: "button", className: unreadable ? "primary" : "", textContent: "Choose a different file",
+          onclick: resetPick}),
+      ].filter(Boolean));
       $("uploading").hidden = true;
       $("drop").hidden = false;
       $("chosen").hidden = false;
@@ -744,6 +757,7 @@
     stopPolling();
     stopClock();
     state.finished = true;
+    show("");   // the error says what happened: no progress bar still spinning beside it
     showError(message, retryActions());
   }
 
@@ -762,7 +776,9 @@
       }
     } catch (error) {
       state.misses += 1;
-      if (state.misses >= 3) fail("We lost touch with the run: " + (error.message || error) + ".");
+      if (error.status === 404) fail("There's no upload with that address. It may have been removed; upload the "
+        + "video again, or open it from My videos.");   // nothing will ever answer: say so at once
+      else if (state.misses >= 3) fail("We lost touch with the run: " + (error.message || error) + ".");
     } finally {
       state.polling = false;
     }
@@ -824,8 +840,9 @@
     if (qa && qa.checks) {
       for (const [name, check] of Object.entries(qa.checks)) {
         if (!check || check.pass === false) continue;
-        out.push(titleCase(name) + " " + num(check.value)
-          + (check.limit != null ? " (limit " + num(check.limit) + ")" : "") + " — passed");
+        out.push(check.limit == null   // a measure we record without gating on it
+          ? titleCase(name) + ": " + num(check.value) + (name === "looks_printed" ? " of 5, Muse Spark's rating (recorded, not a check)" : "")
+          : titleCase(name) + " " + num(check.value) + " (limit " + num(check.limit) + ") — passed");
       }
     }
     for (const reason of (qa && qa.reasons) || []) out.push(reason);
@@ -834,7 +851,7 @@
       // vessels have no automated check on the rendered result: say what was measured, and that a person judges the look
       out.push("Passed the upload gates: on screen long enough, a steady outline, rarely covered, big enough for a "
         + "logo a fifth of its height, a blank patch for it, never moved, and Muse judged it a natural place.");
-      out.push("No automated check of the finished look for glasses and cups: a person judges that.");
+      out.push("Its final check (Muse Spark reading the brand off the rendered video) isn't recorded for this run.");
     } else if (!out.length) {
       out.push(qa && qa.pass ? "Passed the upload gates and the final check of the rendered result."
         : "Passed the upload gates. The final checks were not recorded for this run.");
@@ -862,12 +879,20 @@
     const items = placed ? placedReasons(p)
       : (p.reasons && p.reasons.length ? p.reasons : ["It did not meet one of the checks."]);
     const list = make("ul", {className: "reasons"});
-    for (const item of items) list.append(make("li", {textContent: item}));
+    const SHOWN = 2;   // the first reasons are the ones that decided it; the rest wait behind a toggle
+    for (const item of items.slice(0, SHOWN)) list.append(make("li", {textContent: item}));
+    let more = null;
+    if (items.length > SHOWN) {
+      const rest = make("ul", {className: "reasons"});
+      for (const item of items.slice(SHOWN)) rest.append(make("li", {textContent: item}));
+      more = make("details", null, make("summary", {className: "reasons-title",
+        textContent: (items.length - SHOWN) + " more " + (placed ? "checks" : "reasons")}), rest);
+    }
 
     return make("article", {className: "card"}, picture,
       make("div", {className: "card-body"}, head, facts,
         make("p", {className: "reasons-title", textContent: placed ? "Checks it passed" : "Why we declined it"}),
-        list));
+        list, more));
   }
 
   function renderReport(report) {
@@ -893,6 +918,7 @@
     $("stat-candidates").textContent = placements.length;
     $("stat-placed").textContent = placements.filter(p => p.decision === "placed").length;
     $("stat-declined").textContent = placements.filter(p => p.decision !== "placed").length;
+    $("stat-unsupported").textContent = named.length;   // these and the measured ones add up to the report's total
     $("unsupported").hidden = !named.length;
     $("unsupported").textContent = "Also in the scene, kinds we can't place an ad on yet (not measured): " +
       named.join(", ") + ".";
@@ -909,8 +935,11 @@
       player.hidden = true;
       $("no-player").hidden = false;
       $("no-player").textContent = placements.length ? "Nothing was placed, so there is no player to open. " +
-        "The cards below say why." : report.note || "Nothing was found to place an ad on.";
+        "The cards below say why." : named.length ? "Muse Spark saw " + named.join(", ") + " in this video. None of "
+        + "those is a kind we can place an ad on yet (we place on posters, pictures, signs and screens, and on glasses, "
+        + "cups and bowls that stay still), so nothing was measured." : report.note || "Nothing was found to place an ad on.";
     }
+    $("cards-panel").hidden = !placements.length;   // nothing measured: the sentence above says what was seen
 
     $("cards").replaceChildren(...placements.map(card));
     show("report");

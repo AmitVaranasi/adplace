@@ -36,7 +36,16 @@
     "food",
     "morning"
    ],
-   "bid_cpm": 6.0
+   "bid_cpm": 6.0,
+   "unsuitable_contents": [
+    "juice",
+    "smoothie",
+    "beer",
+    "wine",
+    "cocktail",
+    "soda",
+    "water"
+   ]
   },
   {
    "brand_id": "kestrel",
@@ -54,13 +63,10 @@
     "poster",
     "screen",
     "sign",
-    "mug",
-    "cup",
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print",
-    "glass"
+    "print"
    ],
    "contextual_exclusions": [
     "funeral",
@@ -92,8 +98,7 @@
     "cup",
     "table_card",
     "sidewalk_sign",
-    "print",
-    "glass"
+    "print"
    ],
    "contextual_exclusions": [
     "safety_signage"
@@ -171,7 +176,12 @@
     "cooking",
     "health"
    ],
-   "bid_cpm": 5.0
+   "bid_cpm": 5.0,
+   "unsuitable_contents": [
+    "beer",
+    "wine",
+    "cocktail"
+   ]
   },
   {
    "brand_id": "voltway",
@@ -242,7 +252,13 @@
     "dining",
     "snacks"
    ],
-   "bid_cpm": 6.5
+   "bid_cpm": 6.5,
+   "unsuitable_contents": [
+    "coffee",
+    "latte",
+    "tea",
+    "milk"
+   ]
   },
   {
    "brand_id": "slicedash",
@@ -265,12 +281,13 @@
     "shirt",
     "table_card",
     "sidewalk_sign",
-    "print",
-    "cup",
-    "glass"
+    "print"
    ],
    "contextual_exclusions": [
+    "cafe",
+    "dining",
     "hospital",
+    "restaurant",
     "safety_signage"
    ],
    "preference_tags": [

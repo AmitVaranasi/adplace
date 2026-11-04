@@ -5,30 +5,58 @@ Analysis (SAM 3 + tracking) is done ahead of time by scripts/analyse.py and scri
 cached. Rendering a (clip, brand) pair runs for real the first time and is reused afterwards.
 """
 import functools
+import hashlib
+import hmac
+import secrets
 import json
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import zlib
+import threading
 import time
 from pathlib import Path
 
 import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pipeline import auction, creator, discover, rank, watermark  # noqa: E402
-from pipeline.sam_track import read_frames  # noqa: E402
 from scripts.render import render_campaign  # noqa: E402
 
 app = FastAPI(title="AdPlace")
 for d in ("outputs", "assets/clips", "runs"):   # git-ignored: a fresh clone has none of them
     (ROOT / d).mkdir(parents=True, exist_ok=True)
+PLAYERS = Path(__file__).parent / "static" / "player"
+
+
+@app.middleware("http")
+async def removed_videos_stay_gone(request, call_next):
+    """A video its creator removed is gone for viewers: its player files (the video, the artwork) are refused too."""
+    parts = request.url.path.split("/")
+    gone = JSONResponse({"detail": "This video was removed by its creator."}, status_code=404)
+    if len(parts) > 4 and parts[1:3] == ["static", "player"] and (PLAYERS / parts[3] / "removed").exists():
+        return gone
+    if len(parts) > 3 and parts[1] == "runs":
+        # a run's folder holds the creator's source video and logs: only its poster and thumbnails are public,
+        # and none of it once the creator removed the video
+        if not (parts[3] == "poster.jpg" or (parts[3] == "thumbs" and len(parts) == 5 and parts[4].endswith(".jpg"))):
+            return JSONResponse({"detail": "Not public."}, status_code=404)
+        if (ROOT / "runs" / parts[2] / "removed").exists():
+            return gone
+    if len(parts) > 2 and parts[1] == "clips" and parts[2] == "uploads":   # creators' source videos stay private
+        return JSONResponse({"detail": "Not public."}, status_code=404)
+    return await call_next(request)
+
+
 app.mount("/outputs", StaticFiles(directory=ROOT / "outputs"), name="outputs")
 app.mount("/clips", StaticFiles(directory=ROOT / "assets" / "clips"), name="clips")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
@@ -123,18 +151,37 @@ class ViewerRenderRequest(BaseModel):
     clip: str          # stem, e.g. "patio_waiter"
     profile_id: str
     assignment: dict[str, str] | None = None   # what this viewer's auction chose; default: the export's choice
+    token: str | None = None   # the auction's signature over that assignment (auction_token)
+
+
+def _secret():
+    """This server's signing key, kept across restarts (cache/ is git-ignored)."""
+    p = ROOT / "cache" / "auction_secret"
+    if not p.exists():
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(secrets.token_hex(32))
+    return p.read_text().strip().encode()
+
+
+def auction_token(clip, profile_id, assignment):
+    """Signs what an auction this server ran awarded, so a download can only name brands that actually won (a copy
+    naming any brand a browser asks for would be an impression nobody bought)."""
+    msg = json.dumps([clip, profile_id, sorted(assignment.items())]).encode()
+    return hmac.new(_secret(), msg, hashlib.sha256).hexdigest()
 
 
 class AuctionRequest(BaseModel):
     clip: str          # stem of a player export
     profile_id: str
     jitter: float = 0.15
+    fresh: bool = False   # "run the bid again": a new impression; otherwise a viewer's first bid on a video repeats
 
 
 def player_export(stem):
     d = Path(__file__).parent / "static" / "player" / stem
-    if not stem.replace("_", "").replace("-", "").isalnum() or not (d / "track.json").exists():
-        raise HTTPException(404, f"no player export for {stem}")
+    # a video the creator removed is gone for viewers too: no settings, auction or download
+    if not stem.replace("_", "").replace("-", "").isalnum() or not (d / "track.json").exists() or (d / "removed").exists():
+        raise HTTPException(404, "We don't have a player for that video.")
     return d, json.loads((d / "track.json").read_text()), json.loads((d / "assignments.json").read_text())
 
 
@@ -149,8 +196,11 @@ def run_auction(req: AuctionRequest):
     settings = creator.load(player_export_dir(req.clip))
     r = auction.run(creator.allowed(auction.placements_of(track), settings), load("inventory.json"),
                     viewers[req.profile_id].get("preferences", []), entry.get("context_tags", []),
-                    jitter=min(max(req.jitter, 0.0), 0.5))
-    return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"]}
+                    jitter=min(max(req.jitter, 0.0), 0.5),
+                    # the same viewer reloading the same video sees the same brands; only a deliberate re-bid moves them
+                    seed=None if req.fresh else zlib.crc32(f"{req.clip}|{req.profile_id}".encode()))
+    return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"],
+            "token": auction_token(req.clip, req.profile_id, r["assignment"])}
 
 
 def player_export_dir(stem):
@@ -161,6 +211,8 @@ def latest_report(stem):
     """The newest upload report for this export, for its declined places and their reasons."""
     best = None
     for p in (ROOT / "runs").glob("*/report.json"):
+        if (p.parent / "removed").exists():   # a run the creator removed from their library
+            continue
         try:
             r = json.loads(p.read_text())
         except (OSError, ValueError):
@@ -196,6 +248,10 @@ def creator_get(stem: str):
                        "on_screen_s": r.get("on_screen_s"), "thumb": r.get("thumb"),
                        "where": where(centre.get(p["id"]))})
         for b in p["brands"]:
+            c = campaigns.get(b, {})
+            if p["surface"] not in c.get("eligible_surfaces", [p["surface"]]) or \
+                    (p.get("contents") and p["contents"] in c.get("unsuitable_contents", [])):
+                continue   # artwork exists, but not this kind of surface or drink (no sportswear, no coffee on juice)
             brands.setdefault(b, {"id": b, "category": campaigns.get(b, {}).get("category"),
                                   "allowed": settings["brands"].get(b, True), "places": []})["places"].append(p["id"])
     unsupported = lambda p: any(str(d).startswith("not yet:") for d in p.get("details", []))  # noqa: E731
@@ -224,10 +280,55 @@ def remove_video(stem: str):
         raise HTTPException(404, "unknown video")
     d = player_export_dir(stem)
     if (d / "track.json").exists():
-        creator.save(d, {**creator.load(d), "enabled": False})
+        creator.update(d, {"enabled": False})
+        (d / "removed").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"))
     for r in runs:
         (r / "removed").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"))
     return {"removed": stem, "runs": len(runs)}
+
+
+@app.delete("/api/runs/{run_id}")
+def remove_run(run_id: str):
+    """Clear an upload that failed or is still processing (it has no report, so no video to remove)."""
+    d = _run_dir(run_id)
+    if (d / "report.json").exists():
+        raise HTTPException(409, "this upload finished: remove the video instead")
+    (d / "removed").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"))
+    return {"removed": run_id}
+
+
+@app.get("/api/players")
+def players():
+    """The videos a viewer can open in the full player: exports with a placement, not removed, publishable."""
+    out = []
+    clips, uploads = load("clips.json"), load("uploads.json")
+    # real uploads first (the default video), the hand-built clip last
+    for d in sorted(PLAYERS.iterdir(), key=lambda d: (not d.name.startswith("upload_"), d.name)):
+        if not ((d / "track.json").exists() and (d / "stack.mp4").exists()) or (d / "removed").exists():
+            continue
+        clip = json.loads((d / "track.json").read_text()).get("clip", "")
+        entry = clips.get(clip) or uploads.get(clip) or {}
+        if "not for publication" in str(entry.get("source", "")):
+            continue
+        report = latest_report(d.name)
+        if d.name.startswith("upload_") and not report.get("player_url"):
+            continue   # an older export whose newest run places nothing
+        label = report.get("source_name") or d.name.replace("_", " ").capitalize() + " (set up by hand)"
+        out.append({"name": d.name, "label": label})
+    return out
+
+
+@app.get("/api/creator/{stem}/rev")
+def creator_rev(stem: str):
+    """Cheap: an open player polls this and keeps what it shows within the creator's current settings."""
+    d = player_export_dir(stem)
+    if not stem.replace("_", "").replace("-", "").isalnum() or not (d / "track.json").exists():
+        raise HTTPException(404, "We don't have a player for that video.")
+    p = d / creator.NAME
+    settings = creator.load(d)
+    return {"rev": p.stat().st_mtime_ns if p.exists() else 0, "removed": (d / "removed").exists(),
+            "enabled": settings["enabled"] and not (d / "removed").exists(),
+            "places": settings["places"], "brands": settings["brands"]}
 
 
 class CreatorSettings(BaseModel):   # fields left out keep their saved value (the library only flips `enabled`)
@@ -243,7 +344,7 @@ def creator_put(stem: str, req: CreatorSettings):
     names = {b for p in auction.placements_of(track) for b in p["brands"]}
     if set(req.places or {}) - ids or set(req.brands or {}) - names:
         raise HTTPException(400, "settings name a place or brand this video doesn't have")
-    return creator.save(d, {**creator.load(d), **req.model_dump(exclude_none=True)})
+    return creator.update(d, req.model_dump(exclude_none=True))
 
 
 @app.post("/api/viewer_render")
@@ -257,7 +358,9 @@ def viewer_render(req: ViewerRenderRequest):
         raise HTTPException(404, f"unknown profile {req.profile_id}")
     clip = track["clip"]
     assignment = viewers[req.profile_id]["assignment"]
-    if req.assignment is not None:   # from /api/auction: only brands this export has artwork for
+    if req.assignment is not None:   # from /api/auction, signed by it: only brands that won this viewer's auction
+        if not req.token or not hmac.compare_digest(req.token, auction_token(req.clip, req.profile_id, req.assignment)):
+            raise HTTPException(403, "That isn't what this viewer's auction awarded. Run the bid again, then download.")
         brands = {s["id"]: set(s["brands"]) for s in track["slots"] + track.get("objects", [])}
         if any(k not in brands or v not in brands[k] for k, v in req.assignment.items()):
             raise HTTPException(400, "assignment names a placement or brand this export doesn't have")
@@ -267,9 +370,29 @@ def viewer_render(req: ViewerRenderRequest):
         raise HTTPException(403, "the creator hasn't turned on product placement for this video")
     if any(not settings["places"].get(k, True) or not settings["brands"].get(v, True) for k, v in assignment.items()):
         raise HTTPException(403, "the creator hasn't approved that place or brand")
+    if not assignment:
+        raise HTTPException(409, "No ad won for this viewer, so there's nothing to download: the original plays.")
     tag = "_".join(f"{k}-{v}" for k, v in sorted(assignment.items()))
-    out = ROOT / "outputs" / "viewers" / f"{req.clip}__{tag}.mp4"
+    out = ROOT / "outputs" / "viewers" / f"{req.clip}__{tag}__{render_version(d)}.mp4"
     t0 = time.time()
+    with RENDER_LOCKS.setdefault(out.name, threading.Lock()):   # a double click waits for the first render
+        return _render_viewer(req, clip, track, assignment, out, t0)
+
+
+RENDER_LOCKS: dict[str, threading.Lock] = {}
+
+
+def render_version(d):
+    """What a viewer's download depends on besides the assignment: the export and the renderer's code."""
+    h = hashlib.sha1()
+    for p in [d / "track.json", *sorted((d / "art").glob("*")), ROOT / "scripts" / "render_dynamic.py",
+              ROOT / "scripts" / "glass_decal.py"]:
+        if p.is_file():
+            h.update(p.name.encode() + str(p.stat().st_size).encode() + str(p.stat().st_mtime_ns).encode())
+    return h.hexdigest()[:8]
+
+
+def _render_viewer(req, clip, track, assignment, out, t0):
     cached = out.with_suffix(".json").exists()
     if not cached and not (ROOT / clip).exists():
         raise HTTPException(409, "the original video isn't on this server (a fresh copy of the repo carries the live "
@@ -304,6 +427,16 @@ def index():
     return page("index.html")
 
 
+def failure_text(msg):
+    """An older run logged the raw exception ("CalledProcessError: Command '['ffmpeg', ...") as its error: show the
+    creator a sentence instead (scripts/ingest.py failure_message writes these now)."""
+    if re.match(r"^[A-Za-z]+(Error|Exception|Exit)\b", msg or ""):
+        return ("We couldn't read that video file. Try an mp4, mov or webm that plays on your computer."
+                if "ffmpeg" in msg else "Something went wrong while processing this video. Please try again.")
+    return msg
+
+
+MAX_RUNNING = 2   # uploads processed at once
 STALLED_S = 30 * 60   # a run with no progress for this long has stopped (the process died or the machine slept)
 
 
@@ -351,7 +484,7 @@ def videos():
             last = json.loads(lines[-1]) if lines else {"stage": "upload", "pct": 0, "msg": "starting"}
             name = (d / "name.txt").read_text().strip() if (d / "name.txt").exists() else "Your video"
             active.append({"run_id": d.name, "name": name, "status": "failed" if last["stage"] == "error" else "processing",
-                           "stage": last["stage"], "pct": last.get("pct", 0), "message": last.get("msg", ""),
+                           "stage": last["stage"], "pct": last.get("pct", 0), "message": failure_text(last.get("msg", "")),
                            "uploaded": d.stat().st_mtime})
     items = []
     for stem, (t, d, r) in latest.items():
@@ -360,13 +493,28 @@ def videos():
         items.append({"run_id": r.get("run_id", d.name), "clip": stem, "status": "ready",
                       "name": r.get("source_name") or stem, "duration_s": r.get("duration_s"),
                       "placed": summary.get("placed", 0) if has_player else 0,
-                      "found": summary.get("candidates", 0), "note": r.get("note"),
+                      "found": sum(1 for p in r.get("placements", []) if not any(
+                          str(x).startswith("not yet:") for x in p.get("details", []))), "note": r.get("note"),
                       "enabled": creator.load(player_export_dir(stem))["enabled"] if has_player else False,
                       "has_player": has_player, "poster": poster(d, r), "updated": t,
                       "places": [p["surface"] for p in r.get("placements", []) if p.get("decision") == "placed"]})
     active.sort(key=lambda v: -v["uploaded"])
     items.sort(key=lambda v: (-v["placed"], -v["updated"]))
-    return {"processing": active, "videos": items}
+    # the benchmark and development runs aren't a creator's uploads: they get their own tab, and the 23 unseen
+    # videos a funnel (videos -> places measured -> placed), so yield is shown as a measurement, not a library
+    unseen = set(load_config("testset.json").get("unseen", []))
+    for v in items:
+        v["test"] = not v["has_player"] and not v["run_id"].startswith("r_20")
+        v["unseen"] = v["clip"] in unseen
+    tested = [v for v in items if v["unseen"]]
+    funnel = {"videos": len(unseen), "measured": sum(v["found"] for v in tested),
+              "placed": sum(v["placed"] for v in tested), "with_ads": sum(1 for v in tested if v["placed"])}
+    return {"processing": active, "videos": items, "funnel": funnel}
+
+
+def load_config(name):
+    p = ROOT / "configs" / name
+    return json.loads(p.read_text()) if p.exists() else {}
 
 
 @app.get("/api/catalog")
@@ -426,6 +574,43 @@ def render(req: RenderRequest):
             "seconds": round(time.time() - t0, 1)}
 
 
+def named_places(clip_stem, campaigns):
+    """c07 -> brewlark-2026-q4 as a person reads it: the kind of place, the brand, the campaign."""
+    surfaces = {}
+    t = PLAYERS / clip_stem / "track.json"
+    if clip_stem.replace("_", "").replace("-", "").isalnum() and t.exists():
+        track = json.loads(t.read_text())
+        surfaces = {s["id"]: s.get("surface") for s in track.get("slots", []) + track.get("objects", [])}
+    brands = {c["campaign_token"]: c["brand_id"] for c in load("inventory.json")["campaigns"]}
+    return [{"place": (surfaces.get(pid) or "place").replace("_", " "), "brand": brands.get(tok, tok), "campaign": tok}
+            for pid, tok in campaigns.items()]
+
+
+VERIFY_FRAMES = 96   # every other frame of the first ~8 s at 24 fps: what the download's own check reads
+
+
+def check_file(path, candidates):
+    """Decode a bounded sample (1280 px at most) and look for a watermark. An unreadable file is the sender's
+    problem (400), not a server error."""
+    cap = cv2.VideoCapture(str(path))
+    frames, i = [], 0
+    while len(frames) < VERIFY_FRAMES:
+        ok, f = cap.read()
+        if not ok:
+            break
+        if i % 2 == 0:
+            if max(f.shape[:2]) > 1280:
+                s = 1280 / max(f.shape[:2])
+                f = cv2.resize(f, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+            frames.append(f)
+        i += 1
+    cap.release()
+    if len(frames) < 8:
+        raise HTTPException(400, "We couldn't read a video in that file. Try an mp4, mov or webm that plays on "
+                                 "your computer.")
+    return watermark.verify(frames, candidates)
+
+
 @app.post("/api/verify")
 async def verify(file: UploadFile):
     # candidates: every campaign token (a single-ad render) and every scene manifest this server issued (a viewer's
@@ -450,11 +635,11 @@ async def verify(file: UploadFile):
                 raise HTTPException(413, "videos up to 200 MB")
             tmp.write(chunk)
         tmp.flush()
-        frames, _ = read_frames(tmp.name)
-    r = watermark.verify(frames, tokens + list(manifests))
+        r = await run_in_threadpool(check_file, tmp.name, tokens + list(manifests))
     if r["campaign"] in manifests:   # "clip|c01=brewlark-2026-q4|c03=..." -> which campaign is in which place
         clip, *placed = (manifests[r["campaign"]] or "").split("|")
         r.update(manifest_id=r["campaign"], clip=clip, campaigns=dict(x.split("=", 1) for x in placed))
+        r["places"] = named_places(clip, r["campaigns"])
     r.pop("scores", None)
     return r
 
@@ -473,6 +658,11 @@ async def ingest(file: UploadFile):
     from datetime import datetime
     if not (file.filename or "").lower().endswith((".mp4", ".mov", ".m4v", ".webm")):
         raise HTTPException(400, "please upload an mp4, mov or webm video")
+    busy = [d for d in (ROOT / "runs").glob("r_*") if (d / "progress.jsonl").exists() and not (d / "report.json").exists()
+            and not (d / "removed").exists() and time.time() - (d / "progress.jsonl").stat().st_mtime < 600
+            and '"stage": "error"' not in (d / "progress.jsonl").read_text()]
+    if len(busy) >= MAX_RUNNING:   # each run spends Meta API credit and minutes of this machine
+        raise HTTPException(429, f"{len(busy)} videos are already processing. Try again when one of them finishes.")
     run_id = f"r_{datetime.now():%Y%m%d_%H%M}_{uuid.uuid4().hex[:8]}"
     run_dir = ROOT / "runs" / run_id
     run_dir.mkdir(parents=True)
@@ -486,6 +676,12 @@ async def ingest(file: UploadFile):
                 shutil.rmtree(run_dir, ignore_errors=True)   # no half-uploaded run left behind
                 raise HTTPException(413, "videos up to 200 MB")
             f.write(chunk)
+    probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_type",
+                            "-of", "csv=p=0", str(src)], capture_output=True, text=True)
+    if "video" not in probe.stdout:
+        shutil.rmtree(run_dir, ignore_errors=True)
+        raise HTTPException(400, "We couldn't read a video in that file. Try an mp4, mov or webm that plays on your "
+                                 "computer.")
     (run_dir / "name.txt").write_text(Path(file.filename).name)   # for the library while it processes
     log = open(run_dir / "ingest.log", "w")
     subprocess.Popen([sys.executable, str(ROOT / "scripts" / "ingest.py"), str(src), "--run-id", run_id],
@@ -504,11 +700,12 @@ def _run_dir(run_id):
 def run_progress(run_id: str):
     p = _run_dir(run_id) / "progress.jsonl"
     events = [json.loads(line) for line in p.read_text().splitlines()[-50:]] if p.exists() else []
+    events = [{**e, "msg": failure_text(e.get("msg", ""))} if e.get("stage") == "error" else e for e in events]
     if not events and (p.parent / "report.json").exists():   # shipped demo runs keep the report, not the log
         events = [{"stage": "done", "pct": 100, "msg": "finished"}]
     latest = events[-1] if events else {"stage": "upload", "pct": 0, "msg": "waiting to start"}
     return {"events": events, "latest": latest, "done": latest["stage"] in ("done", "error"),
-            "error": latest["msg"] if latest["stage"] == "error" else None}
+            "error": failure_text(latest["msg"]) if latest["stage"] == "error" else None}
 
 
 @app.get("/api/runs/{run_id}/report")

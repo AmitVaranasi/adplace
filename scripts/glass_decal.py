@@ -122,7 +122,7 @@ class GlassDecal(ShirtPrint):
         (a bowl, a jug) hides part of it there; then the biggest print nearest the default whose footprint is in
         view. A glass is see-through, so only what hides it counts, not what's seen through it."""
         _, seen = self.design_map(good, check_design=False)
-        self.search_spot(seen)
+        self.search_spot_clear(seen)
 
     def design_map(self, good, step_a=0.05, step_t=0.02, check_design=True):
         """Where the cup carries a design of its own, in its wrapped coordinates: (angle round the cup from the
@@ -132,6 +132,7 @@ class GlassDecal(ShirtPrint):
         False: only where the vessel is seen (a glass, whose "design" would be whatever is behind it)."""
         na, nt = int(2.4 / step_a), int(1 / step_t)
         des, tot = np.zeros((na, nt)), np.zeros((na, nt))
+        self.vis, used = np.zeros((na, nt)), 0   # in how many sampled frames each cell is in view
         keys = sorted(good)
         for i in keys[:: max(1, len(keys) // 8)][:8]:
             cx, cy, r, ang, height = good[i][:5]
@@ -153,6 +154,11 @@ class GlassDecal(ShirtPrint):
             ok = (ia >= 0) & (ia < na) & (it >= 0) & (it < nt)
             np.add.at(tot, (ia[ok], it[ok]), 1)
             np.add.at(des, (ia[ok], it[ok]), design[ys, xs][ok])
+            hit = np.zeros((na, nt), bool)
+            hit[ia[ok], it[ok]] = True
+            self.vis += hit
+            used += 1
+        self.vis /= max(used, 1)
         return np.where(tot > 0, des / np.maximum(tot, 1), 1.0), tot > 0
 
     def design_pixels(self, i, body, r):
@@ -174,6 +180,13 @@ class GlassDecal(ShirtPrint):
         if self.logo_h is None:
             return self.half
         return min(MAX_HALF, self.logo_h * self.ratio / (2 * art.shape[0] / art.shape[1]))
+
+    def search_spot_clear(self, free):
+        """search_spot, first among cells in view in at least 80% of the sampled frames: a hand that holds the glass
+        low would otherwise sit over the first letters in most frames ("REWLARK"). Nowhere that clear: as before."""
+        self.search_spot(free & (self.vis >= 0.8))
+        if self.logo_h is None:
+            self.search_spot(free)
 
     def search_spot(self, free, step_a=0.05, step_t=0.02):
         """The biggest logo (from LOGO_HEIGHTS[0] of the vessel's height down to LOGO_HEIGHTS[1]), nearest the front
@@ -214,7 +227,8 @@ class GlassDecal(ShirtPrint):
         # the measuring below takes about a minute and an upload needs it three times (the gates, the player export,
         # the final check render): keep it per object, keyed by this file's code and the logos the spot must fit, so
         # either changing re-measures
-        logos = hashlib.sha1(" ".join(logo_brands()).encode()).hexdigest()[:6]
+        logos = hashlib.sha1(b"".join(b.encode() + (ROOT / "assets/creatives/gen" / f"{b}_glass_print.png").read_bytes()
+                                      for b in logo_brands())).hexdigest()[:6]   # which logos, and their shapes
         cache = (scene_dir(clip) /
                  f"vessel_{type(self).__name__}_{spec.get('prompt', 'cup')}_{spec['object']}_{CODE}_{logos}.pkl")
         if cache.exists():
@@ -851,7 +865,7 @@ class CupDecal(GlassDecal):
         share, seen = self.design_map(good)
         # a real design is design in nearly every sample of its cells, or in a cluster of them; a lone cell of shading
         # noise or grain is neither
-        self.search_spot(seen & (share < 0.5) & (cv2.blur(share.astype(np.float32), (3, 3)) < 0.12))
+        self.search_spot_clear(seen & (share < 0.5) & (cv2.blur(share.astype(np.float32), (3, 3)) < 0.12))
 
 
 def print_sigma(sigma):

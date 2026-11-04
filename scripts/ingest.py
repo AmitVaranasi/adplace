@@ -66,7 +66,10 @@ def flat_slot(name, kind):
                     "dynamic_content": False}
         return {"surface": "print", "creative_format": "menu_card", "shading": True, "dynamic_content": False}
     surface = SURFACES.get(name, display_surface(name))
-    return {"surface": surface, "dynamic_content": surface == "screen", "wall_light": surface != "screen"}
+    slot = {"surface": surface, "dynamic_content": surface == "screen", "wall_light": surface != "screen"}
+    if surface == "poster":   # Muse Image's photographic posters: bold, high-contrast, read at phone size
+        slot["creative_format"] = "poster"
+    return slot
 STAGES = ["upload", "shots", "segment", "track", "score", "render", "export", "qa", "done"]
 
 
@@ -357,8 +360,8 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
     results = []
     for k, c in enumerate(accepted):
         run.progress("qa", 20 + 70 * k / len(accepted), f"checking {c['id']} ({c['surface']})")
-        if c["kind"] in ("glass_decal", "cup_decal"):   # measured at the gates; the human reviewer judges the look
-            results.append({"id": c["id"], "pass": True, "checks": {}, "reasons": []})
+        if c["kind"] in ("glass_decal", "cup_decal"):   # measured at the gates; Muse must be able to read it
+            results.append(read_check(c, rendered, stem, assignment))
             continue
         with np.load(scene_dir(clip) / f"track_{c['id']}.npz") as z:
             quads, valid = z["quads"], z["valid"]
@@ -381,6 +384,55 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
         # the blind Muse judge is off for now (it rewarded blurring prints until unreadable); a person reviews the look
         results.append(qa_placement(c["id"], checks, required=("stability",)))
     return results
+
+
+READ_FRAMES, READ_NEEDED = 3, 2
+
+
+def read_check(c, rendered, stem, assignment):
+    """The final check for a logo on a glass or cup: Muse Spark, shown close crops of the rendered video at three
+    moments, must read the brand off the vessel in at least two. A logo cut off by a hand or the glass's edge, or
+    too small or too soft to read, fails; blurring a print can't pass this check the way it fooled a realism judge.
+    It also rates how printed the logo looks (1-5), recorded, not a gate."""
+    brand = assignment.get(c["id"])
+    if not brand:
+        return {"id": c["id"], "pass": True, "checks": {}, "reasons": []}
+    track = json.loads((ROOT / "app" / "static" / "player" / stem / "track.json").read_text())
+    obj = next((o for o in track.get("objects", []) if o["id"] == c["id"]), None)
+    start = int(track.get("start", 0))
+    seen = [(start + k, b) for k, b in enumerate(obj["boxes"] if obj else []) if b and start + k < len(rendered)]
+    picks = [seen[int(j * (len(seen) - 1) / max(READ_FRAMES - 1, 1))] for j in range(READ_FRAMES)] if seen else []
+    read, printed = 0, []
+    for i, (x, y, w, h, *_) in picks:
+        f = rendered[i]
+        x0, y0 = max(0, int(x - 0.6 * w)), max(0, int(y - 0.3 * h))
+        crop = f[y0:int(y + 1.3 * h), x0:int(x + 1.6 * w)]
+        if crop.size == 0:
+            continue
+        crop = cv2.resize(crop, None, fx=max(1.0, 512 / crop.shape[1]), fy=max(1.0, 512 / crop.shape[1]),
+                          interpolation=cv2.INTER_CUBIC)
+        try:
+            v = muse_json("You check ads printed on drinkware in video frames. Be strict and literal.",
+                          [{"type": "text", "text": "Read the brand name printed on the drinking vessel in the middle of "
+                            "this image, exactly as much of it as you can see (a word cut off by a hand or the edge: "
+                            "only the visible letters). Then rate how much the print looks really printed on the "
+                            "vessel rather than pasted onto the picture, 1 (pasted) to 5 (printed). Reply JSON: "
+                            '{"text": str, "printed": int, "why": str}'},
+                           {"type": "image_url", "image_url": {"url": jpeg_url(crop, width=crop.shape[1])}}],
+                          tokens=1500)
+        except RuntimeError:
+            continue
+        text = "".join(ch for ch in str(v.get("text", "")).lower() if ch.isalpha())
+        read += brand.lower() in text
+        if isinstance(v.get("printed"), (int, float)):
+            printed.append(float(v["printed"]))
+    ok = read >= READ_NEEDED
+    checks = {"readable": {"value": read / max(len(picks), 1), "limit": READ_NEEDED / READ_FRAMES, "pass": ok}}
+    if printed:
+        checks["looks_printed"] = {"value": round(float(np.mean(printed)), 2), "limit": None, "pass": True}
+    return {"id": c["id"], "pass": ok, "checks": checks,
+            "reasons": [] if ok else [f"readable: Muse Spark read \"{brand}\" in {read} of {len(picks)} frames, "
+                                      f"needs {READ_NEEDED}"]}
 
 
 def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
@@ -514,20 +566,36 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
     ("could not track", "We couldn't track it through the shot."),
     ("moves:", "Someone picks it up or moves it; for now we only place ads on things that stay still."),
     ("not yet:", "We found it, but can't place an ad on this kind of thing yet."),
+    ("not yet: more than", f"We measure the first {MAX_PLACES} places in a video; this one wasn't looked at."),
     ("no blank patch", "No blank area of it is big enough for a logo with clear space round it, so the logo would "
                        "touch its own design or edges."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
     ("failed final check: judge", "A blind reviewer spotted it as inserted much more often than the original."),
+    ("failed final check: readable", "In the rendered video, Muse Spark couldn't read the brand on it: cut off, too "
+                                     "small or too soft."),
     ("failed final check", "It failed the final checks on the rendered video."),
     ("flat placement required", "3D objects need a calibrated table, which this clip doesn't give us."),
 ]
+
+
+DRINKS = ["coffee", "latte", "matcha", "tea", "juice", "smoothie", "beer", "wine", "cocktail", "soda", "water", "milk"]
+
+
+def contents_of(text):
+    """What is in a vessel, from Muse's description of it ("a drinking glass with juice" -> "juice"); "" if unsaid.
+    The auction keeps brands off drinks they don't fit (inventory: unsuitable_contents)."""
+    text = str(text).lower()
+    return next((d for d in DRINKS if d in text), "")
 
 
 def plain(reasons):
     """Plain sentences for the report, each once, in order; anything unrecognised is passed through."""
     out = []
     for r in reasons:
-        text = next((p for key, p in PLAIN if key in r), r)
+        # the key nearest the start names the gate ("logo too small: ... px tall on screen" is not "on screen");
+        # on a tie the longer key is the more specific one
+        hits = [(r.find(key), -len(key), p) for key, p in PLAIN if key in r]
+        text = min(hits)[2] if hits else r
         if text not in out:
             out.append(text)
     return out
@@ -583,7 +651,8 @@ def ingest(src, run_id=None):
         results = segment(clip, prompts + printable + (["cup handle"] if printable else []) + OCCLUDERS) \
             if prompts or printable else []
         failed = [p for p, rc, _ in results if rc != 0]
-        run.progress("segment", 100, "SAM 3.1 done" + (f" (failed: {', '.join(failed)})" if failed else ""))
+        run.progress("segment", 100, ("SAM 3.1 outlined them" + (f" (failed: {', '.join(failed)})" if failed else ""))
+                     if results else "nothing here is a kind we can place on yet, so SAM 3.1 wasn't needed")
 
         entry = {"hidden": True, "dynamic": True, "upload": True, "source": Path(src).name,
                  # only occluders SAM actually ran for (none when the scene has no surfaces to place on)
@@ -594,6 +663,10 @@ def ingest(src, run_id=None):
         cands, k = [], 0
         objs = [(p, oid, st) for p in prompts if p not in failed
                 for oid, st in sorted(object_stores(clip, p, frames).items())]
+        held = [(p, oid) for p in printable if p not in failed
+                for oid, st in sorted(object_stores(clip, p, frames).items(), key=lambda kv: int(kv[0]))
+                if sum(st.any(i) for i in range(frames.n)) >= fps]
+        total = max(len(objs) + len(held), 1)   # progress counts every object, flat ones and vessels
         for j, (p, oid, st) in enumerate(objs):
             seen = sum(st.any(i) for i in range(frames.n))
             peak = max(area(st, i) for i in range(frames.n)) / (frames.w * frames.h)
@@ -602,7 +675,7 @@ def ingest(src, run_id=None):
             k += 1
             slot = {"id": f"c{k:02d}", "prompt": p, "object": int(oid), **flat_slot(p, flat_kind[p])}
 
-            run.progress("track", 100 * j / max(len(objs), 1), f"tracking {p} #{oid}")
+            run.progress("track", 100 * j / total, f"object {j + 1} of {total}: tracking the {p}")
             c = {"id": slot["id"], "shot": 0, "prompt": p, "object": int(oid), "kind": "flat",
                  "surface": slot["surface"], "fps": fps, "frame_size": [frames.w, frames.h], "slot": slot}
             try:
@@ -627,37 +700,38 @@ def ingest(src, run_id=None):
                 c["frames"], c["thumb"] = [0, 0], None
             c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
             cands.append(c)
-        for p in printable:
-            if p in failed:
-                continue
-            for oid, st in sorted(object_stores(clip, p, frames).items(), key=lambda kv: int(kv[0])):
-                if sum(st.any(i) for i in range(frames.n)) < fps:
-                    continue
-                k += 1
-                cid = f"c{k:02d}"
-                run.progress("track", 95, f"following glass or cup #{oid}")
-                c = {"id": cid, "shot": 0, "prompt": p, "object": int(oid), "kind": "glass_decal", "surface": "glass",
-                     "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg"}
-                try:
-                    c["metrics"], c["frames"], c["kind"], c["surface"] = glass_candidate(
-                        clip, cid, int(oid), frames, fps, run.dir / "thumbs", prompt=p)
-                except Exception as e:
-                    c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
-                    c["frames"], c["thumb"] = [0, 0], None
-                c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid)}
-                c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
-                cands.append(c)
+        for i, (p, oid) in enumerate(held):
+            k += 1
+            cid = f"c{k:02d}"
+            run.progress("track", 100 * (len(objs) + i) / total,
+                         f"object {len(objs) + i + 1} of {total}: following a glass, cup or bowl")
+            c = {"id": cid, "shot": 0, "prompt": p, "object": int(oid), "kind": "glass_decal", "surface": "glass",
+                 "fps": fps, "frame_size": [frames.w, frames.h], "thumb": f"thumbs/{cid}.jpg"}
+            try:
+                c["metrics"], c["frames"], c["kind"], c["surface"] = glass_candidate(
+                    clip, cid, int(oid), frames, fps, run.dir / "thumbs", prompt=p)
+            except Exception as e:
+                c["metrics"] = {"on_screen_s": 0.0, "error": f"could not track: {e}"}
+                c["frames"], c["thumb"] = [0, 0], None
+            c["slot"] = {"id": cid, "kind": c["kind"], "surface": c["surface"], "prompt": p, "object": int(oid),
+                         "contents": contents_of(c["metrics"].get("muse_reason", ""))}
+            c["metrics"]["scene_safe"] = bool(scene.get("scene_safe", False))
+            cands.append(c)
         # places with no placement method yet: reported as found, so the report shows every opportunity
+        safe = bool(scene.get("scene_safe", False))
         for pl in places:
             if pl["kind"] == "other" or (pl["kind"] in ("display", "print") and pl["name"] not in prompts):
                 k += 1
                 why = (f"not yet: we can't place an ad on a {pl['name']} yet" if pl["kind"] == "other" else
+                       f"scene_safe is False: {scene.get('safety_reason', '')}"[:300] if not safe else
                        f"not yet: more than {MAX_PLACES} places in one video; this one wasn't looked at")
                 cands.append({"id": f"c{k:02d}", "shot": 0, "prompt": pl["name"], "kind": "found", "surface": pl["name"],
                               "fps": fps, "frame_size": [frames.w, frames.h], "thumb": None, "frames": [0, 0],
                               "metrics": {"on_screen_s": 0.0, "error": why, "where": pl["where"]}})
         run.write("candidates.json", [{kk: v for kk, v in c.items() if kk not in ("slot", "quads")} for c in cands])
-        run.progress("track", 100, f"{len(cands)} candidates measured")
+        unsupported = sum(1 for c in cands if c["kind"] == "found")
+        run.progress("track", 100, f"{len(cands) - unsupported} places measured"
+                                   + (f"; {unsupported} more of kinds we can't place on yet" if unsupported else ""))
 
         run.progress("score", 0, "deciding")
         try:
@@ -736,11 +810,22 @@ def ingest(src, run_id=None):
                   "player_url": f"/player?clip={stem}" if accepted else None,
                   "reels_url": f"/reels?clip={stem}" if accepted else None, "viewers": viewers}
         run.write("report.json", report)
-        run.progress("done", 100, f"{len(accepted)} placed, {len(cands) - len(accepted)} declined")
+        measured = sum(1 for c in cands if c["kind"] != "found")
+        run.progress("done", 100, f"{len(accepted)} placed, {measured - len(accepted)} declined"
+                                  + (f", {len(cands) - measured} not placeable yet" if len(cands) > measured else ""))
     except Exception as e:
-        traceback.print_exc()
-        run.progress("error", 100, f"{type(e).__name__}: {e}")
+        traceback.print_exc()   # the details go to the run's ingest.log; the creator reads a sentence
+        run.progress("error", 100, failure_message(e))
     return run.id
+
+
+def failure_message(e):
+    """What a creator reads when an upload fails: what happened and what to do, never a command line or a path."""
+    if isinstance(e, subprocess.CalledProcessError) and "ffmpeg" in str(e.cmd):
+        return "We couldn't read that video file. Try an mp4, mov or webm that plays on your computer."
+    if isinstance(e, FileNotFoundError):
+        return "The uploaded file went missing before we could process it. Please upload it again."
+    return "Something went wrong while processing this video. Please try again, or try another video."
 
 
 if __name__ == "__main__":

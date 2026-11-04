@@ -1,0 +1,258 @@
+{
+ "run_id": "r_v5_m223",
+ "clip_stem": "upload_m223",
+ "clip": "assets/clips/uploads/upload_m223.mp4",
+ "source_name": "m223.mp4",
+ "finished_at": 1793757831.289909,
+ "duration_s": 10.55,
+ "status": "done",
+ "elapsed_s": 394,
+ "note": "",
+ "scene": {
+  "places": [
+   {
+    "name": "chalkboard",
+    "kind": "display",
+    "where": "on back wall behind woman"
+   },
+   {
+    "name": "mug",
+    "kind": "vessel",
+    "where": "on counter in front of woman and in her hand"
+   },
+   {
+    "name": "jar",
+    "kind": "vessel",
+    "where": "on left end of counter"
+   },
+   {
+    "name": "plate",
+    "kind": "other",
+    "where": "on left side of counter under small dome"
+   },
+   {
+    "name": "counter",
+    "kind": "other",
+    "where": "foreground bar top across bottom"
+   },
+   {
+    "name": "book",
+    "kind": "print",
+    "where": "open on counter in front of woman"
+   },
+   {
+    "name": "bottle",
+    "kind": "other",
+    "where": "row on back counter on right"
+   },
+   {
+    "name": "jacket",
+    "kind": "other",
+    "where": "worn by woman"
+   },
+   {
+    "name": "wall",
+    "kind": "other",
+    "where": "brick wall behind counter"
+   },
+   {
+    "name": "menu board",
+    "kind": "display",
+    "where": "on back wall behind counter"
+   },
+   {
+    "name": "tray",
+    "kind": "other",
+    "where": "on counter on right under dessert dome"
+   }
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult woman reading and drinking coffee in a cafe, no children, medical, accident, violence or grief content; adult woman calmly reading and drinking coffee in a cafe, no children, medical, accident, violence or grief visible",
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "food",
+   "indoor",
+   "reading"
+  ],
+  "surfaces": [
+   "book",
+   "bottle",
+   "chalkboard",
+   "counter",
+   "jacket",
+   "jar",
+   "menu board",
+   "mug",
+   "plate",
+   "tray",
+   "wall"
+  ]
+ },
+ "summary": {
+  "candidates": 10,
+  "placed": 0,
+  "declined": 10
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "sign",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m223/thumbs/c01.jpg",
+   "on_screen_s": 10.55,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 179.2 px, needs at most 2.5 px",
+    "p90 track residual 248.8 px, needs at most 5.0 px",
+    "p95 corner jitter 4.076 px, needs at most 3.0 px"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "print",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m223/thumbs/c02.jpg",
+   "on_screen_s": 10.55,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "People or things cover too much of it most of the time."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual missing or non-finite, needs at most 2.5 px",
+    "p90 track residual missing or non-finite, needs at most 5.0 px",
+    "p95 corner jitter 6.89 px, needs at most 3.0 px",
+    "mean occlusion 0.4376, needs at most 0.35"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m223/thumbs/c03.jpg",
+   "on_screen_s": 10.55,
+   "reasons": [
+    "It's too small on screen for a readable logo.",
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges.",
+    "Someone picks it up or moves it; for now we only place ads on things that stay still."
+   ],
+   "details": [
+    "logo too small: the logo would be 16 px tall on screen, needs 28 px to be readable",
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it",
+    "moves: travels 5.7 cup radii within a second, needs at most 0.5 (only still objects carry ads)"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m223/thumbs/c04.jpg",
+   "on_screen_s": 7.63,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad."
+   ],
+   "details": [
+    "muse_plausible: Only a narrow truncated sliver at the left frame edge is visible, appearing as a white container holding multiple utensils/stirrers. Not a fully visible single drinking cup, glass or bowl with a clear"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "plate",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a plate yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "counter",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a counter yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c07",
+   "surface": "bottle",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a bottle yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c08",
+   "surface": "jacket",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a jacket yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c09",
+   "surface": "wall",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a wall yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c10",
+   "surface": "tray",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a tray yet"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "reels_url": null,
+ "viewers": []
+}

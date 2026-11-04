@@ -26,6 +26,7 @@ required, credited here anyway). `assets/clips/raw3/m<id>.mp4` is Mixkit video <
 - 134, 4043, 4195, 4350, 4385, 9211, 22314, 24152, 24278, 24405, 24406, 40701, 41156, 41218, 41222, 41229, 42482,
   43248 (the bar clip in the demo), 43984, 43999, 44000, 44003, 44005, 44007, 44008, 44010, 44011, 44012, 44015,
   44019 (also `assets/clips/patio_waiter.mp4`, "A table being served pizza by a waiter"), 44025.
+- Nov 3, `assets/clips/raw4/m<id>.mp4`: 206, 223, 1737 (iced coffee on a tray, "Writing notes at a cafe"), 1741.
 
 Not published: `assets/clips/pizzeria_counter.mp4` and `pizzeria_box.mp4` are cut from a YouTube video for
 experiments only. Their videos are not in this repository (only tracking data and the fictional brands' artwork), and

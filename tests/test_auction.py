@@ -18,10 +18,18 @@ def test_second_price_and_relevance():
 
 
 def test_one_placement_per_brand_biggest_first():
-    ps = [{"id": "small", "surface": "glass", "brands": ["a", "b"], "area": 0.1},
+    ps = [{"id": "small", "surface": "poster", "brands": ["a", "b"], "area": 0.1},
           {"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5}]
     r = auction.run(ps, INV, [])
     assert r["assignment"] == {"big": "b", "small": "a"}
+
+
+def test_drinkware_near_the_camera_is_sold_first():
+    # a glass on the table is in focus and legible; the bigger poster behind it is often soft
+    ps = [{"id": "glass", "surface": "glass", "brands": ["a", "b"], "area": 0.1},
+          {"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5}]
+    r = auction.run(ps, INV, [])
+    assert r["assignment"] == {"glass": "b", "big": "a"}
 
 
 def test_exclusions_artwork_and_reserve():
@@ -62,6 +70,23 @@ def test_placements_of_track():
 
 def test_left_over_placement_goes_to_a_brand_already_shown():
     ps = [{"id": "big", "surface": "poster", "brands": ["a", "b"], "area": 0.5},
-          {"id": "small", "surface": "glass", "brands": ["b"], "area": 0.1}]
+          {"id": "small", "surface": "poster", "brands": ["b"], "area": 0.1}]
     r = auction.run(ps, INV, [])
     assert r["assignment"] == {"big": "b", "small": "b"}
+
+
+def test_a_brand_skips_a_drink_it_does_not_fit():
+    inv = {"campaigns": [{"brand_id": "coffee", "bid_cpm": 9, "preference_tags": [], "eligible_surfaces": ["glass"],
+                          "unsuitable_contents": ["juice"]},
+                         {"brand_id": "fizz", "bid_cpm": 2, "preference_tags": [], "eligible_surfaces": ["glass"]}]}
+    juice = [{"id": "g", "surface": "glass", "contents": "juice", "brands": ["coffee", "fizz"], "area": 0.1}]
+    assert auction.run(juice, inv, [])["assignment"] == {"g": "fizz"}
+    latte = [{**juice[0], "contents": "latte"}]
+    assert auction.run(latte, inv, [])["assignment"] == {"g": "coffee"}
+
+
+def test_the_winner_says_which_interests_it_matched():
+    r = auction.run([{"id": "p", "surface": "poster", "brands": ["a", "b", "c"], "area": 1}], INV, ["coffee"])
+    lot = r["placements"]["p"]
+    assert lot["matched"] == sorted({"coffee"} & set(next(c for c in INV["campaigns"]
+                                                         if c["brand_id"] == lot["winner"])["preference_tags"]))

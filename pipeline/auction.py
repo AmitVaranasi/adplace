@@ -1,7 +1,8 @@
 """The bid at playback: which brand each placement in a video carries for this viewer, decided when they press play.
 
 Every placement's geometry, light and mattes were prepared at upload and do not depend on the brand (export_player),
-so the auction only has to pick names. Per placement, in order of size (the biggest is worth most):
+so the auction only has to pick names. Per placement, nearest the camera first (glasses, cups and bowls on the
+table: in focus and the most legible), then the rest in order of size (the biggest is worth most):
 
   eligible   the brand has artwork for this placement, can run on this surface, its exclusions don't match the
              scene, and it hasn't already won another placement in this video (one placement per brand). A
@@ -20,6 +21,7 @@ import random
 import time
 
 RESERVE_CPM = 1.0
+NEAR = {"glass", "cup", "mug", "bowl"}   # sold first: in focus, near the camera, where a viewer reads a brand
 
 
 def relevance(campaign, preferences, context_tags):
@@ -36,7 +38,7 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
     scene = set(context_tags)
     known = {x for c in campaigns.values() for x in c.get("eligible_surfaces", [])}   # surfaces campaigns name
     taken, assignment, detail = set(), {}, {}
-    order = sorted(placements, key=lambda p: -p.get("area", 0.0))
+    order = sorted(placements, key=lambda p: (p.get("surface") not in NEAR, -p.get("area", 0.0)))
     for p in order + order:   # second pass: placements left empty, brands already in the video may bid again
         if p["id"] in assignment:
             continue
@@ -48,6 +50,8 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
                 continue
             if p.get("surface") in known and p["surface"] not in c.get("eligible_surfaces", []):
                 continue
+            if p.get("contents") and p["contents"] in c.get("unsuitable_contents", []):
+                continue   # a coffee brand on a glass of orange juice reads as a mistake
             bid = float(c.get("bid_cpm", RESERVE_CPM)) * (1 + rng.uniform(-jitter, jitter))
             if bid < RESERVE_CPM:
                 continue
@@ -62,7 +66,9 @@ def run(placements, inventory, preferences, context_tags=(), jitter=0.0, seed=No
         price = min(max(floor, RESERVE_CPM), w["bid_cpm"])
         taken.add(w["brand"])
         assignment[p["id"]] = w["brand"]
-        detail[p["id"]] = {"winner": w["brand"], "price_cpm": round(price, 2), "bidders": bidders}
+        detail[p["id"]] = {"winner": w["brand"], "price_cpm": round(price, 2), "bidders": bidders,
+                           # why this viewer: the interests of theirs the winner targets
+                           "matched": sorted(set(campaigns[w["brand"]].get("preference_tags", [])) & set(preferences))}
     return {"assignment": assignment, "placements": detail, "ms": round(1000 * (time.perf_counter() - t0), 2)}
 
 
@@ -78,5 +84,5 @@ def placements_of(track):
         bs = [b for b in o["boxes"] if b]
         area = sum(b[2] * b[3] for b in bs) / max(len(bs), 1) * 0.5   # a wrapped print covers about half its box
         out.append({"id": o["id"], "surface": o.get("surface"), "brands": list(o["brands"]),
-                    "area": area / (track["width"] * track["height"])})
+                    "contents": o.get("contents", ""), "area": area / (track["width"] * track["height"])})
     return out
