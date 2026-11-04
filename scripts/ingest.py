@@ -360,8 +360,8 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
     results = []
     for k, c in enumerate(accepted):
         run.progress("qa", 20 + 70 * k / len(accepted), f"checking {c['id']} ({c['surface']})")
-        if c["kind"] in ("glass_decal", "cup_decal"):   # measured at the gates; the human reviewer judges the look
-            results.append({"id": c["id"], "pass": True, "checks": {}, "reasons": []})
+        if c["kind"] in ("glass_decal", "cup_decal"):   # measured at the gates; Muse must be able to read it
+            results.append(read_check(c, rendered, stem, assignment))
             continue
         with np.load(scene_dir(clip) / f"track_{c['id']}.npz") as z:
             quads, valid = z["quads"], z["valid"]
@@ -384,6 +384,55 @@ def check_placements(run, clip, entry, stem, frames, fps, accepted, samples=8):
         # the blind Muse judge is off for now (it rewarded blurring prints until unreadable); a person reviews the look
         results.append(qa_placement(c["id"], checks, required=("stability",)))
     return results
+
+
+READ_FRAMES, READ_NEEDED = 3, 2
+
+
+def read_check(c, rendered, stem, assignment):
+    """The final check for a logo on a glass or cup: Muse Spark, shown close crops of the rendered video at three
+    moments, must read the brand off the vessel in at least two. A logo cut off by a hand or the glass's edge, or
+    too small or too soft to read, fails; blurring a print can't pass this check the way it fooled a realism judge.
+    It also rates how printed the logo looks (1-5), recorded, not a gate."""
+    brand = assignment.get(c["id"])
+    if not brand:
+        return {"id": c["id"], "pass": True, "checks": {}, "reasons": []}
+    track = json.loads((ROOT / "app" / "static" / "player" / stem / "track.json").read_text())
+    obj = next((o for o in track.get("objects", []) if o["id"] == c["id"]), None)
+    start = int(track.get("start", 0))
+    seen = [(start + k, b) for k, b in enumerate(obj["boxes"] if obj else []) if b and start + k < len(rendered)]
+    picks = [seen[int(j * (len(seen) - 1) / max(READ_FRAMES - 1, 1))] for j in range(READ_FRAMES)] if seen else []
+    read, printed = 0, []
+    for i, (x, y, w, h, *_) in picks:
+        f = rendered[i]
+        x0, y0 = max(0, int(x - 0.6 * w)), max(0, int(y - 0.3 * h))
+        crop = f[y0:int(y + 1.3 * h), x0:int(x + 1.6 * w)]
+        if crop.size == 0:
+            continue
+        crop = cv2.resize(crop, None, fx=max(1.0, 512 / crop.shape[1]), fy=max(1.0, 512 / crop.shape[1]),
+                          interpolation=cv2.INTER_CUBIC)
+        try:
+            v = muse_json("You check ads printed on drinkware in video frames. Be strict and literal.",
+                          [{"type": "text", "text": "Read the brand name printed on the drinking vessel in the middle of "
+                            "this image, exactly as much of it as you can see (a word cut off by a hand or the edge: "
+                            "only the visible letters). Then rate how much the print looks really printed on the "
+                            "vessel rather than pasted onto the picture, 1 (pasted) to 5 (printed). Reply JSON: "
+                            '{"text": str, "printed": int, "why": str}'},
+                           {"type": "image_url", "image_url": {"url": jpeg_url(crop, width=crop.shape[1])}}],
+                          tokens=1500)
+        except RuntimeError:
+            continue
+        text = "".join(ch for ch in str(v.get("text", "")).lower() if ch.isalpha())
+        read += brand.lower() in text
+        if isinstance(v.get("printed"), (int, float)):
+            printed.append(float(v["printed"]))
+    ok = read >= READ_NEEDED
+    checks = {"readable": {"value": read / max(len(picks), 1), "limit": READ_NEEDED / READ_FRAMES, "pass": ok}}
+    if printed:
+        checks["looks_printed"] = {"value": round(float(np.mean(printed)), 2), "limit": None, "pass": True}
+    return {"id": c["id"], "pass": ok, "checks": checks,
+            "reasons": [] if ok else [f"readable: Muse Spark read \"{brand}\" in {read} of {len(picks)} frames, "
+                                      f"needs {READ_NEEDED}"]}
 
 
 def glass_candidate(clip, cid, oid, frames, fps, thumbs, prompt="cup"):
@@ -522,6 +571,8 @@ PLAIN = [  # gate reason (pipeline/gates.py wording) -> what a viewer of the rep
                        "touch its own design or edges."),
     ("failed final check: stability", "In the rendered video it moved more than the real wall around it."),
     ("failed final check: judge", "A blind reviewer spotted it as inserted much more often than the original."),
+    ("failed final check: readable", "In the rendered video, Muse Spark couldn't read the brand on it: cut off, too "
+                                     "small or too soft."),
     ("failed final check", "It failed the final checks on the rendered video."),
     ("flat placement required", "3D objects need a calibrated table, which this clip doesn't give us."),
 ]

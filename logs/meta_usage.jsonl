@@ -2260,3 +2260,82 @@
 {"t": "2026-11-03T15:40:03", "kind": "muse", "usd": 0.004283, "purpose": "rank", "prompt_tokens": 1084, "completion_tokens": 689}
 {"t": "2026-11-03T15:40:09", "kind": "muse", "usd": 0.004206, "purpose": "rank", "prompt_tokens": 1083, "completion_tokens": 671}
 {"t": "2026-11-03T15:40:15", "kind": "muse", "usd": 0.003892, "purpose": "rank", "prompt_tokens": 1084, "completion_tokens": 597}
+{"t": "2026-11-03T15:44:44", "kind": "muse", "usd": 0.015641, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2900}
+{"t": "2026-11-03T15:45:06", "kind": "muse", "usd": 0.010411, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2328}
+{"t": "2026-11-03T15:45:57", "kind": "muse", "usd": 0.015127, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2779}
+{"t": "2026-11-03T15:46:25", "kind": "muse", "usd": 0.012842, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2900}
+{"t": "2026-11-03T15:46:39", "kind": "sam", "usd": 0.0488, "purpose": "bowl", "frames": 244}
+{"t": "2026-11-03T15:46:48", "kind": "sam", "usd": 0.0488, "purpose": "cup handle", "frames": 244}
+{"t": "2026-11-03T15:46:51", "kind": "sam", "usd": 0.0488, "purpose": "painting", "frames": 244}
+{"t": "2026-11-03T15:46:52", "kind": "sam", "usd": 0.0488, "purpose": "picture", "frames": 244}
+{"t": "2026-11-03T15:46:53", "kind": "sam", "usd": 0.0488, "purpose": "cup", "frames": 244}
+{"t": "2026-11-03T15:51:32", "kind": "muse", "usd": 0.006413, "purpose": "rank", "prompt_tokens": 3238, "completion_tokens": 619}
+{"t": "2026-11-03T15:51:39", "kind": "muse", "usd": 0.004059, "purpose": "rank", "prompt_tokens": 3238, "completion_tokens": 827}
+{"t": "2026-11-03T15:52:14", "kind": "sam", "usd": 0.0488, "purpose": "person", "frames": 244}
+{"t": "2026-11-03T15:53:21", "kind": "muse", "usd": 0.00373, "purpose": "rank", "prompt_tokens": 873, "completion_tokens": 621}
+{"t": "2026-11-03T15:53:47", "kind": "muse", "usd": 0.004347, "purpose": "rank", "prompt_tokens": 873, "completion_tokens": 766}
+{"t": "2026-11-03T15:54:25", "kind": "muse", "usd": 0.003293, "purpose": "rank", "prompt_tokens": 873, "completion_tokens": 518}
+{"t": "2026-11-03T15:54:47", "kind": "muse", "usd": 0.004385, "purpose": "rank", "prompt_tokens": 873, "completion_tokens": 775}
+{"t": "2026-11-03T15:55:09", "kind": "muse", "usd": 0.009719, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 2000}
+{"t": "2026-11-03T15:55:33", "kind": "muse", "usd": 0.010471, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 2177}
+{"t": "2026-11-03T15:55:43", "kind": "muse", "usd": 0.0048, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 872}
+{"t": "2026-11-03T15:57:07", "kind": "muse", "usd": 0.003751, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 625}
+{"t": "2026-11-03T15:58:49", "kind": "muse", "usd": 0.004594, "purpose": "rank", "prompt_tokens": 1088, "completion_tokens": 761}
+{"t": "2026-11-03T15:58:59", "kind": "muse", "usd": 0.005311, "purpose": "rank", "prompt_tokens": 1087, "completion_tokens": 930}
+{"t": "2026-11-03T15:59:03", "kind": "muse", "usd": 0.003429, "purpose": "rank", "prompt_tokens": 1087, "completion_tokens": 487}
+{"t": "2026-11-03T15:59:07", "kind": "muse", "usd": 0.002994, "purpose": "rank", "prompt_tokens": 1093, "completion_tokens": 383}
+{"t": "2026-11-03T15:59:11", "kind": "muse", "usd": 0.003175, "purpose": "rank", "prompt_tokens": 1092, "completion_tokens": 426}
+{"t": "2026-11-03T15:59:16", "kind": "muse", "usd": 0.003738, "purpose": "rank", "prompt_tokens": 1093, "completion_tokens": 558}
+{"t": "2026-11-03T17:21:18", "kind": "muse", "usd": 0.011408, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 1904}
+{"t": "2026-11-03T17:21:41", "kind": "muse", "usd": 0.013402, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2373}
+{"t": "2026-11-03T17:22:00", "kind": "sam", "usd": 0.1058, "purpose": "cup handle", "frames": 529}
+{"t": "2026-11-03T17:23:18", "kind": "sam", "usd": 0.1058, "purpose": "cup", "frames": 529}
+{"t": "2026-11-03T17:24:48", "kind": "muse", "usd": 0.006979, "purpose": "rank", "prompt_tokens": 483, "completion_tokens": 1500}
+{"t": "2026-11-03T17:25:03", "kind": "muse", "usd": 0.005882, "purpose": "rank", "prompt_tokens": 483, "completion_tokens": 1242}
+{"t": "2026-11-03T17:25:04", "kind": "sam", "usd": 0.1058, "purpose": "notebook", "frames": 529}
+{"t": "2026-11-03T17:25:20", "kind": "muse", "usd": 0.005962, "purpose": "rank", "prompt_tokens": 446, "completion_tokens": 1301}
+{"t": "2026-11-03T17:25:29", "kind": "muse", "usd": 0.004679, "purpose": "rank", "prompt_tokens": 483, "completion_tokens": 959}
+{"t": "2026-11-03T17:27:29", "kind": "muse", "usd": 0.005434, "purpose": "rank", "prompt_tokens": 482, "completion_tokens": 1166}
+{"t": "2026-11-03T17:27:37", "kind": "muse", "usd": 0.004242, "purpose": "rank", "prompt_tokens": 464, "completion_tokens": 891}
+{"t": "2026-11-03T17:27:45", "kind": "muse", "usd": 0.003847, "purpose": "rank", "prompt_tokens": 559, "completion_tokens": 770}
+{"t": "2026-11-03T17:28:41", "kind": "muse", "usd": 0.004461, "purpose": "rank", "prompt_tokens": 483, "completion_tokens": 1003}
+{"t": "2026-11-03T17:28:52", "kind": "muse", "usd": 0.004606, "purpose": "rank", "prompt_tokens": 446, "completion_tokens": 1048}
+{"t": "2026-11-03T17:29:02", "kind": "muse", "usd": 0.004592, "purpose": "rank", "prompt_tokens": 483, "completion_tokens": 1034}
+{"t": "2026-11-03T17:30:19", "kind": "sam", "usd": 0.1058, "purpose": "person", "frames": 529}
+{"t": "2026-11-03T17:31:49", "kind": "muse", "usd": 0.005313, "purpose": "rank", "prompt_tokens": 901, "completion_tokens": 985}
+{"t": "2026-11-03T17:31:54", "kind": "muse", "usd": 0.00331, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 492}
+{"t": "2026-11-03T17:34:40", "kind": "muse", "usd": 0.001988, "purpose": "rank", "prompt_tokens": 601, "completion_tokens": 291}
+{"t": "2026-11-03T17:34:43", "kind": "muse", "usd": 0.002369, "purpose": "rank", "prompt_tokens": 600, "completion_tokens": 381}
+{"t": "2026-11-03T17:34:46", "kind": "muse", "usd": 0.002259, "purpose": "rank", "prompt_tokens": 600, "completion_tokens": 355}
+{"t": "2026-11-03T17:34:50", "kind": "muse", "usd": 0.002322, "purpose": "rank", "prompt_tokens": 606, "completion_tokens": 368}
+{"t": "2026-11-03T17:34:52", "kind": "muse", "usd": 0.002341, "purpose": "rank", "prompt_tokens": 605, "completion_tokens": 373}
+{"t": "2026-11-03T17:34:56", "kind": "muse", "usd": 0.002452, "purpose": "rank", "prompt_tokens": 606, "completion_tokens": 428}
+{"t": "2026-11-03T17:36:54", "kind": "muse", "usd": 0.013941, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2500}
+{"t": "2026-11-03T17:37:18", "kind": "muse", "usd": 0.015977, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2979}
+{"t": "2026-11-03T17:37:53", "kind": "sam", "usd": 0.1646, "purpose": "cup handle", "frames": 823}
+{"t": "2026-11-03T17:46:59", "kind": "sam", "usd": 0.1646, "purpose": "notebook", "frames": 823}
+{"t": "2026-11-03T17:53:16", "kind": "sam", "usd": 0.1646, "purpose": "cup", "frames": 823}
+{"t": "2026-11-03T17:55:01", "kind": "muse", "usd": 0.005725, "purpose": "rank", "prompt_tokens": 901, "completion_tokens": 1082}
+{"t": "2026-11-03T17:55:08", "kind": "muse", "usd": 0.004096, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 677}
+{"t": "2026-11-03T17:55:48", "kind": "muse", "usd": 0.017014, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 3223}
+{"t": "2026-11-03T17:56:15", "kind": "muse", "usd": 0.015952, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2973}
+{"t": "2026-11-03T17:56:25", "kind": "sam", "usd": 0.024, "purpose": "cup handle", "frames": 120}
+{"t": "2026-11-03T17:56:25", "kind": "sam", "usd": 0.024, "purpose": "cup", "frames": 120}
+{"t": "2026-11-03T17:56:39", "kind": "sam", "usd": 0.024, "purpose": "person", "frames": 120}
+{"t": "2026-11-03T17:56:50", "kind": "muse", "usd": 0.004644, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 806}
+{"t": "2026-11-03T17:57:46", "kind": "muse", "usd": 0.015935, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 2969}
+{"t": "2026-11-03T17:58:14", "kind": "muse", "usd": 0.016585, "purpose": "rank", "prompt_tokens": 2653, "completion_tokens": 3122}
+{"t": "2026-11-03T17:58:28", "kind": "sam", "usd": 0.0506, "purpose": "menu board", "frames": 253}
+{"t": "2026-11-03T17:58:34", "kind": "sam", "usd": 0.0506, "purpose": "book", "frames": 253}
+{"t": "2026-11-03T17:58:34", "kind": "sam", "usd": 0.0506, "purpose": "cup", "frames": 253}
+{"t": "2026-11-03T17:58:39", "kind": "sam", "usd": 0.0506, "purpose": "cup handle", "frames": 253}
+{"t": "2026-11-03T17:58:44", "kind": "sam", "usd": 0.0506, "purpose": "chalkboard", "frames": 253}
+{"t": "2026-11-03T18:00:04", "kind": "sam", "usd": 0.0506, "purpose": "person", "frames": 253}
+{"t": "2026-11-03T18:00:51", "kind": "muse", "usd": 0.005095, "purpose": "rank", "prompt_tokens": 873, "completion_tokens": 942}
+{"t": "2026-11-03T18:01:26", "kind": "muse", "usd": 0.005559, "purpose": "rank", "prompt_tokens": 901, "completion_tokens": 1043}
+{"t": "2026-11-03T18:01:32", "kind": "muse", "usd": 0.003475, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 531}
+{"t": "2026-11-03T18:03:10", "kind": "muse", "usd": 0.009594, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 2000}
+{"t": "2026-11-03T18:03:51", "kind": "muse", "usd": 0.01727, "purpose": "rank", "prompt_tokens": 975, "completion_tokens": 3806}
+{"t": "2026-11-03T18:05:51", "kind": "muse", "usd": 0.00586, "purpose": "rank", "prompt_tokens": 428, "completion_tokens": 1253}
+{"t": "2026-11-03T18:06:03", "kind": "muse", "usd": 0.005138, "purpose": "rank", "prompt_tokens": 428, "completion_tokens": 1083}
+{"t": "2026-11-03T18:06:17", "kind": "muse", "usd": 0.005613, "purpose": "rank", "prompt_tokens": 445, "completion_tokens": 1219}

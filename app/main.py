@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zlib
 import threading
 import time
 from pathlib import Path
@@ -173,7 +174,7 @@ class AuctionRequest(BaseModel):
     clip: str          # stem of a player export
     profile_id: str
     jitter: float = 0.15
-    seed: int | None = None   # fixed for a recording: the same viewer gets the same brands every time
+    fresh: bool = False   # "run the bid again": a new impression; otherwise a viewer's first bid on a video repeats
 
 
 def player_export(stem):
@@ -195,7 +196,9 @@ def run_auction(req: AuctionRequest):
     settings = creator.load(player_export_dir(req.clip))
     r = auction.run(creator.allowed(auction.placements_of(track), settings), load("inventory.json"),
                     viewers[req.profile_id].get("preferences", []), entry.get("context_tags", []),
-                    jitter=min(max(req.jitter, 0.0), 0.5), seed=req.seed)
+                    jitter=min(max(req.jitter, 0.0), 0.5),
+                    # the same viewer reloading the same video sees the same brands; only a deliberate re-bid moves them
+                    seed=None if req.fresh else zlib.crc32(f"{req.clip}|{req.profile_id}".encode()))
     return {**r, "context_tags": entry.get("context_tags", []), "creator_enabled": settings["enabled"],
             "token": auction_token(req.clip, req.profile_id, r["assignment"])}
 
@@ -497,7 +500,21 @@ def videos():
                       "places": [p["surface"] for p in r.get("placements", []) if p.get("decision") == "placed"]})
     active.sort(key=lambda v: -v["uploaded"])
     items.sort(key=lambda v: (-v["placed"], -v["updated"]))
-    return {"processing": active, "videos": items}
+    # the benchmark and development runs aren't a creator's uploads: they get their own tab, and the 23 unseen
+    # videos a funnel (videos -> places measured -> placed), so yield is shown as a measurement, not a library
+    unseen = set(load_config("testset.json").get("unseen", []))
+    for v in items:
+        v["test"] = not v["has_player"] and not v["run_id"].startswith("r_20")
+        v["unseen"] = v["clip"] in unseen
+    tested = [v for v in items if v["unseen"]]
+    funnel = {"videos": len(unseen), "measured": sum(v["found"] for v in tested),
+              "placed": sum(v["placed"] for v in tested), "with_ads": sum(1 for v in tested if v["placed"])}
+    return {"processing": active, "videos": items, "funnel": funnel}
+
+
+def load_config(name):
+    p = ROOT / "configs" / name
+    return json.loads(p.read_text()) if p.exists() else {}
 
 
 @app.get("/api/catalog")

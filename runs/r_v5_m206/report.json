@@ -1,0 +1,142 @@
+{
+ "run_id": "r_v5_m206",
+ "clip_stem": "upload_m206",
+ "clip": "assets/clips/uploads/upload_m206.mp4",
+ "source_name": "m206.mp4",
+ "finished_at": 1793757436.620947,
+ "duration_s": 5.0,
+ "status": "done",
+ "elapsed_s": 120,
+ "note": "",
+ "scene": {
+  "places": [
+   {
+    "name": "mug",
+    "kind": "vessel",
+    "where": "center foreground on table in front of laptop"
+   },
+   {
+    "name": "table",
+    "kind": "other",
+    "where": "wooden slatted table top across bottom of frame"
+   },
+   {
+    "name": "coffeepot",
+    "kind": "other",
+    "where": "left side of table"
+   },
+   {
+    "name": "cup",
+    "kind": "vessel",
+    "where": "left background on table behind coffeepot holding utensils"
+   },
+   {
+    "name": "jacket",
+    "kind": "other",
+    "where": "on woman on right side of frame"
+   },
+   {
+    "name": "french press",
+    "kind": "other",
+    "where": "left foreground on table"
+   }
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult woman typing on laptop at outdoor cafe with coffee, no children, medical, accident, violence or grief.; adult woman typing on laptop at outdoor cafe table, calm neutral activity with no children, medical, accident, violence or grief",
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "laptop",
+   "outdoor",
+   "work"
+  ],
+  "surfaces": [
+   "coffeepot",
+   "cup",
+   "french press",
+   "jacket",
+   "mug",
+   "table"
+  ]
+ },
+ "summary": {
+  "candidates": 5,
+  "placed": 0,
+  "declined": 5
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "cup",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m206/thumbs/c01.jpg",
+   "on_screen_s": 5.0,
+   "reasons": [
+    "No blank area of it is big enough for a logo with clear space round it, so the logo would touch its own design or edges."
+   ],
+   "details": [
+    "no blank patch: no blank area of the cup (clear of its own design, rim and what covers it) is big enough for the logo with a margin round it"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "table",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a table yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "coffeepot",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a coffeepot yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "jacket",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a jacket yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "french press",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a french press yet"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "reels_url": null,
+ "viewers": []
+}

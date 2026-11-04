@@ -16,6 +16,10 @@ AdPlace
 An opt-in ad format for short videos: creators approve placements in videos they've already filmed, and each viewer
 sees different labelled sponsors in the scene itself, with nothing re-rendered to switch brands.
 
+## What's new
+
+Product placement in finished footage is an existing industry (studios insert brands into shows, once, for every viewer). AdPlace changes three things: the creator opts in and approves each place and brand; the brand is chosen per viewer when their video loads, by an auction, and switching it re-renders nothing; and every ad is disclosed, on screen and in an invisible watermark in any copy a viewer keeps.
+
 ## What it does
 
 A creator uploads a video once. Muse Spark reads sampled frames of its longest shot and proposes the places an ad
@@ -26,8 +30,8 @@ it, whether someone picks it up. Only places that stay still and in view carry a
 plain reason ("Someone picks it up or moves it", "No blank patch on the mug's own design").
 
 Placement is off until the creator turns it on. They approve each place and each brand from their library, and every
-auction respects that. When a viewer's video loads, a second-price auction picks a brand for each place in about a
-tenth of a millisecond on the server, and the browser composites the winner into the footage live: in the scene's perspective,
+auction respects that. When a viewer's video loads, a second-price auction picks a brand for each place in under a
+millisecond on the server, and the browser composites the winner into the footage live: in the scene's perspective,
 light, focus and grain, printed on glasses (and cups, on test clips), behind the hands and people in front. Two phones side by side
 show the same video to two viewers, each with the sponsors their own auction picked.
 
@@ -88,7 +92,7 @@ before the Nov 3 gates), all in cafés and restaurants, so the first market is f
 - Only still objects carry ads. Objects people pick up are declined.
 - Processing takes 10 to 15 minutes for a 10-second upload with places to measure, once, offline (under a minute when
   nothing in it can carry an ad) [10.2 s bar clip: 12.1 min alone, 15.7 min with two other uploads running; 5.7 s
-  clip: 8.2 min; 5 s clip with nothing to place: 40–57 s]. Picking brands at playback takes about 0.1 ms on the server (5–15 ms round trip).
+  clip: 8.2 min; 5 s clip with nothing to place: 40–57 s]. Picking brands at playback takes under a millisecond on the server (0.06–0.5 ms measured; 5–15 ms round trip).
 - The bids are test bids from a demo inventory of fictional brands. It's a standalone prototype, not connected to a
   real ad auction, with no accounts: it runs locally.
 - The five placements on the patio clip were set up by hand (its rendered 3D can and bottle were dropped on Nov 3:

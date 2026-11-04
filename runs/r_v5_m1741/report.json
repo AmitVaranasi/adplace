@@ -1,0 +1,178 @@
+{
+ "run_id": "r_v5_m1741",
+ "clip_stem": "upload_m1741",
+ "clip": "assets/clips/uploads/upload_m1741.mp4",
+ "source_name": "m1741.mp4",
+ "finished_at": 1793757316.119338,
+ "duration_s": 34.29,
+ "status": "done",
+ "elapsed_s": 1131,
+ "note": "",
+ "scene": {
+  "places": [
+   {
+    "name": "glass",
+    "kind": "vessel",
+    "where": "right foreground on tray"
+   },
+   {
+    "name": "notebook",
+    "kind": "print",
+    "where": "center left on table"
+   },
+   {
+    "name": "tray",
+    "kind": "other",
+    "where": "bottom right under glass"
+   },
+   {
+    "name": "table",
+    "kind": "other",
+    "where": "bottom center table surface"
+   },
+   {
+    "name": "book",
+    "kind": "other",
+    "where": "center background stacked"
+   },
+   {
+    "name": "pen",
+    "kind": "other",
+    "where": "center left in hand"
+   }
+  ],
+  "scene_safe": true,
+  "safety_reason": "Adult hand writing in notebook at a table with drink and books, no children, medical, accident, violence or grief visible.; calm adult writing in notebook with iced drink and books, no children, medical, accident, violence or grief visible",
+  "context_tags": [
+   "books",
+   "cafe",
+   "drink",
+   "indoor",
+   "study",
+   "writing"
+  ],
+  "surfaces": [
+   "book",
+   "glass",
+   "notebook",
+   "pen",
+   "table",
+   "tray"
+  ]
+ },
+ "summary": {
+  "candidates": 6,
+  "placed": 0,
+  "declined": 6
+ },
+ "placements": [
+  {
+   "id": "c01",
+   "surface": "print",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m1741/thumbs/c01.jpg",
+   "on_screen_s": 12.71,
+   "reasons": [
+    "Muse Spark judged it not a natural place for an ad.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "Its outline wobbles from frame to frame; an ad would shake.",
+    "It's mostly cut off by the edge of the frame.",
+    "An ad would vanish while the surface is still in view."
+   ],
+   "details": [
+    "muse_plausible is False; needs True",
+    "median track residual 26.72 px, needs at most 2.5 px",
+    "p90 track residual 88.19 px, needs at most 5.0 px",
+    "p95 corner jitter 9.003 px, needs at most 3.0 px",
+    "edge-clipped fraction 0.9344, needs at most 0.3",
+    "time the surface is visible but not covered 20.04 s, needs at most 0.25 s"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c02",
+   "surface": "glass",
+   "decision": "declined",
+   "thumb": "/runs/r_v5_m1741/thumbs/c02.jpg",
+   "on_screen_s": 0.0,
+   "reasons": [
+    "It isn't on screen long enough to register.",
+    "It's never visible long enough in one go.",
+    "It's too small to carry readable artwork.",
+    "We couldn't track it through the shot.",
+    "We couldn't follow its outline precisely enough; an ad would drift on it.",
+    "An ad would vanish while the surface is still in view.",
+    "It's too small on screen for a readable logo."
+   ],
+   "details": [
+    "on screen 0.0 s, needs 2.0 s",
+    "longest run 0.0 s, needs 1.5 s",
+    "minimum side: glass 0 px wide, needs 44 px",
+    "could not track: the glass's shape fitted in 0% of frames, needs 80%",
+    "track residual: logo well inside the glass in 0% of frames, needs 90%",
+    "visible but not covered for 34.3 s",
+    "logo too small: the logo would be 0 px tall on screen, needs 28 px to be readable"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c03",
+   "surface": "tray",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a tray yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c04",
+   "surface": "table",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a table yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c05",
+   "surface": "book",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a book yet"
+   ],
+   "qa": null
+  },
+  {
+   "id": "c06",
+   "surface": "pen",
+   "decision": "declined",
+   "thumb": null,
+   "on_screen_s": 0.0,
+   "reasons": [
+    "We found it, but can't place an ad on this kind of thing yet."
+   ],
+   "details": [
+    "not yet: we can't place an ad on a pen yet"
+   ],
+   "qa": null
+  }
+ ],
+ "player_url": null,
+ "reels_url": null,
+ "viewers": []
+}

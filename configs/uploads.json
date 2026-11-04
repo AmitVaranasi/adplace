@@ -722,5 +722,89 @@
     "object": 1
    }
   ]
+ },
+ "assets/clips/uploads/upload_m1737.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m1737.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "drink",
+   "indoor",
+   "writing"
+  ],
+  "dynamic_slots": [],
+  "objects3d": [
+   {
+    "id": "c02",
+    "kind": "glass_decal",
+    "surface": "glass",
+    "prompt": "cup",
+    "object": 0,
+    "contents": ""
+   }
+  ]
+ },
+ "assets/clips/uploads/upload_m1741.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m1741.mp4",
+  "occluder_prompts": [
+   "cup"
+  ],
+  "context_tags": [
+   "books",
+   "cafe",
+   "drink",
+   "indoor",
+   "study",
+   "writing"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m206.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m206.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "laptop",
+   "outdoor",
+   "work"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
+ },
+ "assets/clips/uploads/upload_m223.mp4": {
+  "hidden": true,
+  "dynamic": true,
+  "upload": true,
+  "source": "m223.mp4",
+  "occluder_prompts": [
+   "cup",
+   "person"
+  ],
+  "context_tags": [
+   "cafe",
+   "coffee",
+   "food",
+   "indoor",
+   "reading"
+  ],
+  "dynamic_slots": [],
+  "objects3d": []
  }
 }

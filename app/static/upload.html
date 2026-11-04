@@ -275,6 +275,10 @@
       <input id="file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v,.webm"
              aria-describedby="file-hint">
       <small id="file-hint" class="muted">An mp4, mov or webm file, up to 200 MB. For now we use one shot: if the video cuts between shots we keep the longest. Its sound starts muted; viewers can turn it on.</small>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">What works today: still posters, pictures and glasses in
+        cafés and restaurants; most other footage has nothing we can place on yet. Two that did:
+        <a href="/upload?run=r_eval_m43248">a bar (a poster and a glass)</a> and
+        <a href="/upload?run=r_eval_m44007">a pizza table (a glass)</a>.</p>
     </div>
 
     <div id="chosen" hidden>
@@ -836,8 +840,9 @@
     if (qa && qa.checks) {
       for (const [name, check] of Object.entries(qa.checks)) {
         if (!check || check.pass === false) continue;
-        out.push(titleCase(name) + " " + num(check.value)
-          + (check.limit != null ? " (limit " + num(check.limit) + ")" : "") + " — passed");
+        out.push(check.limit == null   // a measure we record without gating on it
+          ? titleCase(name) + ": " + num(check.value) + (name === "looks_printed" ? " of 5, Muse Spark's rating (recorded, not a check)" : "")
+          : titleCase(name) + " " + num(check.value) + " (limit " + num(check.limit) + ") — passed");
       }
     }
     for (const reason of (qa && qa.reasons) || []) out.push(reason);
@@ -846,7 +851,7 @@
       // vessels have no automated check on the rendered result: say what was measured, and that a person judges the look
       out.push("Passed the upload gates: on screen long enough, a steady outline, rarely covered, big enough for a "
         + "logo a fifth of its height, a blank patch for it, never moved, and Muse judged it a natural place.");
-      out.push("No automated check of the finished look for glasses and cups: a person judges that.");
+      out.push("Its final check (Muse Spark reading the brand off the rendered video) isn't recorded for this run.");
     } else if (!out.length) {
       out.push(qa && qa.pass ? "Passed the upload gates and the final check of the rendered result."
         : "Passed the upload gates. The final checks were not recorded for this run.");

@@ -1085,8 +1085,11 @@ void main() {
     if (!live || !renderer) return;
     if (upload && live.video.readyState<2) return;   // mid-seek (reels.html keeping two phones in step): next frame
     const chosen=won();   // the label marks ads: none shown (Original, or the creator has placement off), no label
+    // and only on frames where a placement that carries an ad is in the picture
+    const t=live.data.track,i=live.index;
+    const inView=t.slots.some(sl=>chosen[sl.id] && sl.quads[i]) || (t.objects || []).some(o=>chosen[o.id] && o.boxes[i]);
     renderer.render(live.video,live.index,profileId,{ads:withAds,upload,assignment:chosen,
-      label:withAds && !(chosen && !Object.keys(chosen).length)});
+      label:withAds && inView});
     $("scrub").value=live.index;
     $("frame").textContent="Frame "+(live.index+1)+" / "+live.data.track.frames;
     drawCount++;
@@ -1150,19 +1153,19 @@ void main() {
       if (!live || !Object.hasOwn(live.data.profiles,id)) return;
       profileId=id; profileUI(); bid(id);
     },
-    rebid() { if (live) bid(profileId); },
+    rebid(fresh=true) { if (live) bid(profileId,fresh); },
     setAds(on) { withAds=!!on; try { paint(false); } catch (error) { showError(error); } },
   };
   window.embedApi=embedApi;
 
-  async function bid(id) {
+  async function bid(id,fresh=false) {
     const session=live;
     if (!session) return;
     $("auction").textContent="Bidding…";
     const t0=performance.now(),seq=session.bidSeq=(session.bidSeq || 0)+1;
     try {
       const r=await fetch("/api/auction",{method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({clip:session.data.name,profile_id:id,...(STEADY ? {jitter:0} : {})})});
+        body:JSON.stringify({clip:session.data.name,profile_id:id,fresh,...(STEADY ? {jitter:0} : {})})});
       const body=await r.json();
       if (!r.ok) throw new Error(body.detail || r.status);
       body.roundTrip=Math.round(performance.now()-t0);
@@ -1413,7 +1416,7 @@ void main() {
   };
 
   $("clip").onchange=e=>activateClip(e.target.value);
-  $("rebid").onclick=()=>{ if (live) { downloadToken++; $("download-status").textContent=""; bid(profileId); } };
+  $("rebid").onclick=()=>{ if (live) { downloadToken++; $("download-status").textContent=""; bid(profileId,true); } };
   $("play").onclick=togglePlay;
   $("sound").onclick=()=>{ if (live && live.audio) setMuted(!live.audio.muted); };
   $("scrub").oninput=e=>requestSeek(Number(e.target.value));

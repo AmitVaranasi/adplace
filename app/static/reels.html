@@ -414,7 +414,7 @@
       $("creator").classList.toggle("off", !out.enabled);
       $("saved").textContent = out.enabled ? "Saved. Each viewer's next auction uses these settings."
         : "Saved. Placement is off: viewers see your original video.";
-      sides.forEach(s => s.api && s.api.rebid());
+      sides.forEach(s => s.api && s.api.rebid(false));   // same impression, new settings
     } catch (error) {
       $("saved").textContent = "Couldn't save: " + (error.message || error);
     } finally {

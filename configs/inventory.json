@@ -284,7 +284,10 @@
     "print"
    ],
    "contextual_exclusions": [
+    "cafe",
+    "dining",
     "hospital",
+    "restaurant",
     "safety_signage"
    ],
    "preference_tags": [

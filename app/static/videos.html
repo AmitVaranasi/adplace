@@ -45,6 +45,9 @@
   .stat span { font-size: 12px; color: #a2a9b8; }
 
   .filters { display: flex; gap: 6px; margin: 22px 0 14px; flex-wrap: wrap; }
+  .funnel { border: 1px solid #2c3039; background: #171a20; border-radius: 10px; padding: 12px 14px;
+            margin-bottom: 14px; font-size: 13px; max-width: 760px; }
+  .funnel p { margin: 0 0 6px; }
   .filters button[aria-pressed=true] { background: #233e38; border-color: #6bd6b2; color: #c9ffec; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
@@ -118,7 +121,9 @@
     <button type="button" data-filter="ads" aria-pressed="true">With places for ads</button>
     <button type="button" data-filter="all" aria-pressed="false">All</button>
     <button type="button" data-filter="none" aria-pressed="false">Nothing to place</button>
+    <button type="button" data-filter="test" aria-pressed="false">Test set</button>
   </div>
+  <div id="funnel" class="funnel" hidden></div>
   <div id="videos" class="grid" aria-live="polite"></div>
 </main>
 
@@ -241,14 +246,24 @@
   }
 
   function render() {
-    const vs = data.videos;
+    const all = data.videos, vs = all.filter(v => !v.test);   // a creator's own videos; test runs have their tab
     $("s-videos").textContent = vs.length;
     $("s-ready").textContent = vs.filter(v => v.has_player).length;
     $("s-live").textContent = vs.filter(v => v.has_player && v.enabled).length;
     $("s-places").textContent = vs.reduce((n, v) => n + v.placed, 0);
     $("processing-box").hidden = !data.processing.length;
     $("processing").replaceChildren(...data.processing.map(processingCard));
-    const shown = vs.filter(v => filter === "all" || (filter === "ads") === v.has_player);
+    const shown = filter === "test" ? all.filter(v => v.test || v.unseen)
+      : vs.filter(v => filter === "all" || (filter === "ads") === v.has_player);
+    const f = data.funnel;
+    $("funnel").hidden = filter !== "test" || !f;
+    if (f) $("funnel").replaceChildren(
+      make("p", null, make("strong", {textContent: "How often it can place an ad today. "}),
+        "We uploaded " + f.videos + " stock videos it had never seen. It measured " + f.measured + " places in them " +
+        "and kept " + f.placed + " (in " + f.with_ads + " video" + (f.with_ads === 1 ? "" : "s") + "). Every other " +
+        "place was declined with the reason on its report: it would rather place nothing than place badly."),
+      make("p", {className: "muted", textContent: "Most stock footage has nothing it can measure yet (no still poster, " +
+        "picture or glass), or the object moves. Also here: clips used while building it."}));
     $("videos").replaceChildren(...(shown.length ? shown.map(card) : [make("div", {className: "empty"},
       make("p", {textContent: vs.length ? "No videos here." : "No videos yet."}),
       make("a", {className: "button primary", href: "/upload", textContent: "Upload a video"}))]));

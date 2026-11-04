@@ -15,6 +15,8 @@ and grain, behind the people and hands in front, printed on glasses and cups, an
 a design of its own. Every frame carries a visible "AI product placement" label; the file a viewer downloads carries
 an invisible Meta Video Seal watermark carrying an id this server resolves to the campaigns.
 
+**What's new.** Product placement in finished footage is an existing industry (studios insert brands into shows, once, for every viewer). AdPlace changes three things: the creator opts in and approves each place and brand; the brand is chosen per viewer when their video loads, by an auction, and switching it re-renders nothing; and every ad is disclosed, on screen and in an invisible watermark in any copy a viewer keeps.
+
 Meta tooling: SAM 3.1 and Muse Spark 1.3 through the Meta Model API, Muse Image 1.0 for the brand artwork, Video Seal.
 Built for the Meta AI Developer Hackathon (Oct 26 – Nov 4, 2026). Spec: `SPEC.md`. Upload contract: `INGEST.md`.
 Demo script: `docs/DEMO.md`. Write-up: `docs/SUBMISSION.md`.

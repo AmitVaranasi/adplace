@@ -49,10 +49,10 @@ there after the file is compressed again, though not after it's cropped."
 
 ## 2:15–2:40 The bid at playback
 
-Screen: back on `/reels`, "Run both bids again": prices, runner-up and "decided in 0.1 ms" under each phone.
+Screen: back on `/reels`, "Run both bids again": prices, runner-up and "decided in" well under a millisecond under each phone.
 
 Say: "Everything that depends on the video was worked out once, at upload, and is the same for every brand. So when
-a viewer's video loads, a second-price auction only picks names, in about a tenth of a millisecond on the server, and the browser
+a viewer's video loads, a second-price auction only picks names, in under a millisecond on the server, and the browser
 draws the winner in live. That's choosing the brand, not processing the video. These are test bids."
 
 ## 2:40–3:00 Honest numbers and what's next
